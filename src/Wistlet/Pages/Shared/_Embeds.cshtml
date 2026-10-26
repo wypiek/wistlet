@@ -1,0 +1,35 @@
+@model IReadOnlyList<EmbedView>
+@* Links posted on their own line: YouTube becomes a click-to-play player (nothing loads from YouTube until
+   you press play), other links a preview card with what the page says about itself. *@
+@if (Model.Count > 0)
+{
+    <div class="co-embeds">
+        @foreach (var e in Model)
+        {
+            if (e.YouTubeId is { } id)
+            {
+                <div class="co-embed is-youtube">
+                    <a class="i-player" href="@e.Url" target="_blank" rel="nofollow noopener noreferrer ugc" data-youtube="@id" aria-label="Play the YouTube video">
+                        <img src="https://i.ytimg.com/vi/@id/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                        <span class="i-play" aria-hidden="true"><svg viewBox="0 0 68 48" width="68" height="48"><path d="M66.5 7.7a8.5 8.5 0 0 0-6-6C55.3.3 34 .3 34 .3s-21.3 0-26.5 1.4a8.5 8.5 0 0 0-6 6C.1 13 .1 24 .1 24s0 11 1.4 16.3a8.5 8.5 0 0 0 6 6C12.7 47.7 34 47.7 34 47.7s21.3 0 26.5-1.4a8.5 8.5 0 0 0 6-6C67.9 35 67.9 24 67.9 24s0-11-1.4-16.3z" fill="#83254f"/><path d="M45 24 27 14v20z" fill="#fff9f2"/></svg></span>
+                    </a>
+                    <div class="i-caption">YouTube · <a href="@e.Url" target="_blank" rel="nofollow noopener noreferrer ugc">open on youtube.com</a></div>
+                </div>
+            }
+            else
+            {
+                <a class="co-embed is-card" href="@e.Url" target="_blank" rel="nofollow noopener noreferrer ugc">
+                    @if (e.ImageUrl is not null)
+                    {
+                        <img class="i-image" src="@e.ImageUrl" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                    }
+                    <span class="i-text">
+                        <span class="i-site">@(e.SiteName ?? e.Host)</span>
+                        @if (e.Title is not null) { <span class="i-title">@e.Title</span> }
+                        @if (e.Description is not null) { <span class="i-description">@e.Description</span> }
+                    </span>
+                </a>
+            }
+        }
+    </div>
+}

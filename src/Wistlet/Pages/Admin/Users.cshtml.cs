@@ -9,7 +9,7 @@ public class UsersModel(AppDbContext db) : PageModel
 {
     public const int PageSize = 50;
 
-    public record Row(User User, int Posts, int Followers, int Reports);
+    public record Row(User User, int Posts, int Followers, int Reports, string? OwnerName);
 
     public List<Row> Rows { get; private set; } = [];
     public string? Q { get; private set; }
@@ -55,7 +55,8 @@ public class UsersModel(AppDbContext db) : PageModel
             .Select(u => new Row(u,
                 db.Posts.Count(x => x.AuthorId == u.Id),
                 db.Follows.Count(f => f.FolloweeId == u.Id),
-                db.Reports.Count(r => r.Status == ReportStatus.Open && (r.TargetUserId == u.Id || r.Post!.AuthorId == u.Id))))
+                db.Reports.Count(r => r.Status == ReportStatus.Open && (r.TargetUserId == u.Id || r.Post!.AuthorId == u.Id)),
+                u.Owner != null ? u.Owner.UserName : null))
             .ToListAsync();
     }
 }

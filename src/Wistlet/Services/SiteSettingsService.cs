@@ -45,6 +45,10 @@ public class SiteConfig
     [Display(Name = "Allow image uploads in posts")]
     public bool AllowImageUploads { get; set; } = true;
 
+    /// <summary>Links on their own line get a preview card, which means the server fetches those pages.</summary>
+    [Display(Name = "Show link previews (the server fetches linked pages)")]
+    public bool LinkPreviews { get; set; } = true;
+
     [Display(Name = "Maximum upload size (MB)"), Range(1, 50)]
     public int MaxUploadMb { get; set; } = 5;
 

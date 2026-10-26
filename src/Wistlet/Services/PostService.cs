@@ -4,7 +4,7 @@ using Wistlet.Models;
 
 namespace Wistlet.Services;
 
-public class PostService(AppDbContext db, SiteSettingsService settings, UploadService uploads, NotificationService notifications, EmojiService emoji)
+public class PostService(AppDbContext db, SiteSettingsService settings, UploadService uploads, NotificationService notifications, EmojiService emoji, LinkPreviewService previews)
 {
     /// <summary>Most images one post can carry.</summary>
     public const int MaxAttachments = 10;
@@ -18,8 +18,10 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
     {
         var now = DateTime.UtcNow;
         var me = viewerId ?? -1;
+        // Banning an account also hides the extra pages it owns.
         var q = db.Posts.AsNoTracking()
-            .Where(p => !(p.Author.IsBanned && (p.Author.BannedUntil == null || p.Author.BannedUntil > now)));
+            .Where(p => !(p.Author.IsBanned && (p.Author.BannedUntil == null || p.Author.BannedUntil > now)))
+            .Where(p => p.Author.Owner == null || !(p.Author.Owner.IsBanned && (p.Author.Owner.BannedUntil == null || p.Author.Owner.BannedUntil > now)));
         if (!includeDrafts) q = q.Where(p => !p.IsDraft);
         if (!isStaff)
         {
@@ -76,6 +78,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             IsShare = p.IsShare,
             SharedPostId = p.SharedPostId,
             Attachments = p.Attachments.OrderBy(a => a.Position).Select(a => new AttachmentView(a.Id, a.Path, a.AltText)).ToList(),
+            EmbedUrlsRaw = p.EmbedUrls,
             Ask = p.Ask == null ? null : new AskView(p.Ask.Id, p.Ask.Content,
                 p.Ask.IsAnonymous || p.Ask.Sender == null ? null
                     : new UserSummary(p.Ask.Sender.Id, p.Ask.Sender.UserName, p.Ask.Sender.DisplayName, p.Ask.Sender.AvatarPath, p.Ask.Sender.IsVerified, p.Ask.Sender.Role, "", p.Ask.Sender.AvatarShape),
@@ -100,7 +103,42 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
 
         await AttachSharedPostsAsync(posts, viewerId);
         await ApplyTagWarningsAsync(posts, viewerId);
+        await AttachEmbedsAsync(posts);
         return posts;
+    }
+
+    /// <summary>Fills in each post's embeds: YouTube players, and preview cards for links whose details were fetched.</summary>
+    private async Task AttachEmbedsAsync(List<PostView> posts)
+    {
+        var all = new List<PostView>();
+        foreach (var post in posts)
+            for (var p = post; p is not null; p = p.SharedFrom) all.Add(p);
+        var urls = all.SelectMany(p => SplitEmbeds(p.EmbedUrlsRaw)).Distinct().ToList();
+        if (urls.Count == 0) return;
+
+        var cards = settings.Current.LinkPreviews
+            ? await db.LinkPreviews.AsNoTracking().Where(l => urls.Contains(l.Url) && l.Status == LinkPreviewStatus.Ok).ToDictionaryAsync(l => l.Url)
+            : [];
+        foreach (var p in all)
+        {
+            p.Embeds = SplitEmbeds(p.EmbedUrlsRaw).Select(url =>
+            {
+                cards.TryGetValue(url, out var c);
+                return new EmbedView(url, Embeds.YouTubeId(url), c?.Title, c?.Description, c?.ImageUrl, c?.SiteName);
+            }).Where(e => e.YouTubeId is not null || e.HasCard).ToList();
+        }
+    }
+
+    private static string[] SplitEmbeds(string raw) => raw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>Stores a post's rendered HTML and embed links, and queues the links for previews.</summary>
+    private void ApplyRendered(Post post, PostRenderer.Result rendered)
+    {
+        post.RenderedHtml = rendered.Html;
+        post.RenderedPreviewHtml = rendered.PreviewHtml;
+        post.RenderVersion = PostRenderer.Version;
+        post.EmbedUrls = string.Join('\n', rendered.EmbedUrls);
+        previews.Enqueue(rendered.EmbedUrls);
     }
 
     /// <summary>Marks posts carrying one of the viewer's CW'd tags, so they start collapsed.</summary>
@@ -144,6 +182,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             IsShare = p.IsShare,
             SharedPostId = p.SharedPostId,
             Attachments = p.Attachments.OrderBy(a => a.Position).Select(a => new AttachmentView(a.Id, a.Path, a.AltText)).ToList(),
+            EmbedUrlsRaw = p.EmbedUrls,
             Ask = p.Ask == null ? null : new AskView(p.Ask.Id, p.Ask.Content,
                 p.Ask.IsAnonymous || p.Ask.Sender == null ? null
                     : new UserSummary(p.Ask.Sender.Id, p.Ask.Sender.UserName, p.Ask.Sender.DisplayName, p.Ask.Sender.AvatarPath, p.Ask.Sender.IsVerified, p.Ask.Sender.Role, "", p.Ask.Sender.AvatarShape),
@@ -272,9 +311,6 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             AuthorId = authorId,
             Headline = isComment ? null : headline,
             Content = content,
-            RenderedHtml = rendered.Html,
-            RenderedPreviewHtml = rendered.PreviewHtml,
-            RenderVersion = PostRenderer.Version,
             ContentWarnings = warnings.Count > 0 ? string.Join(", ", warnings) : null,
             IsAdult = !isComment && draft.IsAdult,
             ParentId = draft.ParentId,
@@ -287,6 +323,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             SharesLocked = !isComment && draft.SharesLocked,
             Attachments = attachments,
         };
+        ApplyRendered(post, rendered);
         for (var i = 0; i < tags.Count; i++) post.Tags.Add(new PostTag { Tag = tags[i], Position = i });
         db.Posts.Add(post);
         await db.SaveChangesAsync();
@@ -348,6 +385,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             RenderedHtml = draft.RenderedHtml,
             RenderedPreviewHtml = draft.RenderedPreviewHtml,
             RenderVersion = draft.RenderVersion,
+            EmbedUrls = draft.EmbedUrls,
             ContentWarnings = draft.ContentWarnings,
             IsAdult = draft.IsAdult,
             IsShare = draft.IsShare,
@@ -399,9 +437,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         var rendered = Render(content);
         post.Content = content;
         post.Headline = isComment ? null : headline;
-        post.RenderedHtml = rendered.Html;
-        post.RenderedPreviewHtml = rendered.PreviewHtml;
-        post.RenderVersion = PostRenderer.Version;
+        ApplyRendered(post, rendered);
         post.ContentWarnings = warnings.Count > 0 ? string.Join(", ", warnings) : null;
         post.IsAdult = !isComment && draft.IsAdult;
         post.CommentsLocked = !isComment && draft.CommentsLocked;
@@ -460,10 +496,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             if (batch.Count == 0) return count;
             foreach (var post in batch)
             {
-                var r = Render(post.Content);
-                post.RenderedHtml = r.Html;
-                post.RenderedPreviewHtml = r.PreviewHtml;
-                post.RenderVersion = PostRenderer.Version;
+                ApplyRendered(post, Render(post.Content));
             }
             await db.SaveChangesAsync();
             count += batch.Count;

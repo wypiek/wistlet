@@ -208,6 +208,47 @@ namespace Wistlet.Data.Migrations
                     b.ToTable("Likes");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.LinkPreview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FetchedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SiteName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Url")
+                        .IsUnique();
+
+                    b.ToTable("LinkPreviews");
+                });
+
             modelBuilder.Entity("Wistlet.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -307,6 +348,11 @@ namespace Wistlet.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmbedUrls")
+                        .IsRequired()
+                        .HasMaxLength(10000)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Headline")
@@ -594,6 +640,9 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("OwnerId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -630,6 +679,8 @@ namespace Wistlet.Data.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique();
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Users");
                 });
@@ -896,6 +947,16 @@ namespace Wistlet.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.User", b =>
+                {
+                    b.HasOne("Wistlet.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Wistlet.Models.Post", b =>

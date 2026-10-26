@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FollowRequest> FollowRequests => Set<FollowRequest>();
     public DbSet<TagPreference> TagPreferences => Set<TagPreference>();
     public DbSet<CustomEmoji> CustomEmoji => Set<CustomEmoji>();
+    public DbSet<LinkPreview> LinkPreviews => Set<LinkPreview>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -31,6 +32,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(u => u.Email);
             e.Ignore(u => u.IsStaff);
             e.Ignore(u => u.IsCurrentlyBanned);
+            e.Ignore(u => u.IsExtraPage);
+            e.HasOne(u => u.Owner).WithMany().HasForeignKey(u => u.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(u => u.OwnerId);
         });
 
         b.Entity<Post>(e =>
@@ -75,6 +79,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
 
         b.Entity<CustomEmoji>(e => e.HasIndex(x => x.Shortcode).IsUnique());
+        b.Entity<LinkPreview>(e => e.HasIndex(x => x.Url).IsUnique());
 
         b.Entity<PostTag>(e =>
         {

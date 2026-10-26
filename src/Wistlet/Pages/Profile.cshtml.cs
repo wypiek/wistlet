@@ -80,6 +80,9 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         IsMe = me == user.Id;
 
         if (user.IsCurrentlyBanned && !staff) return NotFound();
+        // An extra page disappears along with its account when the account is banned.
+        if (user.OwnerId is int owner && !staff && await db.Users.AnyAsync(u => u.Id == owner && u.IsBanned && (u.BannedUntil == null || u.BannedUntil > DateTime.UtcNow)))
+            return NotFound();
 
         PostCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && !p.IsHidden && !p.IsDraft && p.ParentId == null);
         FollowerCount = await db.Follows.CountAsync(f => f.FolloweeId == user.Id);

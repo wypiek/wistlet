@@ -1,0 +1,76 @@
+@page "/pages"
+@model MyPagesModel
+@{
+    ViewData["Title"] = "Your pages";
+}
+<card title="Your pages" status="@($"{Model.Items.Count} of {AccountService.MaxPagesPerAccount}")">
+    <p>
+        One login can run several pages, each with its own handle, profile, posts, followers, asks and messages.
+        Whatever you do happens as the page you're <b>posting as</b>; switch pages here or from the menu under your avatar.
+    </p>
+    <ul class="co-project-list page-list">
+        @foreach (var item in Model.Items)
+        {
+            var p = item.Page;
+            var current = p.Id == Model.CurrentId;
+            <li>
+                <img class="co-avatar i-avatar" data-shape="@AvatarShapes.Resolve(p.AvatarShape)" src="@(p.AvatarPath ?? $"/avatar/{p.UserName}.svg")" alt="" />
+                <div class="i-names">
+                    <a href="/u/@p.UserName"><b>@p.DisplayName</b></a> <span>@@@p.UserName</span>
+                    <span class="i-dek">
+                        @(p.Id == Model.AccountId ? "main page (your login)" : "extra page")
+                        @if (item.UnreadNotifications > 0) { <text> · @Fmt.Plural(item.UnreadNotifications, "new notification")</text> }
+                        @if (item.PendingAsks > 0) { <text> · @Fmt.Plural(item.PendingAsks, "ask") waiting</text> }
+                        @if (p.IsCurrentlyBanned) { <text> · banned</text> }
+                    </span>
+                </div>
+                @if (current)
+                {
+                    <span class="co-button is-small is-outline" aria-current="true">posting as</span>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Switch" asp-route-id="@p.Id">
+                        <button type="submit" class="co-button is-small">switch</button>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+</card>
+
+@if (Model.Items.Count < AccountService.MaxPagesPerAccount)
+{
+    <card title="New page">
+        <form method="post" asp-page-handler="Create" class="form-grid">
+            <label for="userName">Handle</label>
+            <input id="userName" type="text" name="userName" required pattern="[A-Za-z0-9_]{3,20}" maxlength="20" placeholder="letters, numbers and _" />
+            <label for="displayName">Display name</label>
+            <input id="displayName" type="text" name="displayName" maxlength="50" placeholder="optional" />
+            <span></span>
+            <div><button type="submit" class="default">Create page</button></div>
+        </form>
+    </card>
+}
+
+@if (Model.Items.Count > 1)
+{
+    <card title="Delete a page">
+        <form method="post" asp-page-handler="Delete" class="form-grid" data-confirm="Delete this page and everything posted from it? This can't be undone.">
+            <p class="full">Deletes an extra page with its posts, likes, follows, asks and messages. Your main page is your login; delete it from <a href="/settings?tab=account">account settings</a>.</p>
+            <label for="del-id">Page</label>
+            <select id="del-id" name="id">
+                @foreach (var item in Model.Items.Where(i => i.Page.OwnerId is not null))
+                {
+                    <option value="@item.Page.Id">@@@item.Page.UserName</option>
+                }
+            </select>
+            <label for="del-confirm">Type its handle</label>
+            <input id="del-confirm" type="text" name="confirm" autocomplete="off" required />
+            <label for="del-pw">Your password</label>
+            <input id="del-pw" type="password" name="currentPassword" autocomplete="current-password" required />
+            <span></span>
+            <div><button type="submit">Delete page</button></div>
+        </form>
+    </card>
+}

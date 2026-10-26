@@ -33,7 +33,7 @@
                     {
                         var u = r.User;
                         <tr>
-                            <td><a href="/admin/user/@u.Id">@u.DisplayName</a><br />@@@u.UserName</td>
+                            <td><a href="/admin/user/@u.Id">@u.DisplayName</a><br />@@@u.UserName@if (r.OwnerName is not null) { <br /><span class="muted">page of @@@r.OwnerName</span> }</td>
                             <td>@u.Email</td>
                             <td>@u.Role</td>
                             <td>

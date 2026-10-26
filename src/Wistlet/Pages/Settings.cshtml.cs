@@ -26,11 +26,30 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
     /// <summary>The viewer's tag preferences, by kind.</summary>
     public ILookup<TagPreferenceKind, string> TagPrefs { get; private set; } = Enumerable.Empty<TagPreference>().ToLookup(t => t.Kind, t => t.Tag);
 
+    /// <summary>The login account (e-mail, password, sessions); <see cref="Me"/> is the page being edited.</summary>
+    public User Account { get; private set; } = null!;
+
+    /// <summary>The page currently acted as, whose profile and preferences these settings change.</summary>
     private async Task<User> LoadAsync()
     {
         var id = User.RequireUserId();
         Me = await db.Users.FirstAsync(u => u.Id == id);
         return Me;
+    }
+
+    private async Task<User> LoadAccountAsync()
+    {
+        var id = User.RequireAccountId();
+        Account = await db.Users.FirstAsync(u => u.Id == id);
+        return Account;
+    }
+
+    /// <summary>Re-issues this browser's cookie after the security stamp changed, staying on the same page.</summary>
+    private async Task ReSignInAsync(User account)
+    {
+        var pageId = User.RequireUserId();
+        var page = pageId == account.Id ? null : await db.Users.FirstOrDefaultAsync(u => u.Id == pageId && u.OwnerId == account.Id);
+        await AccountService.SignInAsync(HttpContext, account, remember: true, page);
     }
 
     private IActionResult Done(string tab, string message)
@@ -49,6 +68,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
     {
         Tab = Tabs.Contains(tab) ? tab! : "profile";
         await LoadAsync();
+        await LoadAccountAsync();
         ContactCard = ContactCardItem.Parse(Me.ContactCard);
         if (Tab == "tags")
         {
@@ -131,7 +151,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
 
     public async Task<IActionResult> OnPostEmailAsync(string? email, string? currentPassword)
     {
-        var me = await LoadAsync();
+        var me = await LoadAccountAsync();
         email = (email ?? "").Trim();
         if (!new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) || email.Length is 0 or > 256)
             return Fail("account", "Please enter a valid e-mail address.");
@@ -144,7 +164,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
 
     public async Task<IActionResult> OnPostPasswordAsync(string? currentPassword, string? newPassword, string? confirmPassword)
     {
-        var me = await LoadAsync();
+        var me = await LoadAccountAsync();
         if (!accounts.VerifyPassword(me, currentPassword ?? ""))
             return Fail("account", "Your current password is incorrect.");
         if (AccountService.ValidatePassword(newPassword) is { } error)
@@ -155,16 +175,16 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         accounts.SetPassword(me, newPassword!);
         await db.SaveChangesAsync();
         // The security stamp changed, which signs out every other session; re-issue this one.
-        await AccountService.SignInAsync(HttpContext, me, remember: true);
+        await ReSignInAsync(me);
         return Done("account", "Password changed. You've been signed out everywhere else.");
     }
 
     public async Task<IActionResult> OnPostSignOutEverywhereAsync()
     {
-        var me = await LoadAsync();
+        var me = await LoadAccountAsync();
         AccountService.RotateSecurityStamp(me);
         await db.SaveChangesAsync();
-        await AccountService.SignInAsync(HttpContext, me, remember: true);
+        await ReSignInAsync(me);
         return Done("account", "All other sessions have been signed out.");
     }
 
@@ -209,7 +229,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
 
     public async Task<IActionResult> OnPostDeleteAccountAsync(string? currentPassword, string? confirm)
     {
-        var me = await LoadAsync();
+        var me = await LoadAccountAsync();
         if (!accounts.VerifyPassword(me, currentPassword ?? ""))
             return Fail("account", "Your current password is incorrect.");
         if (!string.Equals(confirm?.Trim(), me.UserName, StringComparison.OrdinalIgnoreCase))
@@ -217,12 +237,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         if (me.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Fail("account", "You're the only administrator. Promote someone else before deleting your account.");
 
-        var images = await db.PostAttachments.Where(a => a.Post.AuthorId == me.Id).Select(a => (string?)a.Path).ToListAsync();
-        images.Add(me.AvatarPath);
-        images.Add(me.BannerPath);
-        db.Users.Remove(me);
-        await db.SaveChangesAsync();
-        foreach (var img in images) uploads.Delete(img);
+        await accounts.DeleteUserAsync(me, uploads);
 
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         TempData["Flash"] = "Your account has been deleted. Goodbye!";

@@ -63,6 +63,51 @@ public partial class AccountService(AppDbContext db, IPasswordHasher<User> hashe
         return user;
     }
 
+    /// <summary>Most pages one account can have, counting the account's own page.</summary>
+    public const int MaxPagesPerAccount = 10;
+
+    /// <summary>Adds an extra page to an account. It has no login of its own; the account switches to it.</summary>
+    public async Task<(User? Page, string? Error)> CreatePageAsync(User account, string userName, string? displayName)
+    {
+        if (account.OwnerId is not null) return (null, "Switch to your main page to create pages.");
+        if (await db.Users.CountAsync(u => u.OwnerId == account.Id) >= MaxPagesPerAccount - 1)
+            return (null, $"An account can have at most {MaxPagesPerAccount} pages.");
+        userName = userName.Trim();
+        if (await ValidateNewUserNameAsync(userName) is { } error) return (null, error);
+        displayName = displayName?.Trim();
+        if (displayName is { Length: > 50 }) return (null, "Display names can be at most 50 characters.");
+        var page = new User
+        {
+            UserName = userName,
+            NormalizedUserName = Normalize(userName),
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? userName : displayName,
+            OwnerId = account.Id,
+            Role = UserRole.User,
+        };
+        db.Users.Add(page);
+        await db.SaveChangesAsync();
+        return (page, null);
+    }
+
+    /// <summary>The pages an account can act as: its own page first, then its extra pages.</summary>
+    public Task<List<User>> PagesOfAsync(int accountId) =>
+        db.Users.AsNoTracking()
+            .Where(u => u.Id == accountId || u.OwnerId == accountId)
+            .OrderBy(u => u.OwnerId != null).ThenBy(u => u.Id)
+            .ToListAsync();
+
+    /// <summary>Deletes a page (for an account: with all of its extra pages) and every file they uploaded.</summary>
+    public async Task DeleteUserAsync(User user, UploadService uploads)
+    {
+        var ids = await db.Users.Where(u => u.Id == user.Id || u.OwnerId == user.Id).Select(u => u.Id).ToListAsync();
+        var files = await db.PostAttachments.Where(a => ids.Contains(a.Post.AuthorId)).Select(a => (string?)a.Path).ToListAsync();
+        files.AddRange(await db.Users.Where(u => ids.Contains(u.Id)).Select(u => u.AvatarPath).ToListAsync());
+        files.AddRange(await db.Users.Where(u => ids.Contains(u.Id)).Select(u => u.BannerPath).ToListAsync());
+        db.Users.RemoveRange(await db.Users.Where(u => ids.Contains(u.Id)).ToListAsync());
+        await db.SaveChangesAsync();
+        foreach (var f in files) uploads.Delete(f);
+    }
+
     public Task<User?> FindByUserNameAsync(string userName)
     {
         var normalized = Normalize(userName);
@@ -76,9 +121,11 @@ public partial class AccountService(AppDbContext db, IPasswordHasher<User> hashe
         if (login.Contains('@'))
         {
             var lower = login.ToLowerInvariant();
-            return await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == lower);
+            return await db.Users.FirstOrDefaultAsync(u => u.OwnerId == null && u.Email.ToLower() == lower);
         }
-        return await FindByUserNameAsync(login);
+        // Extra pages have no password of their own: you log in with the account that owns them.
+        var user = await FindByUserNameAsync(login);
+        return user is { OwnerId: null } ? user : null;
     }
 
     public bool VerifyPassword(User user, string password)
@@ -106,20 +153,23 @@ public partial class AccountService(AppDbContext db, IPasswordHasher<User> hashe
         });
     }
 
-    public static ClaimsPrincipal CreatePrincipal(User user)
+    /// <summary>Claims for a signed-in account acting as one of its pages (the account itself by default).</summary>
+    public static ClaimsPrincipal CreatePrincipal(User account, User? page = null)
     {
+        page ??= account;
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName),
-            new(ClaimTypes.Role, user.Role.ToString()),
-            new(AppClaims.SecurityStamp, user.SecurityStamp),
+            new(ClaimTypes.NameIdentifier, page.Id.ToString()),
+            new(ClaimTypes.Name, page.UserName),
+            new(AppClaims.Account, account.Id.ToString()),
+            new(ClaimTypes.Role, account.Role.ToString()),
+            new(AppClaims.SecurityStamp, account.SecurityStamp),
         };
         return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
     }
 
-    public static Task SignInAsync(HttpContext http, User user, bool remember) =>
-        http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user),
+    public static Task SignInAsync(HttpContext http, User user, bool remember, User? page = null) =>
+        http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user, page),
             new AuthenticationProperties
             {
                 IsPersistent = remember,

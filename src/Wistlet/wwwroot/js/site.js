@@ -167,6 +167,33 @@
         dialog.showModal();
     });
 
+    // Embed images come from other sites; if one doesn't load, drop it instead of showing a broken image.
+    const dropBroken = (img) => {
+        if (img.classList.contains("i-image")) img.remove();
+        else img.style.visibility = "hidden";
+    };
+    document.addEventListener("error", (e) => {
+        if (e.target instanceof HTMLImageElement && e.target.closest(".co-embed")) dropBroken(e.target);
+    }, true);
+    // Images that failed before this script ran.
+    document.querySelectorAll(".co-embed img").forEach((img) => {
+        if (img.complete && img.naturalWidth === 0) dropBroken(img);
+    });
+
+    // YouTube embeds: swap the thumbnail for the player when pressed.
+    document.addEventListener("click", (e) => {
+        const link = e.target.closest("a[data-youtube]");
+        if (!link || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        const frame = document.createElement("iframe");
+        frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(link.dataset.youtube)}?autoplay=1`;
+        frame.title = "YouTube video";
+        frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+        frame.allowFullscreen = true;
+        frame.className = "i-frame";
+        link.replaceWith(frame);
+    });
+
     // Like cohost, collapse very tall post bodies (over twice the window height) behind "read more".
     document.querySelectorAll(".co-post-contents > .i-post-body").forEach((body) => {
         const prose = body.querySelector(".co-prose");

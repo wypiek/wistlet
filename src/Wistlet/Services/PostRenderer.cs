@@ -22,7 +22,7 @@ namespace Wistlet.Services;
 public static partial class PostRenderer
 {
     /// <summary>Bump when the output changes so stored posts are re-rendered on start-up.</summary>
-    public const int Version = 2;
+    public const int Version = 3;
 
     /// <summary>A line containing only this splits a post into a preview and the rest ("read more").</summary>
     public const string ReadMoreMarker = "<!--more-->";
@@ -107,7 +107,11 @@ public static partial class PostRenderer
     [GeneratedRegex(@"^[a-z][a-z-]*$")]
     private static partial Regex CssPropertyRegex();
 
-    public record Result(string Html, string? PreviewHtml);
+    /// <param name="EmbedUrls">Links that sit alone on their own line; they get an embed (cohost turned these into iframely cards).</param>
+    public record Result(string Html, string? PreviewHtml, IReadOnlyList<string> EmbedUrls);
+
+    /// <summary>Most embeds one post can show.</summary>
+    public const int MaxEmbeds = 5;
 
     /// <summary>Renders a post body. When it contains a read-more marker, <see cref="Result.PreviewHtml"/> holds the part before it.</summary>
     /// <param name="emoji">The site's custom emoji (shortcode → image URL); <c>:shortcode:</c> in text becomes the image.</param>
@@ -118,7 +122,7 @@ public static partial class PostRenderer
 
         var cut = FindReadMore(markdown);
         string? preview = cut is int i ? RenderFragment(markdown[..i], emoji) : null;
-        return new Result(full, preview);
+        return new Result(full, preview, FindEmbedLinks(full));
     }
 
     private static int? FindReadMore(string markdown)
@@ -370,6 +374,38 @@ public static partial class PostRenderer
             }
             if (last < value.Length) parent.InsertBefore(root.Owner!.CreateTextNode(value[last..]), text);
             text.RemoveFromParent();
+        }
+    }
+
+    /// <summary>
+    /// Finds links that are alone on their line (the whole paragraph, or between line breaks) and show
+    /// their own address, like a URL pasted on its own line. These become embeds below the post.
+    /// </summary>
+    public static IReadOnlyList<string> FindEmbedLinks(string html)
+    {
+        var doc = new HtmlParser().ParseDocument("<!doctype html><html><body></body></html>");
+        doc.Body!.InnerHtml = html;
+        var found = new List<string>();
+        foreach (var a in doc.Body.QuerySelectorAll("p > a[href]"))
+        {
+            var href = a.GetAttribute("href")!;
+            if (!Uri.TryCreate(href, UriKind.Absolute, out var u) || (u.Scheme != "http" && u.Scheme != "https")) continue;
+            var text = a.TextContent.Trim();
+            if (text != href && text + "/" != href && text != href.TrimEnd('/')) continue;
+            if (!AloneOnLine(a)) continue;
+            if (!found.Contains(href)) found.Add(href);
+            if (found.Count == MaxEmbeds) break;
+        }
+        return found;
+
+        static bool AloneOnLine(IElement a)
+        {
+            static bool Blank(INode? n) => n is IText t && string.IsNullOrWhiteSpace(t.Data);
+            var prev = a.PreviousSibling;
+            while (Blank(prev)) prev = prev!.PreviousSibling;
+            var next = a.NextSibling;
+            while (Blank(next)) next = next!.NextSibling;
+            return (prev is null || prev is IElement { LocalName: "br" }) && (next is null || next is IElement { LocalName: "br" });
         }
     }
 

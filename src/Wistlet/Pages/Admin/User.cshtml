@@ -39,7 +39,18 @@
                             <tr><td>Role</td><td>@u.Role@(u.IsVerified ? ", verified" : "")</td></tr>
                             <tr><td>Status</td><td>@(u.IsCurrentlyBanned ? (u.BannedUntil is DateTime d ? $"Banned until {Fmt.Date(d)}" : "Banned permanently") : "Active")</td></tr>
                             @if (u.BanReason is not null) { <tr><td>Ban reason</td><td>@u.BanReason</td></tr> }
-                            <tr><td>E-mail</td><td>@(string.IsNullOrEmpty(u.Email) ? "—" : u.Email)</td></tr>
+                            @if (u.IsExtraPage)
+                            {
+                                <tr><td>Page of</td><td><a href="/admin/user/@Model.Account.Id">@@@Model.Account.UserName</a> (log in, password and sessions belong to that account)</td></tr>
+                            }
+                            else
+                            {
+                                <tr><td>E-mail</td><td>@(string.IsNullOrEmpty(u.Email) ? "—" : u.Email)</td></tr>
+                            }
+                            @if (Model.ExtraPages.Count > 0)
+                            {
+                                <tr><td>Extra pages</td><td>@foreach (var x in Model.ExtraPages) { <a href="/admin/user/@x.Id">@@@x.UserName</a><text> </text> }</td></tr>
+                            }
                             <tr><td>Joined</td><td>@Fmt.Date(u.CreatedAt)</td></tr>
                             <tr><td>Last seen</td><td>@(u.LastSeenAt is DateTime ls ? Fmt.Ago(ls) + " ago" : "never")</td></tr>
                             <tr><td>Posts</td><td>@Model.PostCount</td></tr>
@@ -58,9 +69,12 @@
                     <form method="post" asp-page-handler="Edit" asp-route-id="@u.Id" class="form-grid">
                         <label for="dn">Display name</label>
                         <input id="dn" type="text" name="displayName" value="@u.DisplayName" maxlength="50" />
-                        <label for="em">E-mail</label>
-                        <input id="em" type="email" name="email" value="@u.Email" />
-                        @if (isAdmin)
+                        @if (!u.IsExtraPage)
+                        {
+                            <label for="em">E-mail</label>
+                            <input id="em" type="email" name="email" value="@u.Email" />
+                        }
+                        @if (isAdmin && !u.IsExtraPage)
                         {
                             <label for="role">Role</label>
                             <select id="role" name="role">
@@ -122,8 +136,8 @@
             <fieldset>
                 <legend>Tools</legend>
                 <div class="row">
-                    <form method="post" asp-page-handler="ResetPassword" asp-route-id="@u.Id" data-confirm="Reset this user's password?"><button type="submit">Reset password</button></form>
-                    <form method="post" asp-page-handler="SignOut" asp-route-id="@u.Id"><button type="submit">Sign out all sessions</button></form>
+                    <form method="post" asp-page-handler="ResetPassword" asp-route-id="@u.Id" data-confirm="Reset the password of @@@Model.Account.UserName?"><button type="submit">Reset @(u.IsExtraPage ? "owner's " : "")password</button></form>
+                    <form method="post" asp-page-handler="SignOut" asp-route-id="@u.Id"><button type="submit">Sign out all @(u.IsExtraPage ? "owner's " : "")sessions</button></form>
                     @if (u.AvatarPath is not null)
                     {
                         <form method="post" asp-page-handler="RemoveAvatar" asp-route-id="@u.Id"><button type="submit">Remove picture</button></form>

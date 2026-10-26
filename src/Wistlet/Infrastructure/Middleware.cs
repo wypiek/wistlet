@@ -15,7 +15,8 @@ public static class MiddlewareExtensions
         h["Content-Security-Policy"] =
             // Posts may use remote images and media (as on cohost) and inline styles ("CSS crimes").
             "default-src 'self'; img-src 'self' data: blob: https:; media-src 'self' https:; style-src 'self' 'unsafe-inline'; script-src 'self'; " +
-            "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+            // YouTube embeds play in a privacy-enhanced frame, loaded only when someone presses play.
+            "frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
         await next();
     });
 

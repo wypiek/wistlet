@@ -84,6 +84,7 @@ public class DbInitializer(AppDbContext db, AccountService accounts, PostService
             (2, null, "Tip: tags go in the tags box under your post, and they can have spaces in them.", "tips, how to use wistlet"),
             (3, "a tiny css crime", CssCrimeDemo, "css crimes, the cohost global feed"),
             (0, null, "Hey @pete, did you know you can save posts for later?", "tips"),
+            (2, null, "the first video ever uploaded to youtube. a link on its own line becomes an embed:\n\nhttps://www.youtube.com/watch?v=jNQXAC9IVRw", "music, history"),
         };
         var t = DateTime.UtcNow.AddHours(-demoPosts.Length);
         foreach (var (author, headline, text, tags) in demoPosts)
@@ -93,6 +94,7 @@ public class DbInitializer(AppDbContext db, AccountService accounts, PostService
             {
                 AuthorId = users[author].Id, Headline = headline, Content = text, CreatedAt = t = t.AddMinutes(37),
                 RenderedHtml = rendered.Html, RenderedPreviewHtml = rendered.PreviewHtml, RenderVersion = PostRenderer.Version,
+                EmbedUrls = string.Join('\n', rendered.EmbedUrls),
             };
             var parsed = PostRenderer.ParseTags(tags);
             for (var i = 0; i < parsed.Count; i++) post.Tags.Add(new PostTag { Tag = parsed[i], Position = i });

@@ -42,7 +42,7 @@ public class ReportsModel(AppDbContext db, PostService posts, AuditService audit
             .FirstOrDefaultAsync(r => r.Id == id);
         if (report is null) return NotFound();
 
-        var me = User.RequireUserId();
+        var me = User.RequireAccountId();
         var target = report.Post is not null ? $"post #{report.Post.Id} by @{report.Post.Author.UserName}" : $"@{report.TargetUser?.UserName}";
         string message;
         switch (action)

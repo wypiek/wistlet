@@ -2,6 +2,7 @@
 @{
     var cfg = Settings.Current;
     var me = await Viewer.GetUserAsync();
+    var pages = me is null ? [] : await Viewer.GetPagesAsync();
     var title = ViewData["Title"] as string;
     var path = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
     var wide = ViewData["NoSidebar"] is true;
@@ -44,13 +45,38 @@
                 <a class="co-button is-light" href="/compose">post</a>
                 <details class="co-dropdown">
                     <summary aria-label="Account menu"><img class="co-avatar i-avatar" data-shape="@AvatarShapes.Resolve(me.AvatarShape)" src="@(me.AvatarPath ?? $"/avatar/{me.UserName}.svg")" alt="" /></summary>
-                    <ul class="co-menu" role="menu">
-                        <li role="menuitem"><a href="/u/@me.UserName">@@@me.UserName</a></li>
+                    <ul class="co-menu i-account-menu" role="menu">
+                        <li class="i-menu-label">posting as</li>
+                        @foreach (var pg in pages)
+                        {
+                            <li role="menuitem">
+                                @if (pg.Id == me.Id)
+                                {
+                                    <a class="i-page is-current" href="/u/@pg.UserName" aria-current="true">
+                                        <img class="co-avatar" data-shape="@AvatarShapes.Resolve(pg.AvatarShape)" src="@(pg.AvatarPath ?? $"/avatar/{pg.UserName}.svg")" alt="" />
+                                        <span>@@@pg.UserName</span><span class="i-check">✓</span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="i-page" form="switch-@pg.Id">
+                                        <img class="co-avatar" data-shape="@AvatarShapes.Resolve(pg.AvatarShape)" src="@(pg.AvatarPath ?? $"/avatar/{pg.UserName}.svg")" alt="" />
+                                        <span>@@@pg.UserName</span>
+                                    </button>
+                                }
+                            </li>
+                        }
+                        <li role="menuitem"><a href="/pages">manage pages…</a></li>
+                        <li role="menuitem" class="is-divided"><a href="/u/@me.UserName">view page</a></li>
                         <li role="menuitem"><a href="/settings">settings</a></li>
                         <li role="menuitem" class="is-divided"><button type="submit" form="logout-form">log out</button></li>
                     </ul>
                 </details>
                 <form id="logout-form" method="post" asp-page="/Account/Logout" hidden></form>
+                @foreach (var pg in pages.Where(x => x.Id != me.Id))
+                {
+                    <form id="switch-@pg.Id" method="post" asp-page="/MyPages" asp-page-handler="Switch" asp-route-id="@pg.Id" asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)" hidden></form>
+                }
             }
             else
             {

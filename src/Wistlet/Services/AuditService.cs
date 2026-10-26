@@ -12,7 +12,7 @@ public class AuditService(AppDbContext db, IHttpContextAccessor http)
         var ctx = http.HttpContext;
         db.AuditLogs.Add(new AuditLog
         {
-            ActorId = ctx?.User.GetUserId(),
+            ActorId = ctx?.User.GetAccountId(),
             Action = action,
             Target = Truncate(target, 200),
             Details = details is null ? null : Truncate(details, 1000),

@@ -26,6 +26,12 @@ public class PostView
     public bool IsShare { get; init; }
     public int? SharedPostId { get; init; }
     public IReadOnlyList<AttachmentView> Attachments { get; init; } = [];
+
+    /// <summary>Stored embed links, one per line; see <see cref="Embeds"/>.</summary>
+    public string EmbedUrlsRaw { get; init; } = "";
+
+    /// <summary>Links shown as embeds below the post (filled in after loading).</summary>
+    public IReadOnlyList<EmbedView> Embeds { get; set; } = [];
     public AskView? Ask { get; init; }
     public bool IsDraft { get; init; }
     public bool CommentsLocked { get; init; }
@@ -76,6 +82,13 @@ public class PostView
 }
 
 public record AttachmentView(int Id, string Url, string AltText);
+
+/// <summary>A link shown as an embed: a YouTube player, or a preview card when the page's details were fetched.</summary>
+public record EmbedView(string Url, string? YouTubeId, string? Title, string? Description, string? ImageUrl, string? SiteName)
+{
+    public bool HasCard => Title is not null || Description is not null;
+    public string Host => Uri.TryCreate(Url, UriKind.Absolute, out var u) ? u.Host : Url;
+}
 
 /// <summary>An ask shown on top of its answer; <see cref="Asker"/> is null for anonymous asks.</summary>
 public record AskView(int Id, string Content, UserSummary? Asker, DateTime CreatedAt);

@@ -13,7 +13,7 @@
         new("Blocked accounts", "/settings", Model.Tab == "blocked", "tab", "blocked"),
     ]);
 }
-<card title="Settings">
+<card title="@($"Settings for @{me.UserName}")">
     <partial name="_Tabs" model="tabs" />
     <div class="tab-panel">
         @switch (Model.Tab)
@@ -85,11 +85,15 @@
                 break;
 
             case "account":
+                <p class="muted">
+                    These are the login settings of your account <b>@@@Model.Account.UserName</b>; they apply to all of its pages.
+                    <a href="/pages">Manage your pages</a>.
+                </p>
                 <fieldset>
                     <legend>E-mail address</legend>
                     <form method="post" asp-page-handler="Email" class="form-grid">
                         <label for="email">E-mail</label>
-                        <input id="email" type="email" name="email" value="@me.Email" required />
+                        <input id="email" type="email" name="email" value="@Model.Account.Email" required />
                         <label for="pw1">Current password</label>
                         <input id="pw1" type="password" name="currentPassword" autocomplete="current-password" required />
                         <span></span>
@@ -118,11 +122,11 @@
                 </fieldset>
                 <fieldset>
                     <legend>Delete account</legend>
-                    <form method="post" asp-page-handler="DeleteAccount" class="form-grid" data-confirm="Really delete your account and everything you've posted? This can't be undone.">
-                        <p class="full">This permanently deletes your profile, posts, likes and messages.</p>
+                    <form method="post" asp-page-handler="DeleteAccount" class="form-grid" data-confirm="Really delete your account, all of its pages and everything you've posted? This can't be undone.">
+                        <p class="full">This permanently deletes your account and all of its pages, with their posts, likes and messages. To delete just one extra page, use <a href="/pages">your pages</a>.</p>
                         <label for="pw5">Current password</label>
                         <input id="pw5" type="password" name="currentPassword" autocomplete="current-password" required />
-                        <label for="confirm">Type <b>@me.UserName</b></label>
+                        <label for="confirm">Type <b>@Model.Account.UserName</b></label>
                         <input id="confirm" type="text" name="confirm" autocomplete="off" required />
                         <span></span>
                         <div><button type="submit">Delete my account</button></div>

@@ -63,11 +63,11 @@ builder.Services.AddRateLimiter(o =>
     // Asks can come from people who aren't logged in, so they get their own, tighter limit.
     o.AddPolicy("ask", ctx => HttpMethods.IsGet(ctx.Request.Method)
         ? RateLimitPartition.GetNoLimiter("get")
-        : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetUserId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
+        : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetAccountId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(10) }));
     o.AddPolicy("write", ctx => HttpMethods.IsGet(ctx.Request.Method)
         ? RateLimitPartition.GetNoLimiter("get")
-        : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetUserId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
+        : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetAccountId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
 });
 
@@ -90,6 +90,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<SiteSettingsService>();
 builder.Services.AddSingleton<UploadService>();
 builder.Services.AddSingleton<EmojiService>();
+builder.Services.AddSingleton<LinkPreviewService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<LinkPreviewService>());
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<AuditService>();

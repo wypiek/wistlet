@@ -20,14 +20,22 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
     public List<Report> Reports { get; private set; } = [];
     public List<AuditLog> History { get; private set; } = [];
 
+    /// <summary>The login account behind the target: the target itself, or the account owning an extra page.</summary>
+    public User Account { get; private set; } = null!;
+
+    /// <summary>For an account: its extra pages.</summary>
+    public List<User> ExtraPages { get; private set; } = [];
+
     private async Task<bool> LoadAsync(int id)
     {
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        var target = await db.Users.Include(u => u.Owner).FirstOrDefaultAsync(u => u.Id == id);
         if (target is null) return false;
         Target = target;
-        IsSelf = target.Id == User.GetUserId();
-        // Admins manage everyone; moderators only manage regular users.
-        CanManage = !IsSelf && (User.IsAdmin() || target.Role == UserRole.User);
+        Account = target.Owner ?? target;
+        var me = User.GetAccountId();
+        IsSelf = Account.Id == me;
+        // Admins manage everyone; moderators only manage regular users (and their pages).
+        CanManage = !IsSelf && (User.IsAdmin() || Account.Role == UserRole.User);
         return true;
     }
 
@@ -47,6 +55,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
     {
         if (!await LoadAsync(id)) return NotFound();
         PostCount = await db.Posts.CountAsync(p => p.AuthorId == id);
+        ExtraPages = await db.Users.AsNoTracking().Where(u => u.OwnerId == id).OrderBy(u => u.Id).ToListAsync();
         FollowerCount = await db.Follows.CountAsync(f => f.FolloweeId == id);
         FollowingCount = await db.Follows.CountAsync(f => f.FollowerId == id);
         RecentPosts = await posts.ProjectAsync(db.Posts.AsNoTracking().Where(p => p.AuthorId == id).OrderByDescending(p => p.Id), User.GetUserId(), 10);
@@ -74,7 +83,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
             Target.DisplayName = displayName;
         }
         email = email?.Trim() ?? "";
-        if (email != Target.Email && email.Length <= 256)
+        if (!Target.IsExtraPage && email != Target.Email && email.Length <= 256)
         {
             changes.Add("e-mail changed");
             Target.Email = email;
@@ -84,7 +93,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
             changes.Add(isVerified ? "verified" : "unverified");
             Target.IsVerified = isVerified;
         }
-        if (role is UserRole newRole && newRole != Target.Role && Enum.IsDefined(newRole))
+        if (role is UserRole newRole && newRole != Target.Role && Enum.IsDefined(newRole) && !Target.IsExtraPage)
         {
             if (!User.IsAdmin()) return Denied("Only administrators can change roles.");
             if (Target.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
@@ -131,8 +140,8 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
         if (!await LoadAsync(id)) return NotFound();
         if (!CanManage) return Denied("You can't manage this account.");
         var temp = AccountService.GenerateTemporaryPassword();
-        accounts.SetPassword(Target, temp);
-        audit.Log("user.reset-password", $"@{Target.UserName}");
+        accounts.SetPassword(Account, temp);
+        audit.Log("user.reset-password", $"@{Account.UserName}");
         await db.SaveChangesAsync();
         TempData["TempPassword"] = temp;
         return Back("Password reset. Give the user the temporary password below — it won't be shown again.");
@@ -142,8 +151,8 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
     {
         if (!await LoadAsync(id)) return NotFound();
         if (!CanManage) return Denied("You can't manage this account.");
-        AccountService.RotateSecurityStamp(Target);
-        audit.Log("user.sign-out", $"@{Target.UserName}");
+        AccountService.RotateSecurityStamp(Account);
+        audit.Log("user.sign-out", $"@{Account.UserName}");
         await db.SaveChangesAsync();
         return Back("All of this user's sessions were signed out.");
     }
@@ -207,7 +216,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
         return Back($"Deleted {count} posts.");
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int id, string? confirm)
+    public async Task<IActionResult> OnPostDeleteAsync(int id, string? confirm, [FromServices] AccountService accounts)
     {
         if (!await LoadAsync(id)) return NotFound();
         if (!User.IsAdmin() || IsSelf) return Denied("Only administrators can delete other accounts.");
@@ -216,13 +225,9 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
         if (Target.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Denied("You can't delete the only administrator.");
 
-        var images = await db.PostAttachments.Where(a => a.Post.AuthorId == id).Select(a => (string?)a.Path).ToListAsync();
-        images.Add(Target.AvatarPath);
-        images.Add(Target.BannerPath);
-        audit.Log("user.delete", $"@{Target.UserName}", $"e-mail {Target.Email}");
-        db.Users.Remove(Target);
+        audit.Log("user.delete", $"@{Target.UserName}", Target.IsExtraPage ? $"page of @{Account.UserName}" : $"e-mail {Target.Email}");
         await db.SaveChangesAsync();
-        foreach (var img in images) uploads.Delete(img);
+        await accounts.DeleteUserAsync(Target, uploads);
         TempData["Flash"] = $"@{Target.UserName} was deleted.";
         return Redirect("/admin/users");
     }

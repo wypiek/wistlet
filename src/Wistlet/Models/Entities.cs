@@ -16,9 +16,18 @@ public enum MessagePrivacy
     Nobody = 2,
 }
 
+/// <summary>
+/// A page (cohost's "project"): a handle with a profile, posts and follows. A page with no
+/// <see cref="OwnerId"/> is also a login account; an account can own further pages, which have
+/// no e-mail or password of their own and are used by switching to them.
+/// </summary>
 public class User
 {
     public int Id { get; set; }
+
+    /// <summary>For extra pages: the account that owns this page. Null for accounts themselves.</summary>
+    public int? OwnerId { get; set; }
+    public User? Owner { get; set; }
 
     [MaxLength(32)]
     public string UserName { get; set; } = "";
@@ -102,6 +111,9 @@ public class User
 
     public bool IsStaff => Role >= UserRole.Moderator;
 
+    /// <summary>True for extra pages, which belong to another account and can't log in.</summary>
+    public bool IsExtraPage => OwnerId is not null;
+
     /// <summary>True if the ban is currently in effect (temporary bans expire on their own).</summary>
     public bool IsCurrentlyBanned => IsBanned && (BannedUntil is null || BannedUntil > DateTime.UtcNow);
 }
@@ -158,6 +170,10 @@ public class Post
     public Ask? Ask { get; set; }
 
     public List<PostAttachment> Attachments { get; set; } = [];
+
+    /// <summary>Links on their own line, one per line, shown as embeds (from <see cref="Services.PostRenderer.Result.EmbedUrls"/>).</summary>
+    [MaxLength(10_000)]
+    public string EmbedUrls { get; set; } = "";
 
     public int? ParentId { get; set; }
     public Post? Parent { get; set; }
@@ -227,6 +243,38 @@ public class Ask
 
     public bool IsAnswered { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public enum LinkPreviewStatus
+{
+    Pending = 0,
+    Ok = 1,
+    Failed = 2,
+}
+
+/// <summary>What a linked page says about itself (OpenGraph / title tags), fetched once and cached.</summary>
+public class LinkPreview
+{
+    public int Id { get; set; }
+
+    [MaxLength(2000)]
+    public string Url { get; set; } = "";
+
+    public LinkPreviewStatus Status { get; set; }
+
+    [MaxLength(300)]
+    public string? Title { get; set; }
+
+    [MaxLength(1000)]
+    public string? Description { get; set; }
+
+    [MaxLength(2000)]
+    public string? ImageUrl { get; set; }
+
+    [MaxLength(200)]
+    public string? SiteName { get; set; }
+
+    public DateTime FetchedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>A follow waiting for a private page to approve it.</summary>

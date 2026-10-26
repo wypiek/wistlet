@@ -32,11 +32,12 @@
                 @if (post.Ask is not null) { <partial name="_EmbeddedAsk" model="post.Ask" /> }
                 <partial name="_PostAttachment" model="post.Attachments" />
                 <div class="co-prose prose">@Html.Raw(post.Html)</div>
+                <partial name="_Embeds" model="post.Embeds" />
                 <label class="i-read-less co-read-more-read-less" for="post-expanded-@uid">read less</label>
             </div>
         </div>
     }
-    else if (!string.IsNullOrWhiteSpace(post.Html) || post.Attachments.Count > 0 || post.Ask is not null)
+    else if (!string.IsNullOrWhiteSpace(post.Html) || post.Attachments.Count > 0 || post.Ask is not null || post.Embeds.Count > 0)
     {
         <div class="@bodyClass">
             @if (post.Ask is not null) { <partial name="_EmbeddedAsk" model="post.Ask" /> }
@@ -45,6 +46,7 @@
             {
                 <div class="co-prose prose">@Html.Raw(post.Html)</div>
             }
+            <partial name="_Embeds" model="post.Embeds" />
         </div>
     }
     <partial name="_PostTags" model="post.Tags" />

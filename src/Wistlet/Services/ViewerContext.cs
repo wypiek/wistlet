@@ -33,5 +33,15 @@ public class ViewerContext(AppDbContext db, IHttpContextAccessor http)
     public Task<int> GetPendingAskCountAsync() =>
         UserId is int id ? db.Asks.CountAsync(a => a.RecipientId == id && !a.IsAnswered) : Task.FromResult(0);
 
+    /// <summary>The pages the signed-in account can switch between (its own page first).</summary>
+    public async Task<List<User>> GetPagesAsync()
+    {
+        if (http.HttpContext?.User.GetAccountId() is not int account) return [];
+        return await db.Users.AsNoTracking()
+            .Where(u => u.Id == account || u.OwnerId == account)
+            .OrderBy(u => u.OwnerId != null).ThenBy(u => u.Id)
+            .ToListAsync();
+    }
+
     public Task<int> GetOpenReportCountAsync() => db.Reports.CountAsync(r => r.Status == ReportStatus.Open);
 }

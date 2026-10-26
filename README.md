@@ -22,6 +22,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 | **Admin dashboard** | **Site settings** |
 | ![The ask inbox with anonymous and signed asks](docs/screenshots/asks.png) | ![A post with two images, their ALT badges and a custom emoji](docs/screenshots/images.png) |
 | **Ask inbox** | **Images with alt text** |
+| ![The avatar menu listing the account's pages](docs/screenshots/pages.png) | |
+| **Switching pages** | |
 | ![Admin user management](docs/screenshots/admin-users.png) | <img src="docs/screenshots/mobile.png" alt="A profile on a phone" width="300"> |
 | **User management** | **On a phone** |
 
@@ -57,6 +59,23 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Follow tags: their posts join your home timeline, and they're listed in the sidebar
 - Silence tags (their posts disappear from your feeds) or CW them (their posts start collapsed)
 
+**Pages**
+- One login can run several pages (up to 10), each with its own handle, profile, posts, followers,
+  asks, messages, notifications and settings, like cohost's projects
+- Switch pages from the menu under your avatar or from `/pages`, where you also add and delete pages;
+  everything you do happens as the page you're posting as
+- Extra pages have no password of their own; e-mail, password and sessions belong to the account.
+  Nobody else can see which pages share an account (admins can)
+
+**Link embeds**
+- A link on its own line becomes an embed below the post, as on cohost
+- YouTube links get a player that loads nothing from YouTube until you press play, and then uses the
+  privacy-enhanced youtube-nocookie.com player
+- Other links get a preview card (title, description, image, site) read from the page's OpenGraph
+  tags. The server fetches these in the background, only from public addresses on ports 80 and 443
+  (every connection is checked, so redirects and DNS tricks can't reach your network), with size and
+  time limits. Admins can turn previews off
+
 **Social**
 - Follow / unfollow, home timeline, explore (latest, top this week, media), people directory
 - Private pages: only followers you approve see your posts, follows become requests you approve or
@@ -82,6 +101,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
   remove banner, moderator messages, delete all posts, delete account
 - Post management: search and filter (reported, hidden, pinned, images), hide, pin to Explore, delete
 - Custom emoji (admins only): upload an image under a shortcode; posts that use it update right away
+- Accounts and their extra pages: the user list shows which account a page belongs to; password
+  resets and sign-outs apply to the account, and banning an account hides all of its pages
 - Reports queue: dismiss, resolve, hide or delete the post, jump to the author
 - Audit log (admins only) of every moderation action
 
@@ -178,7 +199,11 @@ dotnet ef migrations add <Name> --project src/Wistlet -o Data/Migrations
 
 Migrations are applied automatically when the app starts.
 
-The sanitizer has unit tests:
+To try link previews against a site on your own machine, set
+`Wistlet__LinkPreviewsAllowPrivateAddresses=true`; it lifts the public-address and port checks, so
+never set it on a real server.
+
+The sanitizer, embed detection and address checks have unit tests:
 
 ```sh
 dotnet test
@@ -208,15 +233,3 @@ These are vendored under `src/Wistlet/wwwroot/lib/` together with their licence 
 - `atkinson-hyperlegible/` and `league-mono/`: fonts under the SIL Open Font Licence.
 
 The starter emoji and the anonymous asker avatar in `wwwroot/img/` were drawn for Wistlet.
-
-## Not included
-
-Two cohost features are left out on purpose:
-
-- **Several pages per account.** On cohost one login could run many pages. Here an account is a
-  page; supporting more would mean moving posts, follows and settings from accounts to pages.
-- **Link embeds.** cohost fetched previews for links (YouTube, Twitter and so on) through a
-  third-party service. That needs the server to fetch arbitrary URLs and the CSP to allow frames, so
-  links stay plain links.
-
-Wistlet is not affiliated with cohost or Anti Software Software Club.
