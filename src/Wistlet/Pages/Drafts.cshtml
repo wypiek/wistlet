@@ -1,0 +1,8 @@
+@page "/drafts"
+@model DraftsModel
+@{
+    ViewData["Title"] = "Drafts";
+}
+<h1 class="page-title">drafts</h1>
+<p class="muted">Drafts don't show up anywhere on the site, but anyone you send a draft's link to can read it. Publishing a draft posts it as new.</p>
+<partial name="_PostList" model="@(new PostListModel(Model.Drafts, "No drafts. Use “save draft” in the composer to keep a post for later.", Preview: false))" />

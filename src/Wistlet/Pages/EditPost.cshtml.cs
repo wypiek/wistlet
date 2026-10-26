@@ -15,7 +15,7 @@ public class EditPostModel(PostService posts) : PageModel
     public async Task<IActionResult> OnGetAsync(int id)
     {
         var me = User.RequireUserId();
-        var found = (await posts.ProjectAsync(posts.Visible(me, User.IsStaff()).Where(p => p.Id == id), me)).FirstOrDefault();
+        var found = (await posts.ProjectAsync(posts.Visible(me, User.IsStaff(), includeDrafts: true).Where(p => p.Id == id), me)).FirstOrDefault();
         if (found is null) return NotFound();
         if (found.Author.Id != me) return Forbid();
         Post = found;

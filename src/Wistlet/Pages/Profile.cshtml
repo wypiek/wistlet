@@ -5,6 +5,7 @@
     var summary = new UserSummary(p.Id, p.UserName, p.DisplayName, p.AvatarPath, p.IsVerified, p.Role, p.Bio, p.AvatarShape);
     ViewData["Title"] = $"@{p.UserName}";
     ViewData["ProjectPage"] = true;
+    ViewData["ShowProfilePins"] = Model.Tab == "posts";
     var basePath = $"/u/{p.UserName}";
     var ret = basePath;
     var websiteOk = Uri.TryCreate(p.Website, UriKind.Absolute, out var wu) && (wu.Scheme == "http" || wu.Scheme == "https");
@@ -20,6 +21,12 @@
         "tagged" => "posts tagged",
         _ => null,
     };
+}
+@section Head {
+    @if (!p.IsPrivate)
+    {
+        <link rel="alternate" type="application/atom+xml" title="@@@p.UserName's posts" href="/u/@p.UserName/feed.atom" />
+    }
 }
 @section BaseHeader {
     @if (p.BannerPath is not null)
@@ -59,7 +66,7 @@
                 {
                     <div class="i-dek">@p.Dek</div>
                 }
-                @if (p.IsVerified || p.Role != UserRole.User || Model.FollowsMe || p.IsCurrentlyBanned)
+                @if (p.IsVerified || p.Role != UserRole.User || Model.FollowsMe || p.IsCurrentlyBanned || p.IsPrivate)
                 {
                     <div class="i-badges">
                         @{
@@ -68,6 +75,7 @@
                             if (p.Role == UserRole.Admin) badges.Add("admin"); else if (p.Role == UserRole.Moderator) badges.Add("moderator");
                             if (Model.FollowsMe) badges.Add("follows you");
                             if (p.IsCurrentlyBanned) badges.Add("banned");
+                            if (p.IsPrivate) badges.Add("🔒 private");
                         }
                         @string.Join(" · ", badges)
                     </div>
@@ -99,7 +107,32 @@
         </ul>
         @if (!string.IsNullOrWhiteSpace(p.Bio))
         {
-            <div class="i-description prose prose-invert prose-stone isolate co-contain-paint">@Html.Raw(PostRenderer.RenderFragment(p.Bio))</div>
+            <div class="i-description prose prose-invert prose-stone isolate co-contain-paint">@Html.Raw(PostRenderer.RenderFragment(p.Bio, Emoji.Current))</div>
+        }
+        @if (Model.ContactCard.Count > 0)
+        {
+            var publicItems = Model.ContactCard.Where(c => !c.FollowersOnly).ToList();
+            var privateItems = Model.ContactCard.Where(c => c.FollowersOnly).ToList();
+            <hr class="i-contact-card-divider" />
+            @foreach (var item in publicItems)
+            {
+                <partial name="_ContactCardItem" model="item" />
+            }
+            @if (privateItems.Count > 0)
+            {
+                <details class="i-private-contact-card">
+                    <summary class="i-header">
+                        <span class="i-label i-closed">show private contact info</span>
+                        <span class="i-label i-open">hide private contact info</span>
+                        <span class="i-icon"><svg viewBox="0 0 24 24" height="24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" /></svg></span>
+                    </summary>
+                    @foreach (var item in privateItems)
+                    {
+                        <partial name="_ContactCardItem" model="item" />
+                    }
+                </details>
+                <hr class="i-contact-card-divider" />
+            }
         }
         <div class="i-actions">
             @if (Model.IsMe)
@@ -111,7 +144,18 @@
                 @if (!Model.IBlocked && !Model.BlockedMe)
                 {
                     <form method="post" asp-page="/Act" asp-page-handler="Follow" asp-route-id="@p.Id" asp-route-returnUrl="@ret">
-                        <button type="submit" class="co-button @(Model.IFollow ? "is-accent-outline" : "is-accent")">@(Model.IFollow ? "unfollow" : "follow")</button>
+                        @if (Model.IFollow)
+                        {
+                            <button type="submit" class="co-button is-accent-outline">unfollow</button>
+                        }
+                        else if (Model.Requested)
+                        {
+                            <button type="submit" class="co-button is-accent-outline" title="Waiting for approval. Press to withdraw the request.">requested</button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="co-button is-accent">@(p.IsPrivate ? "request to follow" : "follow")</button>
+                        }
                     </form>
                 }
             }
@@ -123,6 +167,26 @@
     </div>
 }
 @section Aside {
+    @if (Model.CanAsk)
+    {
+        <section class="co-titled-box" role="group" id="ask">
+            <h2 class="i-header">ask @@@p.UserName</h2>
+            <div class="i-contents">
+                <form method="post" asp-page="/Ask" asp-route-userName="@p.UserName" class="stack ask-form">
+                    <textarea name="content" rows="3" maxlength="@AskModel.MaxLength" required placeholder="ask @@@p.UserName something" aria-label="Your ask"></textarea>
+                    @if (Model.AskMustBeAnonymous)
+                    {
+                        <p class="muted">You're not logged in, so this ask will be anonymous.</p>
+                    }
+                    else if (p.AnonAsksAllowed)
+                    {
+                        <div class="field-row"><input type="checkbox" id="ask-anon" name="anonymous" value="true" /><label for="ask-anon">ask anonymously</label></div>
+                    }
+                    <div><button type="submit" class="co-button is-small">send ask</button></div>
+                </form>
+            </div>
+        </section>
+    }
     @if (Model.PinnedTags.Count > 0)
     {
         <section class="co-titled-box" role="group">
@@ -157,18 +221,26 @@
 {
     <div class="co-info-box is-warning i-shield-exclam-icon"><div class="i-text">You can't view this account's posts.</div></div>
 }
+else if (Model.IsLockedOut)
+{
+    <div class="co-info-box is-draft i-info-circle-icon"><div class="i-text">🔒 @@@p.UserName's page is private. Only people they approve can see their posts@(Model.Requested ? " — your follow request is waiting for approval." : ".")</div></div>
+}
 else
 {
     @if (heading is null)
     {
         <div class="project-profile-filters">
             <div class="i-filter" data-state="@(Model.HideShares ? "true" : "false")">
-                <a class="i-state" href="@Model.FilterUrl(false, Model.HideReplies)"><span class="i-state">show</span> <span class="i-label">shares</span></a>
-                <a class="i-state" href="@Model.FilterUrl(true, Model.HideReplies)"><span class="i-state">hide</span> <span class="i-label">shares</span></a>
+                <a class="i-state" href="@Model.FilterUrl(false, Model.HideReplies, Model.HideAsks)"><span class="i-state">show</span> <span class="i-label">shares</span></a>
+                <a class="i-state" href="@Model.FilterUrl(true, Model.HideReplies, Model.HideAsks)"><span class="i-state">hide</span> <span class="i-label">shares</span></a>
             </div>
             <div class="i-filter" data-state="@(Model.HideReplies ? "true" : "false")">
-                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, false)"><span class="i-state">show</span> <span class="i-label">replies</span></a>
-                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, true)"><span class="i-state">hide</span> <span class="i-label">replies</span></a>
+                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, false, Model.HideAsks)"><span class="i-state">show</span> <span class="i-label">replies</span></a>
+                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, true, Model.HideAsks)"><span class="i-state">hide</span> <span class="i-label">replies</span></a>
+            </div>
+            <div class="i-filter" data-state="@(Model.HideAsks ? "true" : "false")">
+                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, Model.HideReplies, false)"><span class="i-state">show</span> <span class="i-label">asks</span></a>
+                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, Model.HideReplies, true)"><span class="i-state">hide</span> <span class="i-label">asks</span></a>
             </div>
         </div>
     }

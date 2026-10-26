@@ -29,5 +29,9 @@ public class ViewerContext(AppDbContext db, IHttpContextAccessor http)
         return (notes, messages);
     }
 
+    /// <summary>Unanswered asks waiting in the viewer's inbox.</summary>
+    public Task<int> GetPendingAskCountAsync() =>
+        UserId is int id ? db.Asks.CountAsync(a => a.RecipientId == id && !a.IsAnswered) : Task.FromResult(0);
+
     public Task<int> GetOpenReportCountAsync() => db.Reports.CountAsync(r => r.Status == ReportStatus.Open);
 }

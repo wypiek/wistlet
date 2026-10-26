@@ -18,6 +18,20 @@
         </div>
     </section>
 }
+@if (Model.FollowedTags.Count > 0)
+{
+    <details class="co-themed-titled-box" open>
+        <summary class="i-header">followed tags</summary>
+        <div class="i-contents feed-related-tag-list">
+            <div class="i-tag-list">
+                @foreach (var t in Model.FollowedTags)
+                {
+                    <a class="co-tag-button is-small" href="/tag/@Uri.EscapeDataString(t)">@t</a>
+                }
+            </div>
+        </div>
+    </details>
+}
 @if (Model.Trending.Count > 0)
 {
     <details class="co-themed-titled-box" open>

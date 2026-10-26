@@ -4,16 +4,30 @@ using Wistlet.Services;
 
 namespace Wistlet.Data;
 
-public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, IConfiguration config, ILogger<DbInitializer> logger)
+public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, EmojiService emoji, IConfiguration config, ILogger<DbInitializer> logger)
 {
     public async Task InitializeAsync()
     {
         await db.Database.MigrateAsync();
+        await SeedEmojiAsync();
+        await emoji.ReloadAsync();
         var rerendered = await posts.RerenderOutdatedAsync();
         if (rerendered > 0) logger.LogInformation("Re-rendered {Count} posts with post renderer v{Version}", rerendered, PostRenderer.Version);
         await EnsureAdminAsync();
         if (config.GetValue("Wistlet:SeedDemoContent", false) && !await db.Posts.AnyAsync())
             await SeedDemoAsync();
+    }
+
+    /// <summary>A few starter emoji on a new site (once; admins can remove them).</summary>
+    private async Task SeedEmojiAsync()
+    {
+        const string key = "EmojiSeeded";
+        if (await db.SiteSettings.AnyAsync(s => s.Key == key)) return;
+        foreach (var code in new[] { "egg", "egg-crack", "cherry-heart", "sparkle" })
+            if (!await db.CustomEmoji.AnyAsync(e => e.Shortcode == code))
+                db.CustomEmoji.Add(new CustomEmoji { Shortcode = code, Path = $"/img/emoji/{code}.svg" });
+        db.SiteSettings.Add(new SiteSetting { Key = key, Value = "true" });
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Creates (or promotes) the admin account named in configuration, if any.</summary>
@@ -74,7 +88,7 @@ public class DbInitializer(AppDbContext db, AccountService accounts, PostService
         var t = DateTime.UtcNow.AddHours(-demoPosts.Length);
         foreach (var (author, headline, text, tags) in demoPosts)
         {
-            var rendered = PostRenderer.Render(text);
+            var rendered = posts.Render(text);
             var post = new Post
             {
                 AuthorId = users[author].Id, Headline = headline, Content = text, CreatedAt = t = t.AddMinutes(37),

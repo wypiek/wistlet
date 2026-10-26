@@ -14,6 +14,7 @@ public class PostModel(AppDbContext db, PostService posts) : PageModel
     public List<PostView> TopLevelComments { get; private set; } = [];
     public ILookup<int, PostView> Children { get; private set; } = Enumerable.Empty<PostView>().ToLookup(p => 0);
     public int CommentCount { get; private set; }
+    public bool CanComment { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -30,9 +31,12 @@ public class PostModel(AppDbContext db, PostService posts) : PageModel
         }
         if (rootId != id) return Redirect($"/post/{rootId}#post-{id}");
 
-        var found = await posts.ProjectAsync(visible.Where(p => p.Id == id), me);
+        // Drafts can be opened by anyone who has the link (as on cohost), but appear nowhere else.
+        var found = await posts.ProjectAsync(posts.Visible(me, User.IsStaff(), includeDrafts: true).Where(p => p.Id == id), me);
         if (found.Count == 0) return NotFound();
         Post = found[0];
+        CanComment = !Post.IsDraft && (!Post.CommentsLocked || Post.Author.Id == me);
+        if (Post.IsDraft) return Page();
 
         var ids = (await posts.SubtreeIdsAsync(id)).Where(c => c != id).ToList();
         var comments = await posts.ProjectAsync(visible.Where(p => ids.Contains(p.Id)).OrderBy(p => p.Id), me);

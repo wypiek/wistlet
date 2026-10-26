@@ -199,7 +199,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
     {
         if (!await LoadAsync(id)) return NotFound();
         if (!CanManage) return Denied("You can't manage this account.");
-        var images = await db.Posts.Where(p => p.AuthorId == id && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
+        var images = await db.PostAttachments.Where(a => a.Post.AuthorId == id).Select(a => (string?)a.Path).ToListAsync();
         var count = await db.Posts.Where(p => p.AuthorId == id).ExecuteDeleteAsync();
         foreach (var img in images) uploads.Delete(img);
         audit.Log("user.delete-posts", $"@{Target.UserName}", $"{count} posts");
@@ -216,7 +216,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
         if (Target.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Denied("You can't delete the only administrator.");
 
-        var images = await db.Posts.Where(p => p.AuthorId == id && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
+        var images = await db.PostAttachments.Where(a => a.Post.AuthorId == id).Select(a => (string?)a.Path).ToListAsync();
         images.Add(Target.AvatarPath);
         images.Add(Target.BannerPath);
         audit.Log("user.delete", $"@{Target.UserName}", $"e-mail {Target.Email}");

@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="~/lib/cohost/cohost.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/cohost/tailwind-prose.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
 </head>
 <body>
 <header id="page-header">

@@ -1,0 +1,18 @@
+@model ContactCardItem
+@* One contact card line; web addresses become links. *@
+@{
+    var isLink = Uri.TryCreate(Model.Value, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https");
+}
+<div class="i-contact-card-item">
+    <div class="i-service">@Model.Service</div>
+    <div class="i-value">
+        @if (isLink)
+        {
+            <a href="@Model.Value" rel="me nofollow noopener ugc" target="_blank">@(u!.Host + (u.PathAndQuery == "/" ? "" : u.PathAndQuery))</a>
+        }
+        else
+        {
+            @Model.Value
+        }
+    </div>
+</div>

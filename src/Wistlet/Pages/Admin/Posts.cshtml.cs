@@ -9,8 +9,8 @@ public class PostsModel(AppDbContext db) : PageModel
 {
     public const int PageSize = 50;
 
-    public record Row(int Id, string Content, string? ImagePath, DateTime CreatedAt, bool IsHidden, bool IsPinned, int? ParentId,
-        int AuthorId, string AuthorUserName, int Likes, int Replies, int Reports);
+    public record Row(int Id, string Content, bool HasImages, DateTime CreatedAt, bool IsHidden, bool IsPinned, int? ParentId,
+        int AuthorId, string AuthorUserName, int Likes, int Replies, int Reports, bool IsDraft);
 
     public List<Row> Rows { get; private set; } = [];
     public string? Q { get; private set; }
@@ -38,7 +38,7 @@ public class PostsModel(AppDbContext db) : PageModel
         {
             "hidden" => query.Where(x => x.IsHidden),
             "pinned" => query.Where(x => x.IsPinned),
-            "media" => query.Where(x => x.ImagePath != null),
+            "media" => query.Where(x => x.Attachments.Any()),
             "reported" => query.Where(x => db.Reports.Any(r => r.PostId == x.Id && r.Status == ReportStatus.Open)),
             _ => query,
         };
@@ -46,9 +46,9 @@ public class PostsModel(AppDbContext db) : PageModel
         Total = await query.CountAsync();
         Rows = await query.OrderByDescending(x => x.Id)
             .Skip((PageNumber - 1) * PageSize).Take(PageSize)
-            .Select(x => new Row(x.Id, x.Content, x.ImagePath, x.CreatedAt, x.IsHidden, x.IsPinned, x.ParentId,
+            .Select(x => new Row(x.Id, x.Content, x.Attachments.Any(), x.CreatedAt, x.IsHidden, x.IsPinned, x.ParentId,
                 x.AuthorId, x.Author.UserName, x.Likes.Count, x.Replies.Count,
-                db.Reports.Count(r => r.PostId == x.Id && r.Status == ReportStatus.Open)))
+                db.Reports.Count(r => r.PostId == x.Id && r.Status == ReportStatus.Open), x.IsDraft))
             .ToListAsync();
     }
 }

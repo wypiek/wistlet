@@ -21,13 +21,21 @@
                     <summary class="co-action" aria-label="post options"><partial name="_Icon" model="@(new IconModel("more"))" /></summary>
                     <ul class="co-menu" role="menu">
                         <li role="menuitem"><a href="/post/@Model.Id">open post</a></li>
-                        @if (Model.ParentId is null)
+                        @if (Model.Shareable || (mine && Model.ParentId is null && !Model.IsDraft))
                         {
                             <li role="menuitem"><a href="/compose?share=@Model.Id">share with a comment…</a></li>
                         }
                         @if (mine && !Model.IsTransparentShare)
                         {
-                            <li role="menuitem"><a href="/post/@Model.Id/edit">edit post</a></li>
+                            <li role="menuitem"><a href="/post/@Model.Id/edit">@(Model.IsDraft ? "edit draft" : "edit post")</a></li>
+                        }
+                        @if (mine && Model.IsDraft)
+                        {
+                            <li role="menuitem"><button type="submit" form="@f-publish">publish now</button></li>
+                        }
+                        @if (mine && Model.ParentId is null && !Model.IsDraft)
+                        {
+                            <li role="menuitem"><button type="submit" form="@f-pinp">@(Model.PinnedToProfile ? "unpin from your page" : "pin to your page")</button></li>
                         }
                         @if (!mine)
                         {
@@ -48,6 +56,21 @@
         }
     </div>
 
+    @if (Model.IsDraft)
+    {
+        <hr class="co-hairline" />
+        <div class="co-draft-info-box-container">
+            <div class="co-info-box is-draft i-info-circle-icon">
+                <div class="i-text">
+                    This post is a draft. It's not publicly visible, but you can send people links to it.
+                    @if (mine)
+                    {
+                        <span class="i-draft-actions"><a href="/post/@Model.Id/edit">edit</a> · <button type="submit" form="@f-publish" class="i-link-button">publish now</button></span>
+                    }
+                </div>
+            </div>
+        </div>
+    }
     @if (Model.IsHidden)
     {
         <hr class="co-hairline" />
@@ -101,16 +124,30 @@
     <hr class="co-hairline" />
     <div class="co-thread-footer">
         <div class="i-comments">
-            <a href="/post/@Model.Id#comments">@Fmt.Plural(Model.ReplyCount, "comment")</a>
+            @if (Model.IsDraft) { <span>draft</span> } else { <a href="/post/@Model.Id#comments">@Fmt.Plural(Model.ReplyCount, "comment")</a> }
+            @if (Model.CommentsLocked) { <span class="i-locked" title="Only the author can comment">· comments locked</span> }
+            @if (Model.SharesLocked) { <span class="i-locked" title="Nobody can share this post">· shares locked</span> }
         </div>
         <div class="i-actions">
-            @if (meId is null)
+            @if (Model.IsDraft)
+            {
+                @* Drafts can't be liked, saved or shared until they're published. *@
+                @if (mine)
+                {
+                    <form id="@f-publish" method="post" asp-page="/Act" asp-page-handler="Publish" asp-route-id="@Model.Id" hidden></form>
+                }
+                @if (mine || staff)
+                {
+                    <form id="@f-delete" method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@Model.Id" asp-route-returnUrl="@here" hidden></form>
+                }
+            }
+            else if (meId is null)
             {
                 <a class="co-action" href="/account/login?returnUrl=@Uri.EscapeDataString("/post/" + Model.Id)" title="like" aria-label="like"><partial name="_Icon" model="@(new IconModel("heart"))" /> @(Model.LikeCount > 0 ? Model.LikeCount : "")</a>
             }
             else
             {
-                @if (Model.ParentId is null)
+                @if (Model.Shareable || (mine && Model.ParentId is null && !Model.IsDraft))
                 {
                     <button type="submit" form="@f-share" class="co-action" title="share" aria-label="share"><partial name="_Icon" model="@(new IconModel("share"))" /></button>
                 }
@@ -119,6 +156,11 @@
                 <form id="@f-like" method="post" asp-page="/Act" asp-page-handler="Like" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
                 <form id="@f-bookmark" method="post" asp-page="/Act" asp-page-handler="Bookmark" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
                 <form id="@f-share" method="post" asp-page="/Act" asp-page-handler="Share" asp-route-id="@Model.Id" asp-route-returnUrl="@here" hidden></form>
+                @if (mine)
+                {
+                    <form id="@f-pinp" method="post" asp-page="/Act" asp-page-handler="PinProfile" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+                    <form id="@f-publish" method="post" asp-page="/Act" asp-page-handler="Publish" asp-route-id="@Model.Id" hidden></form>
+                }
                 @if (staff)
                 {
                     <form id="@f-pin" method="post" asp-page="/Act" asp-page-handler="Pin" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>

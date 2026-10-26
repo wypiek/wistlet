@@ -20,6 +20,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 | **Profile with a header image** | **Composer preview** |
 | ![Admin dashboard](docs/screenshots/admin.png) | ![Admin site settings](docs/screenshots/admin-settings.png) |
 | **Admin dashboard** | **Site settings** |
+| ![The ask inbox with anonymous and signed asks](docs/screenshots/asks.png) | ![A post with two images, their ALT badges and a custom emoji](docs/screenshots/images.png) |
+| **Ask inbox** | **Images with alt text** |
 | ![Admin user management](docs/screenshots/admin-users.png) | <img src="docs/screenshots/mobile.png" alt="A profile on a phone" width="300"> |
 | **User management** | **On a phone** |
 
@@ -27,7 +29,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 
 **Posts, the cohost way**
 - Markdown with raw HTML and inline CSS ("CSS crimes"), up to 200 000 characters, an optional
-  headline and an optional image
+  headline, and up to 10 images, each with alt text (shown with an ALT badge and in the lightbox)
+- Custom emoji (`:egg:`) managed by admins, usable in posts, comments and profile descriptions
 - A preview button in the composer that renders the draft through the same sanitizer posts use
 - A `<!--more-->` line splits off the part shown in feeds ("read more"); very tall posts (over
   twice the window height) are collapsed automatically
@@ -37,15 +40,35 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Shares (with or without your own post on top), share chains, and a "deleted by its original
   author" tombstone when the shared post is gone
 - Comments as nested threads on the post page (not in feeds), editing your own posts and comments
+- Drafts: save a post for later, share its link with people before publishing, publish it from the
+  drafts page
+- Lock comments (only you can comment) or shares (nobody can share) per post
+- Pin posts to the top of your page
 - `@mentions`, likes and saved posts
+
+**Asks**
+- An ask box on every page, signed or anonymous; pages choose whether they take asks at all,
+  anonymous asks, and asks from people who aren't logged in
+- An ask inbox: answer an ask (it's posted with the ask embedded on top), delete it, or block the
+  asker (works for anonymous asks without revealing who sent them)
+- The asker is notified when their ask is answered; profiles can show or hide asks
+
+**Tags**
+- Follow tags: their posts join your home timeline, and they're listed in the sidebar
+- Silence tags (their posts disappear from your feeds) or CW them (their posts start collapsed)
 
 **Social**
 - Follow / unfollow, home timeline, explore (latest, top this week, media), people directory
+- Private pages: only followers you approve see your posts, follows become requests you approve or
+  decline, and private posts can't be shared
 - Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
   tagline, pronouns, a Markdown description, location and website, laid out like a 2022 cohost page:
   the project box down the left, show/hide filters for shares and replies, pinned (most used) tags
   with per-profile tag pages, and links to the account's comments, images, likes, followers and following
-- Notifications for likes, comments, shares, mentions, new followers and moderator messages
+- A contact card on the profile, with lines that only followers can see
+- An Atom feed for every public page at `/u/<name>/feed.atom`
+- Notifications for likes, comments, shares, mentions, answered asks, new followers, follow requests
+  and moderator messages
 - Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
 - Blocking, reporting posts and accounts, search across people, tags and posts
 
@@ -58,6 +81,7 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
   bans with a reason, password reset, sign out all sessions, remove picture, clear profile,
   remove banner, moderator messages, delete all posts, delete account
 - Post management: search and filter (reported, hidden, pinned, images), hide, pin to Explore, delete
+- Custom emoji (admins only): upload an image under a shortcode; posts that use it update right away
 - Reports queue: dismiss, resolve, hide or delete the post, jump to the author
 - Audit log (admins only) of every moderation action
 
@@ -87,6 +111,8 @@ implemented in `Services/PostRenderer.cs` (Markdig for Markdown, AngleSharp for 
   (`rgb(var(--color-cherry))` …) and the `spin` and `bounce` keyframes are available.
 - Links get `rel="nofollow noopener noreferrer ugc"`; only http(s), mailto and relative links survive.
 - The post body is a contained box (`isolation`, `contain: paint`), so nothing escapes onto the page.
+
+`:shortcode:` in text (outside code) becomes the site's emoji image.
 
 Posts are rendered once when saved. When the rules change, `PostRenderer.Version` is bumped and
 older posts are re-rendered on start-up.
@@ -180,5 +206,17 @@ These are vendored under `src/Wistlet/wwwroot/lib/` together with their licence 
   points the fonts at the self-hosted files, removes the dark-mode rules (cohost was light-only
   in 2022) and uses its own egg and capsule mask shapes.
 - `atkinson-hyperlegible/` and `league-mono/`: fonts under the SIL Open Font Licence.
+
+The starter emoji and the anonymous asker avatar in `wwwroot/img/` were drawn for Wistlet.
+
+## Not included
+
+Two cohost features are left out on purpose:
+
+- **Several pages per account.** On cohost one login could run many pages. Here an account is a
+  page; supporting more would mean moving posts, follows and settings from accounts to pages.
+- **Link embeds.** cohost fetched previews for links (YouTube, Twitter and so on) through a
+  third-party service. That needs the server to fetch arbitrary URLs and the CSP to allow frames, so
+  links stay plain links.
 
 Wistlet is not affiliated with cohost or Anti Software Software Club.

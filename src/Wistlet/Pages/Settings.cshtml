@@ -8,7 +8,8 @@
     [
         new("Profile", "/settings", Model.Tab == "profile"),
         new("Account", "/settings", Model.Tab == "account", "tab", "account"),
-        new("Privacy", "/settings", Model.Tab == "privacy", "tab", "privacy"),
+        new("Privacy & asks", "/settings", Model.Tab == "privacy", "tab", "privacy"),
+        new("Tags", "/settings", Model.Tab == "tags", "tab", "tags"),
         new("Blocked accounts", "/settings", Model.Tab == "blocked", "tab", "blocked"),
     ]);
 }
@@ -63,6 +64,21 @@
                     <input id="location" type="text" name="location" value="@me.Location" maxlength="60" />
                     <label for="website">Website</label>
                     <input id="website" type="text" inputmode="url" name="website" value="@me.Website" maxlength="200" placeholder="example.com" />
+                    <label>Contact card</label>
+                    <div class="stack contact-card-editor">
+                        <span class="muted">Ways to reach you, shown under your description. Lines marked "followers only" are only shown to people who follow you.</span>
+                        @for (var i = 0; i < ContactCardItem.MaxItems; i++)
+                        {
+                            var item = i < Model.ContactCard.Count ? Model.ContactCard[i] : null;
+                            // Show the filled lines plus two empty ones; the rest stay hidden until needed.
+                            var hide = item is null && i > Model.ContactCard.Count + 1;
+                            <div class="row contact-card-row" hidden="@hide">
+                                <input type="text" name="contactService" value="@item?.Service" maxlength="40" placeholder="service (e.g. e-mail)" aria-label="Contact service @(i + 1)" />
+                                <input type="text" name="contactValue" value="@item?.Value" maxlength="200" placeholder="value" aria-label="Contact value @(i + 1)" />
+                                <span class="field-row"><input type="checkbox" id="cp-@i" name="contactPrivate" value="@i" checked="@(item?.FollowersOnly == true)" /><label for="cp-@i">followers only</label></span>
+                            </div>
+                        }
+                    </div>
                     <span></span>
                     <div class="row"><button type="submit" class="default">Save profile</button> <a href="/u/@me.UserName">View profile</a></div>
                 </form>
@@ -131,10 +147,46 @@
                         }
                     </fieldset>
                     <fieldset>
+                        <legend>Private page</legend>
+                        <div class="field-row"><input type="checkbox" id="isPrivate" name="isPrivate" value="true" checked="@me.IsPrivate" /><label for="isPrivate">Make my page private: only followers I approve can see my posts, and my posts can't be shared</label></div>
+                        @if (me.IsPrivate)
+                        {
+                            <p class="muted">Turning this off approves every pending follow request.</p>
+                        }
+                    </fieldset>
+                    <fieldset>
+                        <legend>Asks</legend>
+                        <div class="field-row"><input type="checkbox" id="asksEnabled" name="asksEnabled" value="true" checked="@me.AsksEnabled" /><label for="asksEnabled">Let people send me asks</label></div>
+                        <div class="field-row"><input type="checkbox" id="anonAsksAllowed" name="anonAsksAllowed" value="true" checked="@me.AnonAsksAllowed" /><label for="anonAsksAllowed">Allow anonymous asks from logged-in people</label></div>
+                        <div class="field-row"><input type="checkbox" id="loggedOutAsksAllowed" name="loggedOutAsksAllowed" value="true" checked="@me.LoggedOutAsksAllowed" /><label for="loggedOutAsksAllowed">Allow asks from people who aren't logged in (always anonymous)</label></div>
+                    </fieldset>
+                    <fieldset>
                         <legend>18+ content</legend>
                         <div class="field-row"><input type="checkbox" id="showAdultContent" name="showAdultContent" value="true" checked="@me.ShowAdultContent" /><label for="showAdultContent">I'm 18 or older and want to see 18+ posts in feeds (they stay collapsed until you open them)</label></div>
                     </fieldset>
                     <div><button type="submit" class="default">Save</button></div>
+                </form>
+                break;
+
+            case "tags":
+                <form method="post" asp-page-handler="Tags" class="form-grid">
+                    <label for="followed">Followed tags</label>
+                    <div class="stack">
+                        <input id="followed" type="text" name="followed" value="@string.Join(", ", Model.TagPrefs[TagPreferenceKind.Follow])" placeholder="art, the cohost global feed" />
+                        <span class="muted">Posts with these tags show up on your home timeline, even from people you don't follow.</span>
+                    </div>
+                    <label for="silenced">Silenced tags</label>
+                    <div class="stack">
+                        <input id="silenced" type="text" name="silenced" value="@string.Join(", ", Model.TagPrefs[TagPreferenceKind.Silence])" placeholder="spoilers, politics" />
+                        <span class="muted">Posts with these tags are left out of your timeline, Explore and tag pages.</span>
+                    </div>
+                    <label for="warned">CW'd tags</label>
+                    <div class="stack">
+                        <input id="warned" type="text" name="warned" value="@string.Join(", ", Model.TagPrefs[TagPreferenceKind.Warn])" placeholder="food, eye contact" />
+                        <span class="muted">Posts with these tags start collapsed, like a content warning.</span>
+                    </div>
+                    <span></span>
+                    <div><button type="submit" class="default">Save tags</button></div>
                 </form>
                 break;
 

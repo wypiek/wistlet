@@ -1,0 +1,49 @@
+@page
+@model Wistlet.Pages.Admin.EmojiModel
+@{
+    ViewData["Title"] = "Emoji";
+    ViewData["AdminTab"] = "emoji";
+}
+<card title="Admin — Emoji" status="@Fmt.Plural(Model.Items.Count, "emoji", "emoji")">
+    <partial name="_AdminNav" />
+    <div class="tab-panel">
+        <p>People can use these in posts, comments and descriptions by writing the shortcode, like <code>:egg:</code>.</p>
+        <fieldset>
+            <legend>Add an emoji</legend>
+            <form method="post" asp-page-handler="Add" enctype="multipart/form-data" class="form-grid">
+                <label for="shortcode">Shortcode</label>
+                <input id="shortcode" type="text" name="shortcode" maxlength="34" required pattern=":?[a-z0-9_+\-]{1,32}:?" placeholder="party-egg" />
+                <label for="image">Image</label>
+                <div class="stack">
+                    <input id="image" type="file" name="image" accept="image/png,image/gif,image/webp" required />
+                    <span class="muted">A small square PNG, GIF or WebP, up to 1 MB. Animated GIFs work.</span>
+                </div>
+                <span></span>
+                <div><button type="submit" class="default">Add emoji</button></div>
+            </form>
+        </fieldset>
+        @if (Model.Items.Count > 0)
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Emoji</th><th>Shortcode</th><th>Added</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var e in Model.Items)
+                        {
+                            <tr>
+                                <td><img class="co-emoji is-large" src="@e.Path" alt=":@e.Shortcode:" /></td>
+                                <td><code>:@e.Shortcode:</code></td>
+                                <td>@Fmt.Time(e.CreatedAt)</td>
+                                <td>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@e.Id" data-confirm="Delete :@e.Shortcode:? Posts using it will show the shortcode as text.">
+                                        <button type="submit">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</card>

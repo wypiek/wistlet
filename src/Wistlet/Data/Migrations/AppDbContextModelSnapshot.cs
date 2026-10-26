@@ -17,6 +17,41 @@ namespace Wistlet.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("Wistlet.Models.Ask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAnonymous")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAnswered")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RecipientId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SenderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("RecipientId", "IsAnswered");
+
+                    b.ToTable("Asks");
+                });
+
             modelBuilder.Entity("Wistlet.Models.AuditLog", b =>
                 {
                     b.Property<int>("Id")
@@ -92,6 +127,33 @@ namespace Wistlet.Data.Migrations
                     b.ToTable("Bookmarks");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.CustomEmoji", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Shortcode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Shortcode")
+                        .IsUnique();
+
+                    b.ToTable("CustomEmoji");
+                });
+
             modelBuilder.Entity("Wistlet.Models.Follow", b =>
                 {
                     b.Property<int>("FollowerId")
@@ -108,6 +170,24 @@ namespace Wistlet.Data.Migrations
                     b.HasIndex("FolloweeId");
 
                     b.ToTable("Follows");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.FollowRequest", b =>
+                {
+                    b.Property<int>("FollowerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FolloweeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("FollowerId", "FolloweeId");
+
+                    b.HasIndex("FolloweeId");
+
+                    b.ToTable("FollowRequests");
                 });
 
             modelBuilder.Entity("Wistlet.Models.Like", b =>
@@ -205,7 +285,13 @@ namespace Wistlet.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("AskId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("AuthorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CommentsLocked")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Content")
@@ -227,11 +313,10 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(140)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("IsAdult")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDraft")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsHidden")
@@ -244,6 +329,9 @@ namespace Wistlet.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("PinnedToProfile")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("RenderVersion")
@@ -262,7 +350,12 @@ namespace Wistlet.Data.Migrations
                     b.Property<int?>("SharedPostId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("SharesLocked")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AskId");
 
                     b.HasIndex("CreatedAt");
 
@@ -275,6 +368,35 @@ namespace Wistlet.Data.Migrations
                     b.HasIndex("AuthorId", "CreatedAt");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.PostAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AltText")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId", "Position");
+
+                    b.ToTable("PostAttachments");
                 });
 
             modelBuilder.Entity("Wistlet.Models.PostTag", b =>
@@ -367,10 +489,33 @@ namespace Wistlet.Data.Migrations
                     b.ToTable("SiteSettings");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.TagPreference", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Tag")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "Tag", "Kind");
+
+                    b.ToTable("TagPreferences");
+                });
+
             modelBuilder.Entity("Wistlet.Models.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AnonAsksAllowed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AsksEnabled")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("AvatarPath")
@@ -398,6 +543,11 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(5000)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ContactCard")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -419,6 +569,9 @@ namespace Wistlet.Data.Migrations
                     b.Property<bool>("IsBanned")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsVerified")
                         .HasColumnType("INTEGER");
 
@@ -429,6 +582,9 @@ namespace Wistlet.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(60)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("LoggedOutAsksAllowed")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("MessagePrivacy")
                         .HasColumnType("INTEGER");
@@ -476,6 +632,24 @@ namespace Wistlet.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.Ask", b =>
+                {
+                    b.HasOne("Wistlet.Models.User", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wistlet.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("Wistlet.Models.AuditLog", b =>
@@ -527,6 +701,25 @@ namespace Wistlet.Data.Migrations
                 });
 
             modelBuilder.Entity("Wistlet.Models.Follow", b =>
+                {
+                    b.HasOne("Wistlet.Models.User", "Followee")
+                        .WithMany()
+                        .HasForeignKey("FolloweeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wistlet.Models.User", "Follower")
+                        .WithMany()
+                        .HasForeignKey("FollowerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Followee");
+
+                    b.Navigation("Follower");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.FollowRequest", b =>
                 {
                     b.HasOne("Wistlet.Models.User", "Followee")
                         .WithMany()
@@ -610,6 +803,11 @@ namespace Wistlet.Data.Migrations
 
             modelBuilder.Entity("Wistlet.Models.Post", b =>
                 {
+                    b.HasOne("Wistlet.Models.Ask", "Ask")
+                        .WithMany()
+                        .HasForeignKey("AskId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Wistlet.Models.User", "Author")
                         .WithMany("Posts")
                         .HasForeignKey("AuthorId")
@@ -626,11 +824,24 @@ namespace Wistlet.Data.Migrations
                         .HasForeignKey("SharedPostId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.Navigation("Ask");
+
                     b.Navigation("Author");
 
                     b.Navigation("Parent");
 
                     b.Navigation("SharedPost");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.PostAttachment", b =>
+                {
+                    b.HasOne("Wistlet.Models.Post", "Post")
+                        .WithMany("Attachments")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("Wistlet.Models.PostTag", b =>
@@ -676,8 +887,21 @@ namespace Wistlet.Data.Migrations
                     b.Navigation("TargetUser");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.TagPreference", b =>
+                {
+                    b.HasOne("Wistlet.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Wistlet.Models.Post", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Bookmarks");
 
                     b.Navigation("Likes");

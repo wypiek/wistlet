@@ -49,6 +49,7 @@ builder.Services.AddRazorPages(o =>
     o.Conventions.AuthorizeFolder("/Admin", Policies.Staff);
     o.Conventions.AuthorizePage("/Admin/Settings", Policies.Admin);
     o.Conventions.AuthorizePage("/Admin/Audit", Policies.Admin);
+    o.Conventions.AuthorizePage("/Admin/Emoji", Policies.Admin);
 }).AddMvcOptions(o => o.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
 
 builder.Services.AddRateLimiter(o =>
@@ -59,6 +60,11 @@ builder.Services.AddRateLimiter(o =>
         ? RateLimitPartition.GetNoLimiter("get")
         : RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    // Asks can come from people who aren't logged in, so they get their own, tighter limit.
+    o.AddPolicy("ask", ctx => HttpMethods.IsGet(ctx.Request.Method)
+        ? RateLimitPartition.GetNoLimiter("get")
+        : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetUserId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(10) }));
     o.AddPolicy("write", ctx => HttpMethods.IsGet(ctx.Request.Method)
         ? RateLimitPartition.GetNoLimiter("get")
         : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetUserId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
@@ -83,6 +89,7 @@ builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 55 * 1024 * 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<SiteSettingsService>();
 builder.Services.AddSingleton<UploadService>();
+builder.Services.AddSingleton<EmojiService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<AuditService>();

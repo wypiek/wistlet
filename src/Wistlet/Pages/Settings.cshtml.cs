@@ -16,11 +16,15 @@ namespace Wistlet.Pages;
 [EnableRateLimiting("write")]
 public class SettingsModel(AppDbContext db, AccountService accounts, UploadService uploads) : PageModel
 {
-    private static readonly string[] Tabs = ["profile", "account", "privacy", "blocked"];
+    private static readonly string[] Tabs = ["profile", "account", "privacy", "tags", "blocked"];
 
     public string Tab { get; private set; } = "profile";
     public User Me { get; private set; } = null!;
     public List<UserSummary> Blocked { get; private set; } = [];
+    public List<ContactCardItem> ContactCard { get; private set; } = [];
+
+    /// <summary>The viewer's tag preferences, by kind.</summary>
+    public ILookup<TagPreferenceKind, string> TagPrefs { get; private set; } = Enumerable.Empty<TagPreference>().ToLookup(t => t.Kind, t => t.Tag);
 
     private async Task<User> LoadAsync()
     {
@@ -45,6 +49,12 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
     {
         Tab = Tabs.Contains(tab) ? tab! : "profile";
         await LoadAsync();
+        ContactCard = ContactCardItem.Parse(Me.ContactCard);
+        if (Tab == "tags")
+        {
+            var prefs = await db.TagPreferences.AsNoTracking().Where(t => t.UserId == Me.Id).OrderBy(t => t.Tag).ToListAsync();
+            TagPrefs = prefs.ToLookup(t => t.Kind, t => t.Tag);
+        }
         if (Tab == "blocked")
         {
             Blocked = await db.Blocks.Where(b => b.BlockerId == Me.Id)
@@ -54,7 +64,8 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
     }
 
     public async Task<IActionResult> OnPostProfileAsync(string? displayName, string? bio, string? location, string? website,
-        IFormFile? avatar, bool removeAvatar, IFormFile? banner, bool removeBanner, string? pronouns, string? dek, string? avatarShape)
+        IFormFile? avatar, bool removeAvatar, IFormFile? banner, bool removeBanner, string? pronouns, string? dek, string? avatarShape,
+        List<string>? contactService, List<string>? contactValue, List<string>? contactPrivate)
     {
         var me = await LoadAsync();
         displayName = (displayName ?? "").Trim();
@@ -64,6 +75,20 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         if ((pronouns ?? "").Length > 40) return Fail("profile", "Pronouns can be at most 40 characters.");
         if ((dek ?? "").Length > 100) return Fail("profile", "The tagline can be at most 100 characters.");
         if ((location ?? "").Length > 60) return Fail("profile", "Location can be at most 60 characters.");
+
+        // Contact card rows: service + value; rows whose index is listed in contactPrivate are followers-only.
+        var card = new List<ContactCardItem>();
+        for (var i = 0; i < (contactService?.Count ?? 0); i++)
+        {
+            var service = (contactService![i] ?? "").Trim();
+            var value = i < (contactValue?.Count ?? 0) ? (contactValue![i] ?? "").Trim() : "";
+            if (service.Length == 0 && value.Length == 0) continue;
+            if (service.Length is 0 or > 40 || value.Length is 0 or > 200)
+                return Fail("profile", "Each contact card line needs a service (up to 40 characters) and a value (up to 200).");
+            card.Add(new ContactCardItem(service, value, contactPrivate?.Contains(i.ToString()) == true));
+        }
+        if (card.Count > ContactCardItem.MaxItems)
+            return Fail("profile", $"A contact card can have at most {ContactCardItem.MaxItems} lines.");
         if (website.Length > 0)
         {
             if (!website.Contains("://")) website = "https://" + website;
@@ -99,6 +124,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         me.Pronouns = (pronouns ?? "").Trim();
         me.Dek = (dek ?? "").Trim();
         me.AvatarShape = AvatarShapes.Resolve(avatarShape);
+        me.ContactCard = card.Count > 0 ? ContactCardItem.Serialize(card) : "";
         await db.SaveChangesAsync();
         return Done("profile", "Profile saved.");
     }
@@ -142,14 +168,43 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         return Done("account", "All other sessions have been signed out.");
     }
 
-    public async Task<IActionResult> OnPostPrivacyAsync(MessagePrivacy messagePrivacy, bool showAdultContent)
+    public async Task<IActionResult> OnPostPrivacyAsync(MessagePrivacy messagePrivacy, bool showAdultContent, bool isPrivate,
+        bool asksEnabled, bool anonAsksAllowed, bool loggedOutAsksAllowed)
     {
         var me = await LoadAsync();
         if (!Enum.IsDefined(messagePrivacy)) return Fail("privacy", "Unknown option.");
         me.MessagePrivacy = messagePrivacy;
         me.ShowAdultContent = showAdultContent;
+        me.AsksEnabled = asksEnabled;
+        me.AnonAsksAllowed = anonAsksAllowed;
+        me.LoggedOutAsksAllowed = loggedOutAsksAllowed;
+
+        // Going public lets everyone who asked to follow in.
+        if (me.IsPrivate && !isPrivate)
+        {
+            var waiting = await db.FollowRequests.Where(f => f.FolloweeId == me.Id).ToListAsync();
+            foreach (var r in waiting)
+                if (!await db.Follows.AnyAsync(f => f.FollowerId == r.FollowerId && f.FolloweeId == me.Id))
+                    db.Follows.Add(new Follow { FollowerId = r.FollowerId, FolloweeId = me.Id });
+            db.FollowRequests.RemoveRange(waiting);
+            await db.Notifications.Where(n => n.UserId == me.Id && n.Type == NotificationType.FollowRequest).ExecuteDeleteAsync();
+        }
+        me.IsPrivate = isPrivate;
         await db.SaveChangesAsync();
         return Done("privacy", "Privacy settings saved.");
+    }
+
+    /// <summary>Replaces the followed, silenced and CW'd tag lists (each comma separated).</summary>
+    public async Task<IActionResult> OnPostTagsAsync(string? followed, string? silenced, string? warned)
+    {
+        var me = await LoadAsync();
+        var lists = new[] { (TagPreferenceKind.Follow, followed), (TagPreferenceKind.Silence, silenced), (TagPreferenceKind.Warn, warned) };
+        await db.TagPreferences.Where(t => t.UserId == me.Id).ExecuteDeleteAsync();
+        foreach (var (kind, text) in lists)
+            foreach (var tag in PostRenderer.ParseTags(text).Take(200))
+                db.TagPreferences.Add(new TagPreference { UserId = me.Id, Tag = tag, Kind = kind });
+        await db.SaveChangesAsync();
+        return Done("tags", "Tag settings saved.");
     }
 
     public async Task<IActionResult> OnPostDeleteAccountAsync(string? currentPassword, string? confirm)
@@ -162,7 +217,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         if (me.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Fail("account", "You're the only administrator. Promote someone else before deleting your account.");
 
-        var images = await db.Posts.Where(p => p.AuthorId == me.Id && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
+        var images = await db.PostAttachments.Where(a => a.Post.AuthorId == me.Id).Select(a => (string?)a.Path).ToListAsync();
         images.Add(me.AvatarPath);
         images.Add(me.BannerPath);
         db.Users.Remove(me);

@@ -21,14 +21,11 @@
             </div>
             @if (c.IsHidden) { <div class="co-info-box is-warning i-shield-exclam-icon">Hidden by a moderator.</div> }
             <div class="i-contents prose co-prose isolate co-contain-paint">@Html.Raw(c.Html)</div>
-            @if (c.ImagePath is not null)
-            {
-                <a class="i-attachment" href="@c.ImagePath" target="_blank" rel="noopener"><img src="@c.ImagePath" alt="Image attached to the comment" loading="lazy" /></a>
-            }
+            <partial name="_PostAttachment" model="c.Attachments" />
             @if (meId is not null)
             {
                 <div class="i-comment-actions">
-                    @if (Model.Depth < 8)
+                    @if (Model.Depth < 8 && Model.CanReply)
                     {
                         <details class="i-reply">
                             <summary>reply</summary>
@@ -52,7 +49,7 @@
         <div class="i-replies">
             @foreach (var child in children)
             {
-                <partial name="_CommentTree" model="@(new CommentTreeModel(child, Model.Children, Model.RootId, Model.Depth + 1))" />
+                <partial name="_CommentTree" model="@(new CommentTreeModel(child, Model.Children, Model.RootId, Model.Depth + 1, Model.CanReply))" />
             }
         </div>
     }

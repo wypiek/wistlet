@@ -22,9 +22,14 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
     private IActionResult Back(string? returnUrl, string fallback = "/") => LocalRedirect(Fmt.SafeReturnUrl(returnUrl, fallback));
 
     public async Task<IActionResult> OnPostPostAsync(string? content, string? headline, string? tags, string? contentWarnings,
-        bool isAdult, IFormFile? image, int? parentId, int? shareOfId, string? returnUrl)
+        bool isAdult, List<IFormFile>? images, List<string>? alt, int? parentId, int? shareOfId, int? askId,
+        bool commentsLocked, bool sharesLocked, string? save, string? returnUrl)
     {
-        var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, image, parentId, shareOfId);
+        var asDraft = save == "draft";
+        var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, images, parentId, shareOfId)
+        {
+            AltTexts = alt, AskId = askId, IsDraft = asDraft, CommentsLocked = commentsLocked, SharesLocked = sharesLocked,
+        };
         var (post, error) = await posts.CreateAsync(Me, draft);
         if (error is not null)
         {
@@ -33,8 +38,40 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
             return Back(returnUrl);
         }
         if (parentId is not null) return LocalRedirect($"{Fmt.SafeReturnUrl(returnUrl)}#post-{post!.Id}");
-        TempData["Flash"] = shareOfId is not null ? "Shared!" : "Your post is live.";
-        return shareOfId is not null ? LocalRedirect($"/post/{post!.Id}") : Back(returnUrl);
+        if (asDraft)
+        {
+            TempData["Flash"] = "Draft saved. Only people you send the link to can see it.";
+            return LocalRedirect("/drafts");
+        }
+        TempData["Flash"] = shareOfId is not null ? "Shared!" : askId is not null ? "Answered!" : "Your post is live.";
+        return shareOfId is not null || askId is not null ? LocalRedirect($"/post/{post!.Id}") : Back(returnUrl);
+    }
+
+    public async Task<IActionResult> OnPostPublishAsync(int id)
+    {
+        var post = await db.Posts.FirstOrDefaultAsync(p => p.Id == id && p.IsDraft);
+        if (post is null) return NotFound();
+        if (post.AuthorId != Me) return Forbid();
+        var (published, error) = await posts.PublishDraftAsync(post);
+        if (error is not null)
+        {
+            TempData["Error"] = error;
+            return LocalRedirect("/drafts");
+        }
+        TempData["Flash"] = "Your post is live.";
+        return LocalRedirect($"/post/{published!.Id}");
+    }
+
+    /// <summary>Pins (or unpins) one of your own posts to the top of your page.</summary>
+    public async Task<IActionResult> OnPostPinProfileAsync(int id, string? returnUrl)
+    {
+        var post = await db.Posts.FirstOrDefaultAsync(p => p.Id == id && p.ParentId == null && !p.IsDraft);
+        if (post is null) return NotFound();
+        if (post.AuthorId != Me) return Forbid();
+        post.PinnedToProfile = !post.PinnedToProfile;
+        await db.SaveChangesAsync();
+        TempData["Flash"] = post.PinnedToProfile ? "Pinned to your page." : "Unpinned from your page.";
+        return Back(returnUrl);
     }
 
     /// <summary>The share button: shares a post without adding anything.</summary>
@@ -45,16 +82,32 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         return Back(returnUrl);
     }
 
-    public async Task<IActionResult> OnPostEditAsync(int id, string? content, string? headline, string? tags, string? contentWarnings, bool isAdult)
+    public async Task<IActionResult> OnPostEditAsync(int id, string? content, string? headline, string? tags, string? contentWarnings, bool isAdult,
+        List<IFormFile>? images, List<string>? alt, Dictionary<int, string>? existingAlt, List<int>? removeAttachment,
+        bool commentsLocked, bool sharesLocked, string? save)
     {
         var post = await db.Posts.FirstOrDefaultAsync(p => p.Id == id);
         if (post is null) return NotFound();
         if (post.AuthorId != Me) return Forbid();
-        var error = await posts.UpdateAsync(post, new PostDraft(content, headline, tags, contentWarnings, isAdult));
+        var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, images)
+        {
+            AltTexts = alt, ExistingAltTexts = existingAlt, RemoveAttachments = removeAttachment,
+            CommentsLocked = commentsLocked, SharesLocked = sharesLocked,
+        };
+        var error = await posts.UpdateAsync(post, draft);
         if (error is not null)
         {
             TempData["Error"] = error;
             return Redirect($"/post/{id}/edit");
+        }
+        if (post.IsDraft)
+        {
+            if (save != "publish")
+            {
+                TempData["Flash"] = "Draft saved.";
+                return Redirect("/drafts");
+            }
+            return await OnPostPublishAsync(id);
         }
         TempData["Flash"] = "Post updated.";
         return Redirect(post.ParentId is int parent ? $"/post/{parent}#post-{id}" : $"/post/{id}");
@@ -65,7 +118,7 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
     {
         content ??= "";
         if (content.Length > settings.Current.MaxPostLength) content = content[..settings.Current.MaxPostLength];
-        var rendered = PostRenderer.Render(content);
+        var rendered = posts.Render(content);
         return new JsonResult(new { html = rendered.Html, hasReadMore = rendered.PreviewHtml is not null });
     }
 
@@ -145,9 +198,16 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         if (target is null) return NotFound();
 
         var existing = await db.Follows.FindAsync(Me, id);
+        var request = await db.FollowRequests.FindAsync(Me, id);
         if (existing is not null)
         {
             db.Follows.Remove(existing);
+        }
+        else if (request is not null)
+        {
+            // Pressing "requested" again withdraws the request.
+            db.FollowRequests.Remove(request);
+            await db.Notifications.Where(n => n.UserId == id && n.ActorId == Me && n.Type == NotificationType.FollowRequest).ExecuteDeleteAsync();
         }
         else
         {
@@ -156,11 +216,78 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
                 TempData["Error"] = "You can't follow this account.";
                 return Back(returnUrl);
             }
-            db.Follows.Add(new Follow { FollowerId = Me, FolloweeId = id });
-            await notifications.NotifyAsync(id, Me, NotificationType.Follow);
+            if (target.IsPrivate)
+            {
+                db.FollowRequests.Add(new FollowRequest { FollowerId = Me, FolloweeId = id });
+                await notifications.NotifyAsync(id, Me, NotificationType.FollowRequest);
+                TempData["Flash"] = $"@{target.UserName}'s page is private. They'll see your follow request.";
+            }
+            else
+            {
+                db.Follows.Add(new Follow { FollowerId = Me, FolloweeId = id });
+                await notifications.NotifyAsync(id, Me, NotificationType.Follow);
+            }
         }
         await db.SaveChangesAsync();
         return Back(returnUrl);
+    }
+
+    /// <summary>Approves (or declines) a follow request to your private page.</summary>
+    public async Task<IActionResult> OnPostFollowRequestAsync(int id, bool accept, string? returnUrl)
+    {
+        var request = await db.FollowRequests.FindAsync(id, Me);
+        if (request is null) return Back(returnUrl, "/notifications");
+        db.FollowRequests.Remove(request);
+        await db.Notifications.Where(n => n.UserId == Me && n.ActorId == id && n.Type == NotificationType.FollowRequest).ExecuteDeleteAsync();
+        if (accept && !await db.Follows.AnyAsync(f => f.FollowerId == id && f.FolloweeId == Me))
+        {
+            db.Follows.Add(new Follow { FollowerId = id, FolloweeId = Me });
+            await notifications.NotifyAsync(id, Me, NotificationType.FollowAccepted);
+        }
+        await db.SaveChangesAsync();
+        return Back(returnUrl, "/notifications");
+    }
+
+    /// <summary>Removes an unanswered ask from your inbox.</summary>
+    public async Task<IActionResult> OnPostDeleteAskAsync(int id)
+    {
+        var ask = await db.Asks.FirstOrDefaultAsync(a => a.Id == id && a.RecipientId == Me);
+        if (ask is null) return NotFound();
+        db.Asks.Remove(ask);
+        await db.SaveChangesAsync();
+        TempData["Flash"] = "Ask deleted.";
+        return LocalRedirect("/inbox");
+    }
+
+    /// <summary>Blocks whoever sent an ask (also for anonymous asks, without revealing who it was) and deletes it.</summary>
+    public async Task<IActionResult> OnPostBlockAskerAsync(int id)
+    {
+        var ask = await db.Asks.FirstOrDefaultAsync(a => a.Id == id && a.RecipientId == Me);
+        if (ask is null) return NotFound();
+        if (ask.SenderId is int sender && sender != Me && !await db.Blocks.AnyAsync(b => b.BlockerId == Me && b.BlockedId == sender))
+        {
+            db.Blocks.Add(new Block { BlockerId = Me, BlockedId = sender });
+            db.Follows.RemoveRange(db.Follows.Where(f => (f.FollowerId == Me && f.FolloweeId == sender) || (f.FollowerId == sender && f.FolloweeId == Me)));
+        }
+        db.Asks.Remove(ask);
+        await db.SaveChangesAsync();
+        TempData["Flash"] = ask.SenderId is null
+            ? "Ask deleted. It was sent while logged out, so there's no account to block."
+            : "Ask deleted and the sender blocked.";
+        return LocalRedirect("/inbox");
+    }
+
+    /// <summary>Follows, silences or CWs a tag (or undoes it).</summary>
+    public async Task<IActionResult> OnPostTagAsync(string? tag, TagPreferenceKind kind, string? returnUrl)
+    {
+        var parsed = PostRenderer.ParseTags(tag);
+        if (parsed.Count == 0 || !Enum.IsDefined(kind)) return Back(returnUrl);
+        var name = parsed[0];
+        var existing = await db.TagPreferences.FindAsync(Me, name, kind);
+        if (existing is not null) db.TagPreferences.Remove(existing);
+        else db.TagPreferences.Add(new TagPreference { UserId = Me, Tag = name, Kind = kind });
+        await db.SaveChangesAsync();
+        return Back(returnUrl, $"/tag/{Uri.EscapeDataString(name)}");
     }
 
     public async Task<IActionResult> OnPostBlockAsync(int id, string? returnUrl)
@@ -179,6 +306,7 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         {
             db.Blocks.Add(new Block { BlockerId = Me, BlockedId = id });
             db.Follows.RemoveRange(db.Follows.Where(f => (f.FollowerId == Me && f.FolloweeId == id) || (f.FollowerId == id && f.FolloweeId == Me)));
+            db.FollowRequests.RemoveRange(db.FollowRequests.Where(f => (f.FollowerId == Me && f.FolloweeId == id) || (f.FollowerId == id && f.FolloweeId == Me)));
             TempData["Flash"] = $"Blocked @{target.UserName}. You won't see each other's posts or messages.";
         }
         await db.SaveChangesAsync();

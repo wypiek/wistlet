@@ -5,6 +5,7 @@
     var cfg = Settings.Current;
     var me = await Viewer.GetUserAsync();
     var (unreadNotes, unreadMessages) = await Viewer.GetUnreadCountsAsync();
+    var unreadAsks = await Viewer.GetPendingAskCountAsync();
     var openReports = me?.IsStaff == true ? await Viewer.GetOpenReportCountAsync() : 0;
     var path = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
     string Current(string prefix) =>
@@ -20,6 +21,8 @@
         {
             <li><a href="/messages" aria-current="@Current("/messages")">messages @if (unreadMessages > 0) { <span class="i-count">@unreadMessages</span> }</a></li>
         }
+        <li><a href="/inbox" aria-current="@Current("/inbox")">ask inbox @if (unreadAsks > 0) { <span class="i-count">@unreadAsks</span> }</a></li>
+        <li><a href="/drafts" aria-current="@Current("/drafts")">drafts</a></li>
         <li><a href="/bookmarks" aria-current="@Current("/bookmarks")">saved posts</a></li>
         <li><a href="/u/@me.UserName" aria-current="@Current("/u/" + me.UserName.ToLowerInvariant())">profile</a></li>
         <li><a href="/settings" aria-current="@Current("/settings")">settings</a></li>

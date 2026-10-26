@@ -22,7 +22,7 @@ namespace Wistlet.Services;
 public static partial class PostRenderer
 {
     /// <summary>Bump when the output changes so stored posts are re-rendered on start-up.</summary>
-    public const int Version = 1;
+    public const int Version = 2;
 
     /// <summary>A line containing only this splits a post into a preview and the rest ("read more").</summary>
     public const string ReadMoreMarker = "<!--more-->";
@@ -98,6 +98,9 @@ public static partial class PostRenderer
     [GeneratedRegex(@"(?<![\w@/])@(?<user>[A-Za-z0-9_]{3,20})\b")]
     private static partial Regex MentionRegex();
 
+    [GeneratedRegex(@":(?<code>[a-z0-9_+-]{1,32}):")]
+    private static partial Regex EmojiRegex();
+
     [GeneratedRegex(@"url\(\s*(['""]?)(?<url>[^'"")]*)\1\s*\)", RegexOptions.IgnoreCase)]
     private static partial Regex CssUrlRegex();
 
@@ -107,13 +110,14 @@ public static partial class PostRenderer
     public record Result(string Html, string? PreviewHtml);
 
     /// <summary>Renders a post body. When it contains a read-more marker, <see cref="Result.PreviewHtml"/> holds the part before it.</summary>
-    public static Result Render(string? markdown)
+    /// <param name="emoji">The site's custom emoji (shortcode → image URL); <c>:shortcode:</c> in text becomes the image.</param>
+    public static Result Render(string? markdown, IReadOnlyDictionary<string, string>? emoji = null)
     {
         markdown = (markdown ?? "").Replace("\r\n", "\n");
-        var full = RenderFragment(markdown.Replace(ReadMoreMarker, ""));
+        var full = RenderFragment(markdown.Replace(ReadMoreMarker, ""), emoji);
 
         var cut = FindReadMore(markdown);
-        string? preview = cut is int i ? RenderFragment(markdown[..i]) : null;
+        string? preview = cut is int i ? RenderFragment(markdown[..i], emoji) : null;
         return new Result(full, preview);
     }
 
@@ -130,13 +134,13 @@ public static partial class PostRenderer
     }
 
     /// <summary>Markdown → sanitized HTML for one body.</summary>
-    public static string RenderFragment(string markdown)
+    public static string RenderFragment(string markdown, IReadOnlyDictionary<string, string>? emoji = null)
     {
         var html = Markdown.ToHtml(markdown, Pipeline);
-        return Sanitize(html);
+        return Sanitize(html, emoji);
     }
 
-    public static string Sanitize(string html)
+    public static string Sanitize(string html, IReadOnlyDictionary<string, string>? emoji = null)
     {
         var parser = new HtmlParser();
         var doc = parser.ParseDocument("<!doctype html><html><body></body></html>");
@@ -148,6 +152,7 @@ public static partial class PostRenderer
 
         CleanChildren(root, ids);
         LinkMentions(root);
+        if (emoji is { Count: > 0 }) ReplaceEmoji(root, emoji);
         return root.InnerHtml;
     }
 
@@ -367,6 +372,42 @@ public static partial class PostRenderer
             text.RemoveFromParent();
         }
     }
+
+    /// <summary>Turns <c>:shortcode:</c> in text (outside code) into the site's emoji images.</summary>
+    private static void ReplaceEmoji(IElement root, IReadOnlyDictionary<string, string> emoji)
+    {
+        var walker = root.Owner!.CreateTreeWalker(root, FilterSettings.Text);
+        var texts = new List<IText>();
+        while (walker.ToNext() is IText t) texts.Add(t);
+
+        foreach (var text in texts)
+        {
+            if (text.Closest("code, pre") is not null) continue;
+            var value = text.Data;
+            var matches = EmojiRegex().Matches(value).Where(m => emoji.ContainsKey(m.Groups["code"].Value)).ToList();
+            if (matches.Count == 0) continue;
+
+            var parent = text.Parent!;
+            var last = 0;
+            foreach (var m in matches)
+            {
+                if (m.Index < last) continue;
+                if (m.Index > last) parent.InsertBefore(root.Owner!.CreateTextNode(value[last..m.Index]), text);
+                var img = root.Owner!.CreateElement("img");
+                img.SetAttribute("class", "co-emoji");
+                img.SetAttribute("src", emoji[m.Groups["code"].Value]);
+                img.SetAttribute("alt", m.Value);
+                img.SetAttribute("title", m.Value);
+                parent.InsertBefore(img, text);
+                last = m.Index + m.Length;
+            }
+            if (last < value.Length) parent.InsertBefore(root.Owner!.CreateTextNode(value[last..]), text);
+            text.RemoveFromParent();
+        }
+    }
+
+    /// <summary>Shortcodes used in a post, to find posts to re-render when an emoji changes.</summary>
+    public static bool IsValidEmojiShortcode(string code) => EmojiRegex().IsMatch($":{code}:") && EmojiRegex().Match($":{code}:").Length == code.Length + 2;
 
     private static IElement? Closest(this INode node, string selector)
     {

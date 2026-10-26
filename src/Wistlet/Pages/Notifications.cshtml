@@ -3,6 +3,26 @@
 @{
     ViewData["Title"] = "Notifications";
 }
+@if (Model.FollowRequests.Count > 0)
+{
+    <card title="Follow requests" status="@Fmt.Plural(Model.FollowRequests.Count, "person", "people") waiting">
+        <ul class="co-project-list">
+            @foreach (var u in Model.FollowRequests)
+            {
+                <li>
+                    <img class="co-avatar i-avatar" data-shape="@u.AvatarShape" src="@u.AvatarUrl" alt="" />
+                    <div class="i-names"><a href="/u/@u.UserName"><b>@u.DisplayName</b></a> <span>@@@u.UserName</span></div>
+                    <form method="post" asp-page="/Act" asp-page-handler="FollowRequest" asp-route-id="@u.Id" asp-route-accept="false" asp-route-returnUrl="/notifications">
+                        <button type="submit" class="co-button is-outline is-small">decline</button>
+                    </form>
+                    <form method="post" asp-page="/Act" asp-page-handler="FollowRequest" asp-route-id="@u.Id" asp-route-accept="true" asp-route-returnUrl="/notifications">
+                        <button type="submit" class="co-button is-small">approve</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    </card>
+}
 <card title="Notifications" status="@Fmt.Plural(Model.Items.Count(i => !i.IsRead), "new notification")">
     @if (Model.Items.Count == 0)
     {
@@ -26,6 +46,9 @@
                             NotificationType.Share => "shared your post",
                             NotificationType.Follow => "started following you",
                             NotificationType.Mention => "mentioned you",
+                            NotificationType.AskAnswered => "answered your ask",
+                            NotificationType.FollowRequest => "asked to follow you",
+                            NotificationType.FollowAccepted => "approved your follow request",
                             _ => "Message from the moderators",
                         };
                         var link = n.PostId is int pid ? $"/post/{pid}" : n.Actor is not null ? $"/u/{n.Actor.UserName}" : null;

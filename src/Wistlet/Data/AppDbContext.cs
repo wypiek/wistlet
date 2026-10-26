@@ -17,6 +17,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
+    public DbSet<PostAttachment> PostAttachments => Set<PostAttachment>();
+    public DbSet<Ask> Asks => Set<Ask>();
+    public DbSet<FollowRequest> FollowRequests => Set<FollowRequest>();
+    public DbSet<TagPreference> TagPreferences => Set<TagPreference>();
+    public DbSet<CustomEmoji> CustomEmoji => Set<CustomEmoji>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -38,7 +43,38 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(p => new { p.AuthorId, p.CreatedAt });
             e.HasIndex(p => p.ParentId);
             e.HasIndex(p => p.RootId);
+            e.HasOne(p => p.Ask).WithMany().HasForeignKey(p => p.AskId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(p => p.AskId);
         });
+
+        b.Entity<PostAttachment>(e =>
+        {
+            e.HasIndex(a => new { a.PostId, a.Position });
+            e.HasOne(a => a.Post).WithMany(p => p.Attachments).HasForeignKey(a => a.PostId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Ask>(e =>
+        {
+            e.HasIndex(a => new { a.RecipientId, a.IsAnswered });
+            e.HasOne(a => a.Recipient).WithMany().HasForeignKey(a => a.RecipientId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.Sender).WithMany().HasForeignKey(a => a.SenderId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        b.Entity<FollowRequest>(e =>
+        {
+            e.HasKey(f => new { f.FollowerId, f.FolloweeId });
+            e.HasIndex(f => f.FolloweeId);
+            e.HasOne(f => f.Follower).WithMany().HasForeignKey(f => f.FollowerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.Followee).WithMany().HasForeignKey(f => f.FolloweeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<TagPreference>(e =>
+        {
+            e.HasKey(t => new { t.UserId, t.Tag, t.Kind });
+            e.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<CustomEmoji>(e => e.HasIndex(x => x.Shortcode).IsUnique());
 
         b.Entity<PostTag>(e =>
         {

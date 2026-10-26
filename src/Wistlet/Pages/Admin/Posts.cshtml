@@ -27,7 +27,7 @@
                         <tr>
                             <td><a href="/post/@r.Id">@r.Id</a></td>
                             <td><a href="/admin/user/@r.AuthorId">@@@r.AuthorUserName</a></td>
-                            <td>@(r.ParentId is not null ? "(reply) " : "")@(r.ImagePath is not null ? "(image) " : "")@(r.Content.Length > 120 ? r.Content[..120] + "…" : r.Content)</td>
+                            <td>@(r.ParentId is not null ? "(reply) " : "")@(r.IsDraft ? "(draft) " : "")@(r.HasImages ? "(images) " : "")@(r.Content.Length > 120 ? r.Content[..120] + "…" : r.Content)</td>
                             <td>@Fmt.Time(r.CreatedAt)</td>
                             <td>@r.Likes</td>
                             <td>@r.Replies</td>

@@ -28,6 +28,19 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
     /// <summary>cohost's profile filters: transparent shares, and shares with something added ("replies").</summary>
     public bool HideShares { get; private set; }
     public bool HideReplies { get; private set; }
+    public bool HideAsks { get; private set; }
+
+    /// <summary>Whether the viewer may send this page an ask, and whether it has to be anonymous.</summary>
+    public bool CanAsk { get; private set; }
+    public bool AskMustBeAnonymous { get; private set; }
+
+    /// <summary>Follow request sent and waiting for approval.</summary>
+    public bool Requested { get; private set; }
+
+    /// <summary>Private page the viewer can't see into.</summary>
+    public bool IsLockedOut { get; private set; }
+
+    public List<ContactCardItem> ContactCard { get; private set; } = [];
     /// <summary>On the "tagged" tab: the tag the posts are filtered by.</summary>
     public string? Tagged { get; private set; }
     /// <summary>The tags this account uses most, shown like cohost's pinned tags.</summary>
@@ -35,15 +48,16 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
 
     private static readonly string[] Tabs = ["posts", "replies", "media", "likes", "followers", "following", "tagged"];
 
-    public string FilterUrl(bool hideShares, bool hideReplies)
+    public string FilterUrl(bool hideShares, bool hideReplies, bool hideAsks)
     {
         var q = new List<string>();
         if (hideShares) q.Add("hideShares=true");
         if (hideReplies) q.Add("hideReplies=true");
+        if (hideAsks) q.Add("hideAsks=true");
         return $"/u/{Profile.UserName}" + (q.Count > 0 ? "?" + string.Join("&", q) : "");
     }
 
-    public async Task<IActionResult> OnGetAsync(string userName, string? tab, string? tag, int? before, bool hideShares, bool hideReplies)
+    public async Task<IActionResult> OnGetAsync(string userName, string? tab, string? tag, int? before, bool hideShares, bool hideReplies, bool hideAsks)
     {
         var normalized = AccountService.Normalize(userName);
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.NormalizedUserName == normalized);
@@ -60,13 +74,14 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         }
         HideShares = hideShares;
         HideReplies = hideReplies;
+        HideAsks = hideAsks;
         var me = User.GetUserId();
         var staff = User.IsStaff();
         IsMe = me == user.Id;
 
         if (user.IsCurrentlyBanned && !staff) return NotFound();
 
-        PostCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && !p.IsHidden);
+        PostCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && !p.IsHidden && !p.IsDraft && p.ParentId == null);
         FollowerCount = await db.Follows.CountAsync(f => f.FolloweeId == user.Id);
         FollowingCount = await db.Follows.CountAsync(f => f.FollowerId == user.Id);
 
@@ -75,6 +90,7 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             IFollow = await db.Follows.AnyAsync(f => f.FollowerId == id && f.FolloweeId == user.Id);
             FollowsMe = await db.Follows.AnyAsync(f => f.FollowerId == user.Id && f.FolloweeId == id);
             IBlocked = await db.Blocks.AnyAsync(b => b.BlockerId == id && b.BlockedId == user.Id);
+            Requested = !IFollow && await db.FollowRequests.AnyAsync(f => f.FollowerId == id && f.FolloweeId == user.Id);
             BlockedMe = await db.Blocks.AnyAsync(b => b.BlockerId == user.Id && b.BlockedId == id);
             CanMessage = settings.Current.AllowDirectMessages && !IBlocked && !BlockedMe && user.MessagePrivacy switch
             {
@@ -84,7 +100,16 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             };
         }
 
-        if (BlockedMe) return Page();
+        // Contact card lines marked followers-only show to followers (and the owner).
+        ContactCard = ContactCardItem.Parse(user.ContactCard).Where(c => !c.FollowersOnly || IsMe || IFollow || staff).ToList();
+        if (user.AsksEnabled && !IsMe && !IBlocked && !BlockedMe)
+        {
+            CanAsk = me is not null || user.LoggedOutAsksAllowed;
+            AskMustBeAnonymous = me is null;
+        }
+        IsLockedOut = user.IsPrivate && !IsMe && !IFollow && !staff;
+
+        if (BlockedMe || IsLockedOut) return Page();
 
         var visible = posts.Visible(me, staff);
         PinnedTags = await db.PostTags
@@ -96,7 +121,7 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             .ToListAsync();
         var baseUrl = Tab switch
         {
-            "posts" => FilterUrl(HideShares, HideReplies),
+            "posts" => FilterUrl(HideShares, HideReplies, HideAsks),
             "tagged" => $"/u/{user.UserName}/tagged/{Uri.EscapeDataString(Tagged!)}",
             _ => $"/u/{user.UserName}/{Tab}",
         };
@@ -117,18 +142,29 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         var query = Tab == "replies"
             ? visible.Where(p => p.AuthorId == user.Id && p.ParentId != null)
             : (await posts.FeedAsync(me, staff)).Where(p => p.AuthorId == user.Id);
-        if (Tab == "media") query = query.Where(p => p.ImagePath != null);
+        if (Tab == "media") query = query.Where(p => p.Attachments.Any());
         if (Tab == "tagged") query = query.Where(p => p.Tags.Any(t => t.Tag == Tagged));
         if (Tab == "posts")
         {
             // A share with nothing added is a "share"; one with its own text, headline or image is a "reply".
             if (HideShares)
-                query = query.Where(p => !(p.IsShare && p.Content == "" && (p.Headline == null || p.Headline == "") && p.ImagePath == null));
+                query = query.Where(p => !(p.IsShare && p.Content == "" && p.Headline == null && p.AskId == null && !p.Attachments.Any()));
             if (HideReplies)
-                query = query.Where(p => !(p.IsShare && !(p.Content == "" && (p.Headline == null || p.Headline == "") && p.ImagePath == null)));
+                query = query.Where(p => !(p.IsShare && !(p.Content == "" && p.Headline == null && p.AskId == null && !p.Attachments.Any())));
+            if (HideAsks)
+                query = query.Where(p => p.AskId == null);
+        }
+
+        // Pinned posts come first, on the first page of the plain post list.
+        var pinned = new List<PostView>();
+        if (Tab == "posts")
+        {
+            if (before is null)
+                pinned = await posts.ProjectAsync(query.Where(p => p.PinnedToProfile).OrderByDescending(p => p.Id), me, 10);
+            query = query.Where(p => !p.PinnedToProfile);
         }
         var (page, next) = await posts.PageAsync(query, me, before);
-        Posts = page;
+        Posts = [.. pinned, .. page];
         MoreUrl = next is int n ? $"{baseUrl}{(baseUrl.Contains('?') ? '&' : '?')}before={n}" : null;
         return Page();
     }

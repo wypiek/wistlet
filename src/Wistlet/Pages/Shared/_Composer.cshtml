@@ -2,10 +2,13 @@
 @{
     var cfg = Settings.Current;
     var editing = Model.Editing;
-    var key = editing is not null ? $"edit-{editing.Id}" : Model.ParentId is int pid ? $"c-{pid}" : Model.ShareOfId is int sid ? $"s-{sid}" : "new";
+    var key = editing is not null ? $"edit-{editing.Id}" : Model.ParentId is int pid ? $"c-{pid}" : Model.ShareOfId is int sid ? $"s-{sid}" : Model.Answering is { } ans ? $"a-{ans.Id}" : "new";
     var counterId = "counter-" + key;
     var content = editing?.Content ?? TempData["Draft"] as string;
-    var showOptions = Model.Expanded || !string.IsNullOrEmpty(editing?.ContentWarnings) || editing?.IsAdult == true;
+    var showOptions = Model.Expanded || !string.IsNullOrEmpty(editing?.ContentWarnings) || editing?.IsAdult == true ||
+                      editing?.CommentsLocked == true || editing?.SharesLocked == true;
+    var isDraft = editing?.IsDraft == true;
+    var canDraft = !Model.IsComment && (editing is null || isDraft);
 }
 @if (Context.User.Identity?.IsAuthenticated == true)
 {
@@ -15,35 +18,65 @@
         {
             <input type="hidden" name="parentId" value="@Model.ParentId" />
             <input type="hidden" name="shareOfId" value="@Model.ShareOfId" />
+            <input type="hidden" name="askId" value="@Model.Answering?.Id" />
+        }
+        @if (Model.Answering is { } ask)
+        {
+            <partial name="_EmbeddedAsk" model="ask" />
         }
         @if (!Model.IsComment)
         {
             <input class="i-headline-input" type="text" name="headline" value="@editing?.Headline" maxlength="140" placeholder="headline" aria-label="Headline" />
         }
         <textarea name="content" rows="@(Model.IsComment ? 3 : 5)" placeholder="@Model.Placeholder" aria-label="Post body" data-max="@cfg.MaxPostLength" data-counter="@counterId" maxlength="@cfg.MaxPostLength">@content</textarea>
+        @if (editing is { Attachments.Count: > 0 })
+        {
+            <div class="i-attachment-list">
+                @foreach (var a in editing.Attachments)
+                {
+                    <div class="i-attachment-edit">
+                        <img src="@a.Url" alt="" />
+                        <div class="stack">
+                            <textarea name="existingAlt[@a.Id]" rows="2" maxlength="1000" placeholder="describe this image for people who can't see it" aria-label="Image description">@a.AltText</textarea>
+                            <div class="field-row"><input type="checkbox" id="rm-@a.Id" name="removeAttachment" value="@a.Id" /><label for="rm-@a.Id">remove this image</label></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        <div class="i-attachment-list" data-new-attachments hidden></div>
         @if (!Model.IsComment)
         {
             <input type="text" name="tags" value="@(editing is null ? "" : string.Join(", ", editing.Tags))" placeholder="#add tags (comma separated, spaces are fine)" aria-label="Tags" />
             <details class="i-options" open="@showOptions">
-                <summary>content warnings &amp; 18+</summary>
+                <summary>content warnings, 18+ &amp; more</summary>
                 <div class="stack">
                     <input type="text" name="contentWarnings" value="@editing?.ContentWarnings" placeholder="CWs, comma separated (the post starts collapsed)" aria-label="Content warnings" />
                     <div class="field-row"><input type="checkbox" id="adult-@key" name="isAdult" value="true" checked="@(editing?.IsAdult == true)" /><label for="adult-@key">this post contains 18+ content</label></div>
+                    <div class="field-row"><input type="checkbox" id="lockc-@key" name="commentsLocked" value="true" checked="@(editing?.CommentsLocked == true)" /><label for="lockc-@key">lock comments (only you can comment)</label></div>
+                    <div class="field-row"><input type="checkbox" id="locks-@key" name="sharesLocked" value="true" checked="@(editing?.SharesLocked == true)" /><label for="locks-@key">lock shares (nobody can share this post)</label></div>
                 </div>
             </details>
         }
         <div class="i-bar">
-            @if (cfg.AllowImageUploads && editing is null)
+            @if (cfg.AllowImageUploads)
             {
-                <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach an image" />
+                <input type="file" name="images" multiple accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach images" data-max-files="@PostService.MaxAttachments" />
             }
             <span class="i-count"><span id="@counterId">@cfg.MaxPostLength.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</span> left</span>
-            <button type="button" class="co-button is-outline" data-preview>preview</button>
-            <button type="submit" class="co-button">@(editing is not null ? "save" : Model.ButtonText)</button>
+            @* The buttons stay together; when the row is too narrow they move to their own line as a group. *@
+            <div class="i-buttons">
+                <button type="button" class="co-button is-outline" data-preview>preview</button>
+                @if (canDraft)
+                {
+                    <button type="submit" class="co-button is-outline" name="save" value="draft">save draft</button>
+                }
+                <button type="submit" class="co-button" name="save" value="@(isDraft ? "publish" : "post")">@(isDraft ? "publish" : editing is not null ? "save" : Model.ButtonText)</button>
+            </div>
         </div>
         @if (!Model.IsComment)
         {
-            <p class="i-hint">Markdown and HTML work, including inline <code>style</code> attributes. Put <code>@PostRenderer.ReadMoreMarker</code> on its own line to add a "read more" break.</p>
+            <p class="i-hint">Markdown and HTML work, including inline <code>style</code> attributes and <code>:emoji:</code>. Put <code>@PostRenderer.ReadMoreMarker</code> on its own line to add a "read more" break. Up to @PostService.MaxAttachments images.</p>
         }
         <div class="i-preview-pane" hidden>
             <div class="i-preview-label">preview</div>

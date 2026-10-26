@@ -175,4 +175,38 @@ public class PostRendererTests
     {
         Assert.Equal(["css crimes", "art", "the cohost global feed"], PostRenderer.ParseTags("#CSS Crimes, art , , the cohost global feed, art"));
     }
+
+    private static readonly Dictionary<string, string> Emoji = new() { ["egg"] = "/img/emoji/egg.svg" };
+
+    [Fact]
+    public void ReplacesKnownEmojiShortcodes()
+    {
+        var html = PostRenderer.Render("hello :egg: and :nope:", Emoji).Html;
+        Assert.Contains("<img class=\"co-emoji\" src=\"/img/emoji/egg.svg\" alt=\":egg:\" title=\":egg:\">", html);
+        Assert.Contains(":nope:", html);
+    }
+
+    [Fact]
+    public void LeavesEmojiInCodeAlone()
+    {
+        var html = PostRenderer.Render("`:egg:`\n\n    :egg:", Emoji).Html;
+        Assert.DoesNotContain("co-emoji", html);
+    }
+
+    [Fact]
+    public void EmojiClassCannotBeForged()
+    {
+        var html = PostRenderer.Render("<img class=\"co-emoji\" src=\"https://x.example/a.png\">", Emoji).Html;
+        Assert.DoesNotContain("class", html);
+    }
+
+    [Theory]
+    [InlineData("egg", true)]
+    [InlineData("party-egg_2+", true)]
+    [InlineData("Egg", false)]
+    [InlineData("", false)]
+    [InlineData("a:b", false)]
+    [InlineData("waytoolongshortcodewaytoolongshortcode", false)]
+    public void ValidatesEmojiShortcodes(string code, bool valid) =>
+        Assert.Equal(valid, PostRenderer.IsValidEmojiShortcode(code));
 }

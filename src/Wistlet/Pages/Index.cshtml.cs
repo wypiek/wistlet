@@ -19,8 +19,13 @@ public class IndexModel(AppDbContext db, PostService posts) : PageModel
         var feed = await posts.FeedAsync(me, User.IsStaff());
         if (me is int id)
         {
-            FollowsAnyone = await db.Follows.AnyAsync(f => f.FollowerId == id);
-            feed = feed.Where(p => p.AuthorId == id || db.Follows.Any(f => f.FollowerId == id && f.FolloweeId == p.AuthorId));
+            FollowsAnyone = await db.Follows.AnyAsync(f => f.FollowerId == id) ||
+                            await db.TagPreferences.AnyAsync(t => t.UserId == id && t.Kind == TagPreferenceKind.Follow);
+            // Your own posts, people you follow, and posts with a tag you follow.
+            var followedTags = db.TagPreferences.Where(t => t.UserId == id && t.Kind == TagPreferenceKind.Follow).Select(t => t.Tag);
+            feed = feed.Where(p => p.AuthorId == id ||
+                                   db.Follows.Any(f => f.FollowerId == id && f.FolloweeId == p.AuthorId) ||
+                                   p.Tags.Any(t => followedTags.Contains(t.Tag)));
         }
 
         var (page, next) = await posts.PageAsync(feed, me, before);

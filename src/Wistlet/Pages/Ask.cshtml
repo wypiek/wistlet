@@ -1,0 +1,26 @@
+@page "/u/{userName}/ask"
+@model AskModel
+@{
+    ViewData["Title"] = $"Ask @{Model.Recipient.UserName}";
+}
+<card title="@($"ask @{Model.Recipient.UserName}")">
+    @if (Model.Recipient.AsksEnabled && (!Model.MustBeAnonymous || Model.Recipient.LoggedOutAsksAllowed))
+    {
+        <form method="post" class="stack">
+            <textarea name="content" rows="4" maxlength="@AskModel.MaxLength" required placeholder="ask @@@Model.Recipient.UserName something" aria-label="Your ask"></textarea>
+            @if (Model.MustBeAnonymous)
+            {
+                <p class="muted">You're not logged in, so this ask will be anonymous.</p>
+            }
+            else if (Model.Recipient.AnonAsksAllowed)
+            {
+                <div class="field-row"><input type="checkbox" id="anon" name="anonymous" value="true" /><label for="anon">ask anonymously</label></div>
+            }
+            <div class="row"><button type="submit" class="co-button">send ask</button> <a href="/u/@Model.Recipient.UserName">back to @@@Model.Recipient.UserName</a></div>
+        </form>
+    }
+    else
+    {
+        <p>@@@Model.Recipient.UserName isn't taking asks from you right now.</p>
+    }
+</card>

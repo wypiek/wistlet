@@ -33,7 +33,7 @@ public class ExploreModel(PostService posts) : PageModel
                     me, 30);
                 break;
             case "media":
-                var (media, nextMedia) = await posts.PageAsync(topLevel.Where(p => p.ImagePath != null), me, before);
+                var (media, nextMedia) = await posts.PageAsync(topLevel.Where(p => p.Attachments.Any()), me, before);
                 Posts = media;
                 MoreUrl = nextMedia is int nm ? $"/explore?tab=media&before={nm}" : null;
                 break;

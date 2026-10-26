@@ -3,7 +3,33 @@
 @{
     ViewData["Title"] = "#" + Model.Tag;
 }
-<h1 class="page-title">#@Model.Tag</h1>
+<div class="tag-feed-heading">
+    <h1 class="page-title">#@Model.Tag</h1>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        var ret = $"/tag/{Uri.EscapeDataString(Model.Tag)}";
+        var follows = Model.Prefs.Contains(TagPreferenceKind.Follow);
+        <div class="row">
+            <form method="post" asp-page="/Act" asp-page-handler="Tag" asp-route-tag="@Model.Tag" asp-route-kind="Follow" asp-route-returnUrl="@ret">
+                <button type="submit" class="co-button @(follows ? "is-outline" : "")">@(follows ? "unfollow tag" : "follow tag")</button>
+            </form>
+            <details class="co-dropdown">
+                <summary class="co-button is-outline" aria-label="More tag options">…</summary>
+                <ul class="co-menu" role="menu">
+                    <li role="menuitem"><button type="submit" form="tag-silence">@(Model.Prefs.Contains(TagPreferenceKind.Silence) ? "unsilence" : "silence") #@Model.Tag</button></li>
+                    <li role="menuitem"><button type="submit" form="tag-warn">@(Model.Prefs.Contains(TagPreferenceKind.Warn) ? "stop collapsing" : "collapse posts with") #@Model.Tag</button></li>
+                    <li role="menuitem" class="is-divided"><a href="/settings?tab=tags">tag settings</a></li>
+                </ul>
+            </details>
+            <form id="tag-silence" method="post" asp-page="/Act" asp-page-handler="Tag" asp-route-tag="@Model.Tag" asp-route-kind="Silence" asp-route-returnUrl="@ret" hidden></form>
+            <form id="tag-warn" method="post" asp-page="/Act" asp-page-handler="Tag" asp-route-tag="@Model.Tag" asp-route-kind="Warn" asp-route-returnUrl="@ret" hidden></form>
+        </div>
+    }
+</div>
+@if (Model.Prefs.Contains(TagPreferenceKind.Silence))
+{
+    <div class="co-info-box is-warning i-info-circle-icon"><div class="i-text">You silenced #@Model.Tag, so its posts are hidden, here too.</div></div>
+}
 @if (User.Identity?.IsAuthenticated == true)
 {
     <partial name="_ComposerBox" model="@(new ComposerModel($"/tag/{Model.Tag}", Placeholder: $"say something about #{Model.Tag}…"))" />

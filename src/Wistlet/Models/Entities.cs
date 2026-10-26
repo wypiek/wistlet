@@ -70,6 +70,22 @@ public class User
     [MaxLength(200)]
     public string? BannerPath { get; set; }
 
+    /// <summary>Private pages: only approved followers (and staff) see the posts; follows become requests.</summary>
+    public bool IsPrivate { get; set; }
+
+    /// <summary>Whether people can send this page asks.</summary>
+    public bool AsksEnabled { get; set; } = true;
+
+    /// <summary>Whether signed-in people may ask without showing who they are.</summary>
+    public bool AnonAsksAllowed { get; set; } = true;
+
+    /// <summary>Whether people who aren't signed in may send (anonymous) asks.</summary>
+    public bool LoggedOutAsksAllowed { get; set; }
+
+    /// <summary>The profile's contact card, as JSON (see <see cref="ContactCardItem"/>).</summary>
+    [MaxLength(4000)]
+    public string ContactCard { get; set; } = "";
+
     public UserRole Role { get; set; } = UserRole.User;
     public bool IsVerified { get; set; }
     public bool IsBanned { get; set; }
@@ -125,8 +141,23 @@ public class Post
     public int? SharedPostId { get; set; }
     public Post? SharedPost { get; set; }
 
-    [MaxLength(200)]
-    public string? ImagePath { get; set; }
+    /// <summary>Drafts are only reachable by their link; publishing turns them into a new post.</summary>
+    public bool IsDraft { get; set; }
+
+    /// <summary>Nobody but the author can comment.</summary>
+    public bool CommentsLocked { get; set; }
+
+    /// <summary>Nobody can share the post.</summary>
+    public bool SharesLocked { get; set; }
+
+    /// <summary>Pinned by its author to the top of their page.</summary>
+    public bool PinnedToProfile { get; set; }
+
+    /// <summary>For answers: the ask the post replies to (shown on top of it).</summary>
+    public int? AskId { get; set; }
+    public Ask? Ask { get; set; }
+
+    public List<PostAttachment> Attachments { get; set; } = [];
 
     public int? ParentId { get; set; }
     public Post? Parent { get; set; }
@@ -159,6 +190,88 @@ public class PostTag
 
     /// <summary>Order the author typed the tags in.</summary>
     public int Position { get; set; }
+}
+
+public class PostAttachment
+{
+    public int Id { get; set; }
+    public int PostId { get; set; }
+    public Post Post { get; set; } = null!;
+
+    [MaxLength(200)]
+    public string Path { get; set; } = "";
+
+    /// <summary>Image description for screen readers (and the "alt" badge).</summary>
+    [MaxLength(1000)]
+    public string AltText { get; set; } = "";
+
+    public int Position { get; set; }
+}
+
+/// <summary>A question sent to a page. It stays in the recipient's inbox until answered (as a post) or deleted.</summary>
+public class Ask
+{
+    public int Id { get; set; }
+    public int RecipientId { get; set; }
+    public User Recipient { get; set; } = null!;
+
+    /// <summary>Who sent it, if they were signed in (kept for moderation even for anonymous asks).</summary>
+    public int? SenderId { get; set; }
+    public User? Sender { get; set; }
+
+    /// <summary>Shown as "anonymous user asked:".</summary>
+    public bool IsAnonymous { get; set; }
+
+    [MaxLength(1000)]
+    public string Content { get; set; } = "";
+
+    public bool IsAnswered { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>A follow waiting for a private page to approve it.</summary>
+public class FollowRequest
+{
+    public int FollowerId { get; set; }
+    public User Follower { get; set; } = null!;
+    public int FolloweeId { get; set; }
+    public User Followee { get; set; } = null!;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public enum TagPreferenceKind
+{
+    /// <summary>Posts with the tag show up on the home feed.</summary>
+    Follow = 0,
+    /// <summary>Posts with the tag are left out of feeds.</summary>
+    Silence = 1,
+    /// <summary>Posts with the tag start collapsed, like a content warning.</summary>
+    Warn = 2,
+}
+
+public class TagPreference
+{
+    public int UserId { get; set; }
+    public User User { get; set; } = null!;
+
+    [MaxLength(64)]
+    public string Tag { get; set; } = "";
+
+    public TagPreferenceKind Kind { get; set; }
+}
+
+/// <summary>Site emoji, written as <c>:shortcode:</c> in posts.</summary>
+public class CustomEmoji
+{
+    public int Id { get; set; }
+
+    [MaxLength(32)]
+    public string Shortcode { get; set; } = "";
+
+    [MaxLength(200)]
+    public string Path { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Like
@@ -205,6 +318,9 @@ public enum NotificationType
     Mention = 3,
     System = 4,
     Share = 5,
+    AskAnswered = 6,
+    FollowRequest = 7,
+    FollowAccepted = 8,
 }
 
 public class Notification
@@ -301,6 +417,21 @@ public class SiteSetting
     public string Key { get; set; } = "";
 
     public string Value { get; set; } = "";
+}
+
+/// <summary>One line of a profile's contact card.</summary>
+public record ContactCardItem(string Service, string Value, bool FollowersOnly)
+{
+    public const int MaxItems = 10;
+
+    public static List<ContactCardItem> Parse(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<ContactCardItem>>(json) ?? []; }
+        catch (System.Text.Json.JsonException) { return []; }
+    }
+
+    public static string Serialize(IEnumerable<ContactCardItem> items) => System.Text.Json.JsonSerializer.Serialize(items);
 }
 
 public static class AvatarShapes

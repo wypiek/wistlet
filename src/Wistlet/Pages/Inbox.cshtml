@@ -1,0 +1,33 @@
+@page "/inbox"
+@model InboxModel
+@{
+    ViewData["Title"] = "Ask inbox";
+}
+<h1 class="page-title">ask inbox</h1>
+@if (!Model.Me.AsksEnabled)
+{
+    <div class="co-info-box is-warning i-info-circle-icon"><div class="i-text">You've turned asks off, so nobody can send you new ones. <a href="/settings?tab=privacy">Change that in settings</a>.</div></div>
+}
+@if (Model.Asks.Count == 0)
+{
+    <p class="muted">No asks waiting. People can ask you things from the box on <a href="/u/@Model.Me.UserName">your page</a>; answers are posted to your page with the ask on top.</p>
+}
+@foreach (var ask in Model.Asks)
+{
+    <article class="co-post-box inbox-ask" id="ask-@ask.Id">
+        <partial name="_EmbeddedAsk" model="ask" />
+        <hr class="co-hairline" />
+        <div class="co-thread-footer">
+            <div class="i-comments">@Fmt.Time(ask.CreatedAt)</div>
+            <div class="i-actions">
+                <form method="post" asp-page="/Act" asp-page-handler="BlockAsker" asp-route-id="@ask.Id" data-confirm="Delete this ask and block whoever sent it? Anonymous senders stay anonymous.">
+                    <button type="submit" class="co-button is-outline is-small">block asker</button>
+                </form>
+                <form method="post" asp-page="/Act" asp-page-handler="DeleteAsk" asp-route-id="@ask.Id" data-confirm="Delete this ask?">
+                    <button type="submit" class="co-button is-outline is-small">delete</button>
+                </form>
+                <a class="co-button is-small" href="/compose?ask=@ask.Id">answer</a>
+            </div>
+        </div>
+    </article>
+}

@@ -15,9 +15,17 @@ public class NotificationsModel(AppDbContext db) : PageModel
 
     public List<Item> Items { get; private set; } = [];
 
+    /// <summary>People waiting for approval to follow the viewer's private page.</summary>
+    public List<UserSummary> FollowRequests { get; private set; } = [];
+
     public async Task OnGetAsync()
     {
         var me = User.RequireUserId();
+        FollowRequests = await db.FollowRequests.AsNoTracking()
+            .Where(f => f.FolloweeId == me)
+            .OrderByDescending(f => f.CreatedAt)
+            .Select(f => new UserSummary(f.Follower.Id, f.Follower.UserName, f.Follower.DisplayName, f.Follower.AvatarPath, f.Follower.IsVerified, f.Follower.Role, "", f.Follower.AvatarShape))
+            .ToListAsync();
         Items = await db.Notifications.AsNoTracking()
             .Where(n => n.UserId == me)
             .OrderByDescending(n => n.Id)

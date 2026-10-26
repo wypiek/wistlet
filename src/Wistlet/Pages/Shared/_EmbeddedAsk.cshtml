@@ -1,0 +1,15 @@
+@model AskView
+@* cohost's embedded ask: who asked (or "anonymous user"), then the question. *@
+<div class="co-embedded-ask">
+    @if (Model.Asker is { } asker)
+    {
+        <img class="i-avatar mask-@AvatarShapes.Resolve(asker.AvatarShape)" src="@asker.AvatarUrl" alt="@asker.UserName" />
+        <div class="i-asker"><a class="co-project-handle" href="/u/@asker.UserName">@@@asker.UserName</a> asked:</div>
+    }
+    else
+    {
+        <img class="i-avatar mask-squircle" src="/img/anon.svg" alt="" />
+        <div class="i-asker">Anonymous User asked:</div>
+    }
+    <div class="i-content">@ContentFormatter.Format(Model.Content)</div>
+</div>
