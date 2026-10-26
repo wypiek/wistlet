@@ -1,21 +1,24 @@
-@page "/u/{userName}/{tab?}"
+@page "/u/{userName}/{tab?}/{tag?}"
 @model ProfileModel
 @{
     var p = Model.Profile;
     var summary = new UserSummary(p.Id, p.UserName, p.DisplayName, p.AvatarPath, p.IsVerified, p.Role, p.Bio, p.AvatarShape);
     ViewData["Title"] = $"@{p.UserName}";
-    var ret = $"/u/{p.UserName}";
-    var websiteOk = Uri.TryCreate(p.Website, UriKind.Absolute, out var wu) && (wu.Scheme == "http" || wu.Scheme == "https");
+    ViewData["ProjectPage"] = true;
     var basePath = $"/u/{p.UserName}";
-    var tabs = new TabsModel("Profile sections",
-    [
-        new("posts", basePath, Model.Tab == "posts"),
-        new("comments", basePath + "/replies", Model.Tab == "replies"),
-        new("media", basePath + "/media", Model.Tab == "media"),
-        new("likes", basePath + "/likes", Model.Tab == "likes"),
-        new("followers", basePath + "/followers", Model.Tab == "followers"),
-        new("following", basePath + "/following", Model.Tab == "following"),
-    ]);
+    var ret = basePath;
+    var websiteOk = Uri.TryCreate(p.Website, UriKind.Absolute, out var wu) && (wu.Scheme == "http" || wu.Scheme == "https");
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var heading = Model.Tab switch
+    {
+        "replies" => $"comments from @{p.UserName}",
+        "media" => $"images from @{p.UserName}",
+        "likes" => $"posts @{p.UserName} liked",
+        "followers" => $"people following @{p.UserName}",
+        "following" => $"people @{p.UserName} follows",
+        "tagged" => $"posts from @{p.UserName} tagged #{Model.Tagged}",
+        _ => null,
+    };
 }
 @section BaseHeader {
     @if (p.BannerPath is not null)
@@ -23,8 +26,27 @@
         <img class="profile-header-image co-container" src="@p.BannerPath" alt="" role="presentation" />
     }
 }
-@section Aside {
+@section ProjectSidebar {
     <div class="project-sidebar @(p.BannerPath is not null ? "has-header" : "")">
+        @if (signedIn && !Model.IsMe)
+        {
+            <details class="co-dropdown i-more">
+                <summary aria-label="More options for @@@p.UserName"><partial name="_Icon" model="@(new IconModel("more"))" /></summary>
+                <ul class="co-menu" role="menu">
+                    @if (Model.CanMessage)
+                    {
+                        <li role="menuitem"><a href="/messages/@p.UserName">message @@@p.UserName</a></li>
+                    }
+                    <li role="menuitem"><a href="/report?userId=@p.Id">report @@@p.UserName…</a></li>
+                    <li role="menuitem"><button type="submit" form="block-form" data-confirm="@(Model.IBlocked ? $"Unblock @{p.UserName}?" : $"Block @{p.UserName}? You won't see each other's posts and they can't message or follow you.")">@(Model.IBlocked ? "unblock" : "block") @@@p.UserName</button></li>
+                    @if (User.IsStaff())
+                    {
+                        <li role="menuitem" class="is-divided"><a href="/admin/user/@p.Id">manage in admin</a></li>
+                    }
+                </ul>
+            </details>
+            <form id="block-form" method="post" asp-page="/Act" asp-page-handler="Block" asp-route-id="@p.Id" asp-route-returnUrl="@ret" hidden></form>
+        }
         <div class="i-details">
             <div class="i-avatar-container co-drop-shadow">
                 <img class="i-avatar co-avatar" data-shape="@AvatarShapes.Resolve(p.AvatarShape)" src="@summary.AvatarUrl" alt="@p.UserName" />
@@ -36,13 +58,19 @@
                 {
                     <div class="i-dek">@p.Dek</div>
                 }
-                <div class="i-badges">
-                    @if (p.IsVerified) { <text>✔ verified · </text> }
-                    @if (p.Role == UserRole.Admin) { <text>admin · </text> } else if (p.Role == UserRole.Moderator) { <text>moderator · </text> }
-                    @if (Model.FollowsMe) { <text>follows you · </text> }
-                    @if (p.IsCurrentlyBanned) { <b>banned · </b> }
-                    joined @Fmt.Date(p.CreatedAt)
-                </div>
+                @if (p.IsVerified || p.Role != UserRole.User || Model.FollowsMe || p.IsCurrentlyBanned)
+                {
+                    <div class="i-badges">
+                        @{
+                            var badges = new List<string>();
+                            if (p.IsVerified) badges.Add("✔ verified");
+                            if (p.Role == UserRole.Admin) badges.Add("admin"); else if (p.Role == UserRole.Moderator) badges.Add("moderator");
+                            if (Model.FollowsMe) badges.Add("follows you");
+                            if (p.IsCurrentlyBanned) badges.Add("banned");
+                        }
+                        @string.Join(" · ", badges)
+                    </div>
+                }
             </div>
         </div>
         <ul class="i-fields">
@@ -63,7 +91,7 @@
             @if (websiteOk)
             {
                 <li class="i-field">
-                    <svg class="i-icon" viewBox="0 0 24 24" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+                    <svg class="i-icon" viewBox="0 0 24 24" height="16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clip-rule="evenodd" /></svg>
                     <a class="i-value" href="@p.Website" rel="me nofollow noopener ugc" target="_blank">@wu!.Host@(wu.AbsolutePath == "/" ? "" : wu.AbsolutePath)</a>
                 </li>
             }
@@ -72,56 +100,95 @@
         {
             <div class="i-description prose prose-invert prose-stone isolate co-contain-paint">@Html.Raw(PostRenderer.RenderFragment(p.Bio))</div>
         }
-        <div class="i-stats">
-            <span><b>@Model.PostCount</b> posts</span>
-            <a href="@basePath/following"><b>@Model.FollowingCount</b> following</a>
-            <a href="@basePath/followers"><b>@Model.FollowerCount</b> followers</a>
-        </div>
         <div class="i-actions">
             @if (Model.IsMe)
             {
-                <a class="co-button is-light" href="/settings">edit profile</a>
+                <a class="co-button is-accent-outline" href="/settings">edit profile</a>
             }
-            else if (User.Identity?.IsAuthenticated == true)
+            else if (signedIn)
             {
                 @if (!Model.IBlocked && !Model.BlockedMe)
                 {
                     <form method="post" asp-page="/Act" asp-page-handler="Follow" asp-route-id="@p.Id" asp-route-returnUrl="@ret">
-                        <button type="submit" class="co-button @(Model.IFollow ? "is-outline" : "is-light")">@(Model.IFollow ? "following" : "follow")</button>
+                        <button type="submit" class="co-button @(Model.IFollow ? "is-accent-outline" : "is-accent")">@(Model.IFollow ? "unfollow" : "follow")</button>
                     </form>
                 }
-                @if (Model.CanMessage)
-                {
-                    <a class="co-button is-outline" href="/messages/@p.UserName">message</a>
-                }
-                <details class="co-dropdown">
-                    <summary class="co-button is-outline" aria-label="More options">…</summary>
-                    <ul class="co-menu" role="menu">
-                        <li role="menuitem"><a href="/report?userId=@p.Id">report @@@p.UserName…</a></li>
-                        <li role="menuitem"><button type="submit" form="block-form" data-confirm="@(Model.IBlocked ? $"Unblock @{p.UserName}?" : $"Block @{p.UserName}? You won't see each other's posts and they can't message or follow you.")">@(Model.IBlocked ? "unblock" : "block") @@@p.UserName</button></li>
-                        @if (User.IsStaff())
-                        {
-                            <li role="menuitem" class="is-divided"><a href="/admin/user/@p.Id">manage in admin</a></li>
-                        }
-                    </ul>
-                </details>
-                <form id="block-form" method="post" asp-page="/Act" asp-page-handler="Block" asp-route-id="@p.Id" asp-route-returnUrl="@ret" hidden></form>
             }
             else
             {
-                <a class="co-button is-light" href="/account/login?returnUrl=@Uri.EscapeDataString(ret)">follow</a>
+                <a class="co-button is-accent" href="/account/login?returnUrl=@Uri.EscapeDataString(ret)">follow</a>
             }
         </div>
     </div>
 }
+@section Aside {
+    @if (Model.PinnedTags.Count > 0)
+    {
+        <section class="co-titled-box" role="group">
+            <h2 class="i-header">pinned tags</h2>
+            <div class="i-contents">
+                <ul class="i-tag-list">
+                    @foreach (var t in Model.PinnedTags)
+                    {
+                        <li><a class="co-tag-button" href="@basePath/tagged/@Uri.EscapeDataString(t)">@t</a></li>
+                    }
+                </ul>
+            </div>
+        </section>
+    }
+    <section class="co-titled-box" role="group">
+        <h2 class="i-header">more from @@@p.UserName</h2>
+        <div class="i-contents">
+            <ul class="project-links">
+                <li><a class="i-link" href="@basePath" aria-current="@(Model.Tab == "posts" ? "page" : "false")">posts <span>@Model.PostCount</span></a></li>
+                <li><a class="i-link" href="@basePath/replies" aria-current="@(Model.Tab == "replies" ? "page" : "false")">comments</a></li>
+                <li><a class="i-link" href="@basePath/media" aria-current="@(Model.Tab == "media" ? "page" : "false")">images</a></li>
+                <li><a class="i-link" href="@basePath/likes" aria-current="@(Model.Tab == "likes" ? "page" : "false")">likes</a></li>
+                <li><a class="i-link" href="@basePath/followers" aria-current="@(Model.Tab == "followers" ? "page" : "false")">followers <span>@Model.FollowerCount</span></a></li>
+                <li><a class="i-link" href="@basePath/following" aria-current="@(Model.Tab == "following" ? "page" : "false")">following <span>@Model.FollowingCount</span></a></li>
+            </ul>
+            <p class="i-joined">joined @Fmt.Date(p.CreatedAt)</p>
+        </div>
+    </section>
+}
 
 @if (Model.BlockedMe)
 {
-    <div class="co-info-box is-warning i-shield-exclam-icon">You can't view this account's posts.</div>
+    <div class="co-info-box is-warning i-shield-exclam-icon"><div class="i-text">You can't view this account's posts.</div></div>
 }
 else
 {
-    <partial name="_Tabs" model="tabs" />
+    @if (heading is null)
+    {
+        <div class="project-profile-filters">
+            <div class="i-filter" data-state="@(Model.HideShares ? "true" : "false")">
+                <a class="i-state" href="@Model.FilterUrl(false, Model.HideReplies)"><span class="i-state">show</span> <span class="i-label">shares</span></a>
+                <a class="i-state" href="@Model.FilterUrl(true, Model.HideReplies)"><span class="i-state">hide</span> <span class="i-label">shares</span></a>
+            </div>
+            <div class="i-filter" data-state="@(Model.HideReplies ? "true" : "false")">
+                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, false)"><span class="i-state">show</span> <span class="i-label">replies</span></a>
+                <a class="i-state" href="@Model.FilterUrl(Model.HideShares, true)"><span class="i-state">hide</span> <span class="i-label">replies</span></a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="project-profile-tagged-header">
+            <h4>@heading</h4>
+            <h6>also:</h6>
+            <div>
+                @if (Model.Tab == "tagged")
+                {
+                    <a class="i-from-all-pages" href="/tag/@Uri.EscapeDataString(Model.Tagged!)">view posts from everyone tagged #@Model.Tagged</a><br />
+                }
+                <a class="i-from-all-pages" href="@basePath">view all posts from @@@p.UserName</a>
+            </div>
+        </div>
+    }
+    @if (Model.IBlocked)
+    {
+        <div class="co-info-box is-warning i-shield-exclam-icon"><div class="i-text">You blocked @@@p.UserName. Their posts are hidden from you.</div></div>
+    }
     @if (Model.Tab is "followers" or "following")
     {
         <card>
@@ -130,10 +197,6 @@ else
     }
     else
     {
-        @if (Model.IBlocked)
-        {
-            <div class="co-info-box is-warning i-shield-exclam-icon">You blocked @@@p.UserName. Their posts are hidden from you.</div>
-        }
-        <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No comments yet.", "media" => "No images yet.", "likes" => "No liked posts yet.", _ => "No posts yet." }, Model.MoreUrl, Preview: false))" />
+        <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No comments yet.", "media" => "No images yet.", "likes" => "No liked posts yet.", "tagged" => "No posts with this tag.", _ => "No posts yet." }, Model.MoreUrl, Preview: false))" />
     }
 }

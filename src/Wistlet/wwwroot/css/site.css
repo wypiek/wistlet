@@ -295,21 +295,59 @@ legend { font-weight: 700; padding: 0 0.4rem; }
 /* ---------- profile ---------- */
 
 .profile-header-image { width: 100%; }
-.project-sidebar { border-radius: 0.5rem; }
 .project-sidebar > .i-fields { flex-wrap: wrap; justify-content: center; column-gap: 1.25rem; row-gap: 0.25rem; }
 .project-sidebar > .i-fields > .i-field > a.i-value { word-break: normal; overflow-wrap: anywhere; }
-.project-sidebar .i-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
-.project-sidebar .i-stats { display: flex; justify-content: center; gap: 1rem; font-size: 0.875rem; margin-top: 0.75rem; }
-.project-sidebar .i-stats a:hover { text-decoration: underline; }
-.project-sidebar .co-menu { left: 50%; right: auto; transform: translateX(-50%); }
-.project-sidebar .co-button.is-outline { color: rgb(var(--color-notWhite)); border-color: rgb(var(--color-notWhite)); }
-.project-sidebar .co-button.is-outline:hover { background: rgb(var(--color-foreground-700)); }
-.project-sidebar .co-button.is-light:hover { background: rgb(var(--color-accent)); }
-
-@media (min-width: 1024px) {
-    /* On profile pages the cohost project box sits in the right-hand column. */
-    .feed-sidebar-alt > .project-sidebar { padding: 0 1rem 1rem; }
+/* Profile pages use cohost's project layout: the project box fills the left-hand column from the
+   header (or header image) down, the posts sit in the middle and pinned tags on the right. */
+#page-container.is-project-page { padding-top: 0; }
+.profile-header-image + #page-container.is-project-page { padding-top: 0; }
+#page-container.is-project-page > .page-contents { padding-top: 1rem; }
+.project-sidebar { position: relative; margin: 0 -0.75rem; padding-top: 1rem; padding-bottom: 1.5rem; }
+.project-sidebar.has-header { padding-top: 0; }
+.project-sidebar > .i-more { position: absolute; top: 0.75rem; right: 0.75rem; z-index: 2; }
+.project-sidebar > .i-more > summary { display: block; color: rgb(var(--color-notWhite)); }
+.project-sidebar > .i-more > summary:hover { color: rgb(var(--color-accent)); }
+.project-sidebar > .i-more .co-menu { top: 2rem; }
+.project-sidebar .i-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1.5rem; }
+.co-button.is-accent, .co-button.is-accent-outline { border-radius: 9999px; padding: 0.4rem 1rem; border-color: rgb(var(--color-accent)); }
+.co-button.is-accent { background: rgb(var(--color-accent)); color: rgb(var(--color-foreground)); }
+.co-button.is-accent:hover { background: rgb(var(--color-notWhite)); border-color: rgb(var(--color-notWhite)); }
+.co-button.is-accent-outline { background: transparent; color: rgb(var(--color-accent)); }
+.co-button.is-accent-outline:hover { background: rgb(var(--color-foreground-700)); }
+.project-sidebar-alt > .site-fine-print { padding: 0; }
+.project-links { display: flex; flex-direction: column; }
+.project-links a { display: flex; justify-content: space-between; padding: 0.25rem 0; color: rgb(var(--color-notBlack)); }
+.project-links a:hover { color: rgb(var(--color-cherry)); text-decoration: underline; }
+.project-links a[aria-current=page] { color: rgb(var(--color-cherry)); font-weight: 700; }
+.project-links a > span { color: rgb(var(--gray2)); font-weight: 400; }
+.project-sidebar-alt .i-joined { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgb(var(--line)); font-size: 0.875rem; color: rgb(var(--gray2)); }
+#page-container.is-project-page > .page-contents { gap: 1rem; }
+.is-project-page .project-profile-filters,
+.is-project-page .project-profile-posts { margin-top: 0; }
+.is-project-page .project-profile-tagged-header { margin: 1rem 0 0.5rem; }
+/* The filter pills were longan with cherry text on 2022 profiles. */
+.project-profile-filters > .i-filter { background: rgb(var(--color-longan)); }
+.project-profile-filters > .i-filter > .i-state { color: rgb(var(--color-cherry)); }
+.project-profile-filters > .i-filter > a.i-state:hover { text-decoration: underline; }
+@media (max-width: 1023px) {
+    .project-links { flex-direction: row; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
+    .project-links a { gap: 0.4ch; }
+    /* Here the boxes come before the posts, so the footer line would sit mid-page. */
+    .project-sidebar-alt > .site-fine-print { display: none; }
 }
+@media (min-width: 1024px) {
+    .project-sidebar { margin: 0; padding: 1.5rem 1rem 2rem; min-height: calc(100vh - 4rem); }
+    .project-sidebar.has-header { padding-top: 0; }
+    .project-sidebar-alt { margin-top: 1rem; }
+}
+
+/* On profile pages the main links live in a menu next to the logo. */
+#page-header .i-nav-menu > summary { display: block; color: rgb(var(--color-notWhite)); }
+#page-header .i-nav-menu > summary:hover { color: rgb(var(--color-accent)); }
+#page-header .i-nav-menu .co-menu { left: 0; right: auto; }
+#page-header .i-nav-menu .co-menu .i-count { margin-left: 0.25rem; background: rgb(var(--color-cherry)); color: rgb(var(--color-notWhite)); border-radius: 9999px; padding: 0 0.45rem; font-size: 0.75rem; font-weight: 700; }
+#page-header .i-nav-menu .co-menu a[aria-current=page] { font-weight: 700; color: rgb(var(--color-cherry)); }
+
 
 /* ---------- tables ---------- */
 
@@ -372,13 +410,6 @@ button.default, a[role=button].default { background: rgb(var(--color-cherry)); c
 button.default:hover, a[role=button].default:hover { background: rgb(var(--color-foreground-600)); border-color: rgb(var(--color-foreground-600)); }
 .co-menu > li > button { border: 0; border-radius: 0; background: none; color: inherit; font-weight: 400; justify-content: flex-start; white-space: normal; }
 
-/* On small screens the profile box comes before the posts. */
-@media (max-width: 1023px) {
-    #page-container > .feed-sidebar-alt:has(> .project-sidebar) { order: 0; margin-bottom: 0; }
-    .feed-sidebar-alt:has(> .project-sidebar) > .site-fine-print { display: none; }
-    /* The navigation sits between the header image and the box here, so the avatar must not overlap it. */
-    .feed-sidebar-alt > .project-sidebar.has-header { margin-top: 3.5rem; }
-}
 
 /* cohost caps titled boxes at 24rem (sized for sidebars); in the main column they fill the width. */
 .page-contents > .co-titled-box, .page-contents .co-titled-box { max-width: none; width: 100%; }

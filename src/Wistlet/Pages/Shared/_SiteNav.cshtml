@@ -1,0 +1,34 @@
+@model string
+@inject ViewerContext Viewer
+@* The site's main links: the left-hand column on most pages, the header menu on profile pages. *@
+@{
+    var cfg = Settings.Current;
+    var me = await Viewer.GetUserAsync();
+    var (unreadNotes, unreadMessages) = await Viewer.GetUnreadCountsAsync();
+    var openReports = me?.IsStaff == true ? await Viewer.GetOpenReportCountAsync() : 0;
+    var path = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
+    string Current(string prefix) =>
+        (prefix == "/" ? path == "/" : path == prefix || path.StartsWith(prefix + "/")) ? "page" : "false";
+}
+<ul class="@Model">
+    <li><a href="/" aria-current="@Current("/")">home</a></li>
+    <li><a href="/explore" aria-current="@Current("/explore")">explore</a></li>
+    @if (me is not null)
+    {
+        <li><a href="/notifications" aria-current="@Current("/notifications")">notifications @if (unreadNotes > 0) { <span class="i-count">@unreadNotes</span> }</a></li>
+        @if (cfg.AllowDirectMessages)
+        {
+            <li><a href="/messages" aria-current="@Current("/messages")">messages @if (unreadMessages > 0) { <span class="i-count">@unreadMessages</span> }</a></li>
+        }
+        <li><a href="/bookmarks" aria-current="@Current("/bookmarks")">saved posts</a></li>
+        <li><a href="/u/@me.UserName" aria-current="@Current("/u/" + me.UserName.ToLowerInvariant())">profile</a></li>
+        <li><a href="/settings" aria-current="@Current("/settings")">settings</a></li>
+    }
+    <li><a href="/people" aria-current="@Current("/people")">people</a></li>
+    <li><a href="/search" aria-current="@Current("/search")">search</a></li>
+    @if (me?.IsStaff == true)
+    {
+        <li><a href="/admin" aria-current="@Current("/admin")">admin @if (openReports > 0) { <span class="i-count">@openReports</span> }</a></li>
+    }
+    <li><a href="/about" aria-current="@Current("/about")">about</a></li>
+</ul>

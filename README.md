@@ -42,8 +42,9 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 **Social**
 - Follow / unfollow, home timeline, explore (latest, top this week, media), people directory
 - Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
-  tagline, pronouns, a Markdown description, location and website; posts / comments / media / likes /
-  followers / following tabs
+  tagline, pronouns, a Markdown description, location and website, laid out like a 2022 cohost page:
+  the project box down the left, show/hide filters for shares and replies, pinned (most used) tags
+  with per-profile tag pages, and links to the account's comments, images, likes, followers and following
 - Notifications for likes, comments, shares, mentions, new followers and moderator messages
 - Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
 - Blocking, reporting posts and accounts, search across people, tags and posts

@@ -25,17 +25,41 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
     public List<UserCardModel> People { get; private set; } = [];
     public string? MoreUrl { get; private set; }
 
-    private static readonly string[] Tabs = ["posts", "replies", "media", "likes", "followers", "following"];
+    /// <summary>cohost's profile filters: transparent shares, and shares with something added ("replies").</summary>
+    public bool HideShares { get; private set; }
+    public bool HideReplies { get; private set; }
+    /// <summary>On the "tagged" tab: the tag the posts are filtered by.</summary>
+    public string? Tagged { get; private set; }
+    /// <summary>The tags this account uses most, shown like cohost's pinned tags.</summary>
+    public List<string> PinnedTags { get; private set; } = [];
 
-    public async Task<IActionResult> OnGetAsync(string userName, string? tab, int? before)
+    private static readonly string[] Tabs = ["posts", "replies", "media", "likes", "followers", "following", "tagged"];
+
+    public string FilterUrl(bool hideShares, bool hideReplies)
+    {
+        var q = new List<string>();
+        if (hideShares) q.Add("hideShares=true");
+        if (hideReplies) q.Add("hideReplies=true");
+        return $"/u/{Profile.UserName}" + (q.Count > 0 ? "?" + string.Join("&", q) : "");
+    }
+
+    public async Task<IActionResult> OnGetAsync(string userName, string? tab, string? tag, int? before, bool hideShares, bool hideReplies)
     {
         var normalized = AccountService.Normalize(userName);
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.NormalizedUserName == normalized);
         if (user is null) return NotFound();
-        if (user.UserName != userName) return RedirectPermanent($"/u/{user.UserName}{(tab is null ? "" : "/" + tab)}");
+        if (user.UserName != userName)
+            return RedirectPermanent($"/u/{user.UserName}{(tab is null ? "" : "/" + tab)}{(tag is null ? "" : "/" + Uri.EscapeDataString(tag))}{Request.QueryString}");
 
         Profile = user;
         Tab = Tabs.Contains(tab) ? tab! : "posts";
+        if (Tab == "tagged")
+        {
+            Tagged = tag?.Trim().TrimStart('#').ToLowerInvariant();
+            if (string.IsNullOrEmpty(Tagged)) return Redirect($"/u/{user.UserName}");
+        }
+        HideShares = hideShares;
+        HideReplies = hideReplies;
         var me = User.GetUserId();
         var staff = User.IsStaff();
         IsMe = me == user.Id;
@@ -63,7 +87,19 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         if (BlockedMe) return Page();
 
         var visible = posts.Visible(me, staff);
-        var baseUrl = $"/u/{user.UserName}{(Tab == "posts" ? "" : "/" + Tab)}";
+        PinnedTags = await db.PostTags
+            .Where(t => t.Post.AuthorId == user.Id && t.Post.ParentId == null && !t.Post.IsHidden)
+            .GroupBy(t => t.Tag)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+            .Select(g => g.Key)
+            .Take(10)
+            .ToListAsync();
+        var baseUrl = Tab switch
+        {
+            "posts" => FilterUrl(HideShares, HideReplies),
+            "tagged" => $"/u/{user.UserName}/tagged/{Uri.EscapeDataString(Tagged!)}",
+            _ => $"/u/{user.UserName}/{Tab}",
+        };
         switch (Tab)
         {
             case "followers":
@@ -82,9 +118,18 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             ? visible.Where(p => p.AuthorId == user.Id && p.ParentId != null)
             : (await posts.FeedAsync(me, staff)).Where(p => p.AuthorId == user.Id);
         if (Tab == "media") query = query.Where(p => p.ImagePath != null);
+        if (Tab == "tagged") query = query.Where(p => p.Tags.Any(t => t.Tag == Tagged));
+        if (Tab == "posts")
+        {
+            // A share with nothing added is a "share"; one with its own text, headline or image is a "reply".
+            if (HideShares)
+                query = query.Where(p => !(p.IsShare && p.Content == "" && (p.Headline == null || p.Headline == "") && p.ImagePath == null));
+            if (HideReplies)
+                query = query.Where(p => !(p.IsShare && !(p.Content == "" && (p.Headline == null || p.Headline == "") && p.ImagePath == null)));
+        }
         var (page, next) = await posts.PageAsync(query, me, before);
         Posts = page;
-        MoreUrl = next is int n ? $"{baseUrl}?before={n}" : null;
+        MoreUrl = next is int n ? $"{baseUrl}{(baseUrl.Contains('?') ? '&' : '?')}before={n}" : null;
         return Page();
     }
 

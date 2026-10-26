@@ -2,13 +2,11 @@
 @{
     var cfg = Settings.Current;
     var me = await Viewer.GetUserAsync();
-    var (unreadNotes, unreadMessages) = await Viewer.GetUnreadCountsAsync();
-    var openReports = me?.IsStaff == true ? await Viewer.GetOpenReportCountAsync() : 0;
     var title = ViewData["Title"] as string;
     var path = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
-    string Current(string prefix) =>
-        (prefix == "/" ? path == "/" : path == prefix || path.StartsWith(prefix + "/")) ? "page" : "false";
     var wide = ViewData["NoSidebar"] is true;
+    // Profile pages use cohost's project layout: the project box on the left, the menu in the header.
+    var project = ViewData["ProjectPage"] is true;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -26,6 +24,15 @@
 <body>
 <header id="page-header">
     <div class="co-container i-header">
+        @if (project)
+        {
+            <details class="co-dropdown i-nav-menu">
+                <summary aria-label="Main menu">
+                    <svg viewBox="0 0 24 24" height="28" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                </summary>
+                <nav aria-label="Main"><partial name="_SiteNav" model="@("co-menu")" /></nav>
+            </details>
+        }
         <a href="/" class="i-logo">@cfg.SiteName.ToLowerInvariant()!</a>
         <form class="i-search" action="/search" method="get" role="search">
             <input type="search" name="q" placeholder="search @cfg.SiteName.ToLowerInvariant()" aria-label="Search" value="@(path == "/search" ? Context.Request.Query["q"].ToString() : "")" />
@@ -56,31 +63,15 @@
     </div>
 </header>
 @await RenderSectionAsync("BaseHeader", required: false)
-<div id="page-container" class="co-container @(wide ? "is-wide" : "")">
-    <nav class="site-nav" aria-label="Main">
-        <ul>
-            <li><a href="/" aria-current="@Current("/")">home</a></li>
-            <li><a href="/explore" aria-current="@Current("/explore")">explore</a></li>
-            @if (me is not null)
-            {
-                <li><a href="/notifications" aria-current="@Current("/notifications")">notifications @if (unreadNotes > 0) { <span class="i-count">@unreadNotes</span> }</a></li>
-                @if (cfg.AllowDirectMessages)
-                {
-                    <li><a href="/messages" aria-current="@Current("/messages")">messages @if (unreadMessages > 0) { <span class="i-count">@unreadMessages</span> }</a></li>
-                }
-                <li><a href="/bookmarks" aria-current="@Current("/bookmarks")">saved posts</a></li>
-                <li><a href="/u/@me.UserName" aria-current="@Current("/u/" + me.UserName.ToLowerInvariant())">profile</a></li>
-                <li><a href="/settings" aria-current="@Current("/settings")">settings</a></li>
-            }
-            <li><a href="/people" aria-current="@Current("/people")">people</a></li>
-            <li><a href="/search" aria-current="@Current("/search")">search</a></li>
-            @if (me?.IsStaff == true)
-            {
-                <li><a href="/admin" aria-current="@Current("/admin")">admin @if (openReports > 0) { <span class="i-count">@openReports</span> }</a></li>
-            }
-            <li><a href="/about" aria-current="@Current("/about")">about</a></li>
-        </ul>
-    </nav>
+<div id="page-container" class="co-container @(wide ? "is-wide" : "") @(project ? "is-project-page" : "")">
+    @if (!project)
+    {
+        <nav class="site-nav" aria-label="Main"><partial name="_SiteNav" model="@("")" /></nav>
+    }
+    else
+    {
+        @await RenderSectionAsync("ProjectSidebar", required: false)
+    }
 
     <div class="page-contents">
         @if (cfg.AnnouncementEnabled && !string.IsNullOrWhiteSpace(cfg.AnnouncementText))
@@ -107,7 +98,14 @@
         @RenderBody()
     </div>
 
-    @if (!wide)
+    @if (project)
+    {
+        <aside class="project-sidebar-alt">
+            @await RenderSectionAsync("Aside", required: false)
+            <p class="site-fine-print">@cfg.FooterText</p>
+        </aside>
+    }
+    else if (!wide)
     {
         <aside class="feed-sidebar-alt">
             @if (IsSectionDefined("Aside"))
