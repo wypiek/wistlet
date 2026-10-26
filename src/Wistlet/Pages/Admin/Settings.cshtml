@@ -1,0 +1,79 @@
+@page
+@model Wistlet.Pages.Admin.SettingsModel
+@{
+    ViewData["Title"] = "Site settings";
+    ViewData["AdminTab"] = "settings";
+}
+<card title="Admin — Site settings">
+    <partial name="_AdminNav" />
+    <article role="tabpanel">
+        <form method="post" class="stack">
+            <div asp-validation-summary="All" role="alert"></div>
+
+            <fieldset>
+                <legend>General</legend>
+                <div class="form-grid">
+                    <label asp-for="Config.SiteName"></label>
+                    <input asp-for="Config.SiteName" />
+                    <label asp-for="Config.Tagline"></label>
+                    <input asp-for="Config.Tagline" />
+                    <label asp-for="Config.AboutText"></label>
+                    <textarea asp-for="Config.AboutText" rows="4"></textarea>
+                    <label asp-for="Config.FooterText"></label>
+                    <input asp-for="Config.FooterText" />
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Announcement banner</legend>
+                <div class="form-grid">
+                    <span></span>
+                    <div ><input asp-for="Config.AnnouncementEnabled" /><label asp-for="Config.AnnouncementEnabled"></label></div>
+                    <label asp-for="Config.AnnouncementText"></label>
+                    <textarea asp-for="Config.AnnouncementText" rows="2" placeholder="Shown at the top of every page. Links, #tags and @@mentions work."></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Access</legend>
+                <div class="form-grid">
+                    <span></span>
+                    <div ><input asp-for="Config.RegistrationOpen" /><label asp-for="Config.RegistrationOpen"></label></div>
+                    <span></span>
+                    <div ><input asp-for="Config.PublicBrowsing" /><label asp-for="Config.PublicBrowsing"></label></div>
+                    <span></span>
+                    <div ><input asp-for="Config.MaintenanceMode" /><label asp-for="Config.MaintenanceMode"></label></div>
+                    <label asp-for="Config.MaintenanceMessage"></label>
+                    <textarea asp-for="Config.MaintenanceMessage" rows="2"></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Posting</legend>
+                <div class="form-grid">
+                    <label asp-for="Config.MaxPostLength"></label>
+                    <input asp-for="Config.MaxPostLength" min="20" max="5000" />
+                    <label asp-for="Config.PostsPerPage"></label>
+                    <input asp-for="Config.PostsPerPage" min="5" max="100" />
+                    <span></span>
+                    <div ><input asp-for="Config.AllowImageUploads" /><label asp-for="Config.AllowImageUploads"></label></div>
+                    <label asp-for="Config.MaxUploadMb"></label>
+                    <input asp-for="Config.MaxUploadMb" min="1" max="50" />
+                    <label asp-for="Config.BannedWords"></label>
+                    <textarea asp-for="Config.BannedWords" rows="2" placeholder="spam, scam, …"></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Messaging</legend>
+                <div ><input asp-for="Config.AllowDirectMessages" /><label asp-for="Config.AllowDirectMessages"></label></div>
+            </fieldset>
+
+
+            <div class="row end">
+                <a role="button" href="/admin/settings">Cancel</a>
+                <button type="submit" class="default">Apply</button>
+            </div>
+        </form>
+    </article>
+</card>

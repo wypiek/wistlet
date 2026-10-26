@@ -1,0 +1,11 @@
+@page "/maintenance"
+@attribute [AllowGuests]
+@{
+    ViewData["Title"] = "Maintenance";
+    ViewData["NoSidebar"] = true;
+}
+<card title="@($"{Settings.Current.SiteName} is under maintenance")" class="narrow">
+    <p>@Settings.Current.MaintenanceMessage</p>
+    <div role="progressbar" class="marquee"></div>
+    <p>Staff can still <a href="/account/login">log in</a>.</p>
+</card>

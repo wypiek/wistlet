@@ -1,0 +1,10 @@
+@page
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@{
+    ViewData["Title"] = "New post";
+}
+<h1 class="page-title">new post</h1>
+<card>
+    <partial name="_Composer" model="@(new ComposerModel("/"))" />
+</card>
+<p class="muted">Use #hashtags to join a topic and @@mentions to notify people. Ctrl+Enter posts.</p>

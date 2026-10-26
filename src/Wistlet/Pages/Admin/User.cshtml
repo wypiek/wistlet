@@ -1,0 +1,188 @@
+@page "/admin/user/{id:int}"
+@model Wistlet.Pages.Admin.UserModel
+@{
+    var u = Model.Target;
+    ViewData["Title"] = $"Manage @{u.UserName}";
+    ViewData["AdminTab"] = "users";
+    var isAdmin = User.IsAdmin();
+}
+<card title="@($"Admin — @{u.UserName}")">
+    <partial name="_AdminNav" />
+    <article role="tabpanel">
+        <div class="row">
+            <a role="button" href="/admin/users">All users</a>
+            <a role="button" href="/u/@u.UserName">Public profile</a>
+        </div>
+
+        @if (TempData["TempPassword"] is string temp)
+        {
+            <div role="tooltip" class="balloon">Temporary password: <code>@temp</code> — it won't be shown again.</div>
+        }
+        @if (!Model.CanManage && !Model.IsSelf)
+        {
+            <p>Moderators can't manage other staff accounts.</p>
+        }
+        @if (Model.IsSelf)
+        {
+            <p>This is your own account. Use <a href="/settings">Settings</a> to change your profile or password.</p>
+        }
+        <br />
+
+        <div class="admin-cols">
+            <fieldset>
+                <legend>Overview</legend>
+                <div class="post-body">
+                    <img src="@(u.AvatarPath ?? $"/avatar/{u.UserName}.svg")" width="64" height="64" alt="" />
+                    <table>
+                        <tbody>
+                            <tr><td>Name</td><td>@u.DisplayName (@@@u.UserName, #@u.Id)</td></tr>
+                            <tr><td>Role</td><td>@u.Role@(u.IsVerified ? ", verified" : "")</td></tr>
+                            <tr><td>Status</td><td>@(u.IsCurrentlyBanned ? (u.BannedUntil is DateTime d ? $"Banned until {Fmt.Date(d)}" : "Banned permanently") : "Active")</td></tr>
+                            @if (u.BanReason is not null) { <tr><td>Ban reason</td><td>@u.BanReason</td></tr> }
+                            <tr><td>E-mail</td><td>@(string.IsNullOrEmpty(u.Email) ? "—" : u.Email)</td></tr>
+                            <tr><td>Joined</td><td>@Fmt.Date(u.CreatedAt)</td></tr>
+                            <tr><td>Last seen</td><td>@(u.LastSeenAt is DateTime ls ? Fmt.Ago(ls) + " ago" : "never")</td></tr>
+                            <tr><td>Posts</td><td>@Model.PostCount</td></tr>
+                            <tr><td>Followers</td><td>@Model.FollowerCount (following @Model.FollowingCount)</td></tr>
+                            <tr><td>Messages from</td><td>@u.MessagePrivacy</td></tr>
+                            @if (!string.IsNullOrEmpty(u.Bio)) { <tr><td>Bio</td><td>@u.Bio</td></tr> }
+                        </tbody>
+                    </table>
+                </div>
+            </fieldset>
+
+            @if (Model.CanManage || (Model.IsSelf && isAdmin))
+            {
+                <fieldset>
+                    <legend>Edit account</legend>
+                    <form method="post" asp-page-handler="Edit" asp-route-id="@u.Id" class="form-grid">
+                        <label for="dn">Display name</label>
+                        <input id="dn" type="text" name="displayName" value="@u.DisplayName" maxlength="50" />
+                        <label for="em">E-mail</label>
+                        <input id="em" type="email" name="email" value="@u.Email" />
+                        @if (isAdmin)
+                        {
+                            <label for="role">Role</label>
+                            <select id="role" name="role">
+                                @foreach (var r in Enum.GetValues<UserRole>())
+                                {
+                                    <option value="@r" selected="@(u.Role == r)">@r</option>
+                                }
+                            </select>
+                        }
+                        <span></span>
+                        <div><input type="checkbox" id="ver" name="isVerified" value="true" checked="@u.IsVerified" /><label for="ver">Verified</label></div>
+                        <span></span>
+                        <div><button type="submit" class="default">Save</button></div>
+                    </form>
+                </fieldset>
+            }
+        </div>
+
+        @if (Model.CanManage)
+        {
+            <div class="admin-cols">
+                <fieldset>
+                    <legend>Ban</legend>
+                    @if (u.IsCurrentlyBanned)
+                    {
+                        <form method="post" asp-page-handler="Unban" asp-route-id="@u.Id" class="stack">
+                            <span>This user can't log in and their posts are hidden.</span>
+                            <div><button type="submit">Lift ban</button></div>
+                        </form>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="Ban" asp-route-id="@u.Id" class="stack" data-confirm="Ban @@@u.UserName?">
+                            <label for="reason">Reason (shown to the user)</label>
+                            <input id="reason" type="text" name="reason" maxlength="300" class="fill" />
+                            <div class="row">
+                                <label for="days">Duration</label>
+                                <select id="days" name="days">
+                                    <option value="1">1 day</option>
+                                    <option value="7">7 days</option>
+                                    <option value="30">30 days</option>
+                                    <option value="365">1 year</option>
+                                    <option value="0">Permanent</option>
+                                </select>
+                                <button type="submit">Ban</button>
+                            </div>
+                        </form>
+                    }
+                </fieldset>
+                <fieldset>
+                    <legend>Send a moderator message</legend>
+                    <form method="post" asp-page-handler="Warn" asp-route-id="@u.Id" class="stack">
+                        <textarea name="message" rows="2" maxlength="500" class="fill" placeholder="Appears in the user's notifications"></textarea>
+                        <div><button type="submit">Send</button></div>
+                    </form>
+                </fieldset>
+            </div>
+
+            <fieldset>
+                <legend>Tools</legend>
+                <div class="row">
+                    <form method="post" asp-page-handler="ResetPassword" asp-route-id="@u.Id" data-confirm="Reset this user's password?"><button type="submit">Reset password</button></form>
+                    <form method="post" asp-page-handler="SignOut" asp-route-id="@u.Id"><button type="submit">Sign out all sessions</button></form>
+                    @if (u.AvatarPath is not null)
+                    {
+                        <form method="post" asp-page-handler="RemoveAvatar" asp-route-id="@u.Id"><button type="submit">Remove picture</button></form>
+                    }
+                    <form method="post" asp-page-handler="ClearProfile" asp-route-id="@u.Id" data-confirm="Clear bio, location and website?"><button type="submit">Clear profile text</button></form>
+                    <form method="post" asp-page-handler="DeletePosts" asp-route-id="@u.Id" data-confirm="Delete ALL posts by @@@u.UserName? This can't be undone."><button type="submit">Delete all posts</button></form>
+                </div>
+                @if (isAdmin)
+                {
+                    <br />
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@u.Id" class="row" data-confirm="Permanently delete @@@u.UserName and all their content?">
+                        <label for="confirm">Delete account — type <b>@u.UserName</b>:</label>
+                        <input id="confirm" type="text" name="confirm" autocomplete="off" />
+                        <button type="submit">Delete user</button>
+                    </form>
+                }
+            </fieldset>
+        }
+
+        <h2 class="section-title">Recent posts</h2>
+        <partial name="_PostList" model="@(new PostListModel(Model.RecentPosts, "This user hasn't posted anything."))" />
+
+        @if (Model.Reports.Count > 0)
+        {
+            <h2 class="section-title">Reports involving this user</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>When</th><th>Reporter</th><th>Category</th><th>Target</th><th>Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in Model.Reports)
+                        {
+                            <tr>
+                                <td>@r.Id</td>
+                                <td>@Fmt.Time(r.CreatedAt)</td>
+                                <td>@@@r.Reporter.UserName</td>
+                                <td>@r.Category</td>
+                                <td>@if (r.PostId is int pid) { <a href="/post/@pid">post #@pid</a> } else { <text>profile</text> }</td>
+                                <td>@r.Status</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (Model.History.Count > 0)
+        {
+            <h2 class="section-title">Moderation history</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>When</th><th>By</th><th>Action</th><th>Details</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in Model.History)
+                        {
+                            <tr><td>@Fmt.Time(a.CreatedAt)</td><td>@(a.Actor is null ? "system" : "@" + a.Actor.UserName)</td><td>@a.Action</td><td>@a.Details</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </article>
+</card>

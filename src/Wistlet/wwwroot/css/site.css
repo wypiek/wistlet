@@ -1,0 +1,230 @@
+/* Wistlet page styles. Form controls, tabs, menus, tables, fieldsets,
+   progress bars and balloons come from 7.css; this file only lays out the
+   page and styles the posts. */
+
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap; src: url(/lib/atkinson-hyperlegible/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: italic; font-weight: 400; font-display: swap; src: url(/lib/atkinson-hyperlegible/atkinson-hyperlegible-latin-400-italic.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap; src: url(/lib/atkinson-hyperlegible/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: italic; font-weight: 700; font-display: swap; src: url(/lib/atkinson-hyperlegible/atkinson-hyperlegible-latin-700-italic.woff2) format("woff2"); }
+
+:root {
+    --cherry: #83254f;
+    --cherry-dark: #5f1a39;
+    --bg: #fff9f2;
+    --ink: #191919;
+    --gray: #6b6b6b;
+    --rule: #d9d3cc;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+}
+
+[hidden] { display: none !important; }
+
+h1, h2, h3 { line-height: 1.25; }
+
+/* ---------- header ---------- */
+
+.site-header { background: var(--cherry); color: #fff; }
+
+.site-header-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.logo { color: #fff; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.logo span { color: #ffab5c; }
+.logo:hover, .logo:focus { color: #fff; text-decoration: none; }
+
+.header-search { width: 260px; }
+.header-search .searchbox, .header-search input[type=search] { width: 100%; }
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.header-right > a:not([role=button]) { color: #fff; }
+
+.dropdown { position: relative; }
+.dropdown > summary { list-style: none; cursor: pointer; display: block; }
+.dropdown > summary::before { content: none; }
+.dropdown > summary::-webkit-details-marker { display: none; }
+.dropdown > ul[role=menu] { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; }
+
+/* ---------- columns ---------- */
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+}
+
+.main { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 680px; }
+.container.wide .main { max-width: none; }
+
+.side { font-size: 15px; }
+.side-nav { list-style: none; margin: 0 0 24px; padding: 0; }
+.side-nav a { display: block; padding: 3px 0; color: var(--ink); }
+.side-nav a:hover { color: var(--cherry); text-decoration: underline; }
+.side-nav a[aria-current=page] { color: var(--cherry); font-weight: 700; }
+
+.side-heading { font-size: 13px; font-weight: 700; color: var(--gray); margin: 0 0 6px; }
+.side-tags { list-style: none; margin: 0 0 24px; padding: 0; }
+.side-tags a { color: var(--ink); }
+.side-foot { font-size: 13px; color: var(--gray); }
+.side-foot a { color: var(--gray); }
+
+@media (max-width: 760px) {
+    .site-header-inner { flex-wrap: wrap; gap: 10px; }
+    .header-search { order: 3; width: 100%; }
+    .container { grid-template-columns: minmax(0, 1fr); padding-top: 12px; gap: 12px; }
+    .side-nav { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 0; }
+    .side-heading, .side-tags, .side-foot { display: none; }
+}
+
+/* ---------- headings & generic boxes ---------- */
+
+.page-title { font-size: 22px; margin: 0; }
+.section-title { font-size: 18px; margin: 8px 0 0; }
+.muted { color: var(--gray); }
+
+.card { background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.card-head { padding: 12px 16px 0; }
+.card-head h2 { margin: 0; font-size: 18px; }
+.card-body { padding: 12px 16px; }
+.card-body > :first-child { margin-top: 0; }
+.card-body > :last-child { margin-bottom: 0; }
+.card-foot { padding: 8px 16px; border-top: 1px solid var(--rule); color: var(--gray); font-size: 14px; }
+
+.narrow { max-width: 460px; width: 100%; margin: 24px auto 0; }
+
+.notice { margin: 18px 0 0; font-size: 9pt; }
+.notice button[data-dismiss] { margin-left: 8px; }
+
+/* ---------- posts ---------- */
+
+.post-list { display: flex; flex-direction: column; gap: 16px; }
+
+.post { background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.post-byline { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; }
+.post-byline .display-name { color: var(--ink); font-weight: 700; }
+.post-byline .handle { color: var(--gray); }
+.post-byline .flag { color: var(--cherry); font-weight: 700; }
+.badge { color: var(--gray); font-size: 13px; text-decoration: none; }
+
+.post-body { padding: 12px 12px 4px; overflow-wrap: anywhere; }
+.post-body p { margin: 0 0 12px; }
+.post-body a { color: var(--cherry); text-decoration: underline; }
+.post-body .replying { color: var(--gray); font-size: 14px; margin-bottom: 4px; }
+.post-image { display: block; max-width: 100%; max-height: 520px; margin: 0 0 12px; }
+
+.post-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--rule);
+    flex-wrap: wrap;
+}
+.post-footer .reply-count { margin-right: auto; color: var(--gray); font-size: 14px; }
+.post-footer form { margin: 0; }
+
+.post-more { position: relative; }
+.post-more > summary { list-style: none; }
+.post-more > summary::before { content: none; }
+.post-more > summary::-webkit-details-marker { display: none; }
+.post-more > ul[role=menu] { position: absolute; right: 0; top: 100%; z-index: 10; }
+
+.avatar { border-radius: 4px; object-fit: cover; flex: none; display: block; }
+.avatar.sm { width: 32px; height: 32px; }
+.avatar.md { width: 40px; height: 40px; }
+.avatar.lg { width: 96px; height: 96px; }
+
+/* ---------- composer ---------- */
+
+.composer textarea { width: 100%; min-height: 90px; resize: vertical; }
+.composer .row { margin-top: 8px; }
+.composer .grow { flex: 1; }
+.composer .muted { font-size: 13px; }
+
+/* ---------- profile ---------- */
+
+.profile-head { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.profile-head .info { flex: 1; min-width: 200px; }
+.profile-head h1 { margin: 0; font-size: 22px; }
+.profile-head p { margin: 2px 0 6px; }
+.profile-stats { display: flex; gap: 14px; font-size: 15px; }
+.profile-stats a { color: var(--ink); }
+
+/* Tabs above a feed: posts sit on the page rather than inside the panel. */
+.feed-tabs [role=tabpanel] { background: none; border: 0; padding: 16px 0 0; margin: 0; }
+
+/* ---------- lists, forms, tables ---------- */
+
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.row.end { justify-content: flex-end; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.fill { width: 100%; }
+
+.form-grid { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
+.form-grid > .full { grid-column: 1 / -1; }
+.form-grid input[type=text], .form-grid input[type=password], .form-grid input[type=email],
+.form-grid input[type=url], .form-grid input[type=number], .form-grid textarea, .form-grid select { width: 100%; }
+@media (max-width: 600px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
+
+fieldset { margin: 0 0 12px; }
+.table-wrap { overflow-x: auto; }
+.table-wrap table, .card-body > table, fieldset > table { width: 100%; }
+
+.people { list-style: none; margin: 0; padding: 0; }
+.people li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.people li:first-child { border-top: 0; padding-top: 0; }
+.people .who { flex: 1; min-width: 0; }
+.people .who a { font-weight: 700; color: var(--ink); }
+.people .who span { display: block; color: var(--gray); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tag-list { list-style: none; margin: 0; padding: 0; }
+.tag-list li { display: flex; justify-content: space-between; padding: 2px 0; }
+
+/* Link-buttons: centre the label the way 7.css does for <button>. */
+a[role=button], summary[role=button] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+/* ---------- messages ---------- */
+
+.chat { display: flex; flex-direction: column; gap: 22px; max-height: 60vh; overflow-y: auto; padding: 22px 4px 8px; }
+.chat [role=tooltip] { max-width: 75%; align-self: flex-start; overflow-wrap: anywhere; }
+.chat [role=tooltip].is-left { align-self: flex-end; }
+
+/* ---------- admin ---------- */
+
+.admin-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.admin-cols > fieldset { margin: 0; min-width: 0; }
+
+@media (max-width: 760px) {
+    .post-footer button, .post-footer [role=button] { min-width: 0; }
+}

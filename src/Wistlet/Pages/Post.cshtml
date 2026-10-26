@@ -1,0 +1,29 @@
+@page "/post/{id:int}"
+@model PostModel
+@{
+    var excerpt = Model.Post.Content.Length > 40 ? Model.Post.Content[..40] + "…" : Model.Post.Content;
+    ViewData["Title"] = $"{Model.Post.Author.DisplayName}: “{excerpt}”";
+}
+@if (Model.Ancestors.Count > 0)
+{
+    <div class="post-list">
+        @foreach (var a in Model.Ancestors)
+        {
+            <partial name="_Post" model="a" />
+        }
+    </div>
+}
+<partial name="_Post" model="Model.Post" />
+
+<h2 class="section-title" id="reply">@Fmt.Plural(Model.Post.ReplyCount, "reply", "replies")</h2>
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <card>
+        <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.Post.Id}", Model.Post.Id, $"reply to @{Model.Post.Author.UserName}…", "reply"))" />
+    </card>
+}
+else
+{
+    <card><p><a href="/account/login?returnUrl=/post/@Model.Post.Id">Log in</a> to join the conversation.</p></card>
+}
+<partial name="_PostList" model="@(new PostListModel(Model.Replies, "No replies yet."))" />

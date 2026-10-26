@@ -1,0 +1,76 @@
+@page
+@model Wistlet.Pages.Admin.ReportsModel
+@{
+    ViewData["Title"] = "Reports";
+    ViewData["AdminTab"] = "reports";
+}
+<card title="Admin — Reports" status="@Fmt.Plural(Model.Items.Count, "report") shown">
+    <partial name="_AdminNav" />
+    <article role="tabpanel">
+        <form method="get" class="row">
+            <label for="status">Show</label>
+            <select id="status" name="status">
+                @foreach (var (key, label) in new[] { ("open", "Open"), ("resolved", "Resolved"), ("dismissed", "Dismissed"), ("all", "All") })
+                {
+                    <option value="@key" selected="@(Model.Status == key)">@label</option>
+                }
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <br />
+        @if (Model.Items.Count == 0)
+        {
+            <p>No @(Model.Status == "all" ? "" : Model.Status) reports.</p>
+        }
+        @foreach (var item in Model.Items)
+        {
+            var r = item.Report;
+            <fieldset>
+                <legend>Report #@r.Id · @r.Category · @r.Status</legend>
+                <p>Reported by <a href="/admin/user/@r.ReporterId">@@@r.Reporter.UserName</a> · @Fmt.Time(r.CreatedAt)</p>
+                @if (!string.IsNullOrWhiteSpace(r.Reason))
+                {
+                    <blockquote>“@r.Reason”</blockquote>
+                }
+                @if (item.Post is not null)
+                {
+                    <partial name="_Post" model="item.Post" />
+                }
+                else if (r.TargetUser is not null)
+                {
+                    <p>Account: <a href="/admin/user/@r.TargetUser.Id">@r.TargetUser.DisplayName (@@@r.TargetUser.UserName)</a></p>
+                }
+                else
+                {
+                    <p>The reported content no longer exists.</p>
+                }
+                <br />
+                @if (r.Status == ReportStatus.Open)
+                {
+                    <form method="post" asp-page-handler="Resolve" asp-route-id="@r.Id" asp-route-status="@Model.Status" class="row">
+                        <input type="text" name="note" placeholder="Note (optional)" maxlength="500" aria-label="Resolution note" />
+                        <button type="submit" name="action" value="dismiss">Dismiss</button>
+                        <button type="submit" name="action" value="resolve">Mark resolved</button>
+                        @if (item.Post is not null)
+                        {
+                            <button type="submit" name="action" value="hide">Hide post</button>
+                            <button type="submit" name="action" value="delete" data-confirm="Delete this post?">Delete post</button>
+                            <a role="button" href="/admin/user/@item.Post.Author.Id">Manage author</a>
+                        }
+                        else if (r.TargetUser is not null)
+                        {
+                            <a role="button" href="/admin/user/@r.TargetUser.Id">Manage user</a>
+                        }
+                    </form>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Reopen" asp-route-id="@r.Id" asp-route-status="@Model.Status" class="row">
+                        <span>@r.Status by @(r.ResolvedBy is null ? "—" : "@" + r.ResolvedBy.UserName) @(r.ResolvedAt is DateTime at ? Fmt.Ago(at) + " ago" : "")@(r.ResolutionNote is null ? "" : $" — “{r.ResolutionNote}”")</span>
+                        <button type="submit">Reopen</button>
+                    </form>
+                }
+            </fieldset>
+        }
+    </article>
+</card>

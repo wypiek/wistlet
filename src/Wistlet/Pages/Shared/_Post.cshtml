@@ -1,0 +1,77 @@
+@model PostView
+@{
+    var meId = Context.User.GetUserId();
+    var staff = Context.User.IsStaff();
+    var mine = meId == Model.Author.Id;
+    var here = Context.Request.Path + Context.Request.QueryString;
+    var ret = here + "#post-" + Model.Id;
+    var f = "pf" + Model.Id;
+}
+<article class="post" id="post-@Model.Id">
+    <header class="post-header">
+        <a href="/u/@Model.Author.UserName" tabindex="-1"><img class="avatar md" src="@Model.Author.AvatarUrl" alt="" loading="lazy" /></a>
+        <div class="post-byline">
+            <a class="display-name" href="/u/@Model.Author.UserName">@Model.Author.DisplayName</a>
+            <a class="handle" href="/u/@Model.Author.UserName">@@@Model.Author.UserName</a>
+            <partial name="_Badges" model="Model.Author" />
+            <span class="handle">·</span>
+            <a class="handle" href="/post/@Model.Id">@Fmt.Time(Model.CreatedAt)</a>
+            @if (Model.IsPinned) { <span class="handle">· pinned</span> }
+            @if (Model.IsHidden) { <span class="flag">hidden by a moderator</span> }
+        </div>
+    </header>
+    <div class="post-body">
+        @if (Model.ParentAuthorUserName is not null)
+        {
+            <p class="replying">replying to <a href="/post/@Model.ParentId">@@@Model.ParentAuthorUserName</a></p>
+        }
+        <p>@ContentFormatter.Format(Model.Content)</p>
+        @if (Model.ImagePath is not null)
+        {
+            <a href="@Model.ImagePath" target="_blank" rel="noopener"><img class="post-image" src="@Model.ImagePath" alt="Image attached to the post" loading="lazy" /></a>
+        }
+    </div>
+    <footer class="post-footer">
+        <a class="reply-count" href="/post/@Model.Id#reply">@Fmt.Plural(Model.ReplyCount, "reply", "replies")</a>
+        @if (meId is null)
+        {
+            <a role="button" href="/account/login?returnUrl=@Uri.EscapeDataString("/post/" + Model.Id)">like · @Model.LikeCount</a>
+        }
+        else
+        {
+            <a role="button" href="/post/@Model.Id#reply">reply</a>
+            <button type="submit" form="@f-like" class="@(Model.LikedByMe ? "active" : "")" aria-pressed="@(Model.LikedByMe ? "true" : "false")">@(Model.LikedByMe ? "liked" : "like") · @Model.LikeCount</button>
+            <button type="submit" form="@f-bookmark" class="@(Model.BookmarkedByMe ? "active" : "")" aria-pressed="@(Model.BookmarkedByMe ? "true" : "false")">@(Model.BookmarkedByMe ? "saved" : "save")</button>
+            <details class="post-more">
+                <summary role="button" aria-label="More options">…</summary>
+                <ul role="menu">
+                    <li role="menuitem"><a href="/post/@Model.Id">Open post</a></li>
+                    @if (!mine)
+                    {
+                        <li role="menuitem"><a href="/report?postId=@Model.Id">Report post…</a></li>
+                    }
+                    @if (staff)
+                    {
+                        <li role="menuitem"><button type="submit" form="@f-pin">@(Model.IsPinned ? "Unpin from Explore" : "Pin to Explore")</button></li>
+                        <li role="menuitem"><button type="submit" form="@f-hide">@(Model.IsHidden ? "Unhide post" : "Hide post")</button></li>
+                    }
+                    @if (mine || staff)
+                    {
+                        <li role="menuitem"><button type="submit" form="@f-delete" data-confirm="Delete this post? This can't be undone.">Delete post</button></li>
+                    }
+                </ul>
+            </details>
+            <form id="@f-like" method="post" asp-page="/Act" asp-page-handler="Like" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+            <form id="@f-bookmark" method="post" asp-page="/Act" asp-page-handler="Bookmark" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+            @if (staff)
+            {
+                <form id="@f-pin" method="post" asp-page="/Act" asp-page-handler="Pin" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+                <form id="@f-hide" method="post" asp-page="/Act" asp-page-handler="Hide" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+            }
+            @if (mine || staff)
+            {
+                <form id="@f-delete" method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@Model.Id" asp-route-returnUrl="@here" hidden></form>
+            }
+        }
+    </footer>
+</article>

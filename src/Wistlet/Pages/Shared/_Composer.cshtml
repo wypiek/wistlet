@@ -1,0 +1,22 @@
+@model ComposerModel
+@{
+    var cfg = Settings.Current;
+    var counterId = "counter-" + (Model.ParentId?.ToString() ?? "new");
+}
+@if (Context.User.Identity?.IsAuthenticated == true)
+{
+    <form method="post" asp-page="/Act" asp-page-handler="Post" asp-route-returnUrl="@Model.ReturnUrl" enctype="multipart/form-data" class="composer">
+        <input type="hidden" name="parentId" value="@Model.ParentId" />
+        <textarea name="content" rows="3" placeholder="@Model.Placeholder" aria-label="Post text" data-max="@cfg.MaxPostLength" data-counter="@counterId" maxlength="@(cfg.MaxPostLength + 50)">@(TempData["Draft"] as string)</textarea>
+        <div class="row">
+            @if (cfg.AllowImageUploads)
+            {
+                <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach an image" />
+            }
+            <span class="grow"></span>
+            <span class="muted"><span id="@counterId">@cfg.MaxPostLength</span> characters left</span>
+            <span class="loader" hidden aria-label="Posting…"></span>
+            <button type="submit" class="default">@Model.ButtonText</button>
+        </div>
+    </form>
+}

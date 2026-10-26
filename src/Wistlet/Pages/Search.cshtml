@@ -1,0 +1,36 @@
+@page
+@model SearchModel
+@{
+    ViewData["Title"] = Model.Query.Length > 0 ? $"Search: {Model.Query}" : "Search";
+}
+<h1 class="page-title">@(Model.Query.Length > 0 ? $"Results for “{Model.Query}”" : "Search")</h1>
+<card>
+    <form method="get" role="search">
+        <div class="searchbox">
+            <input type="search" name="q" value="@Model.Query" placeholder="Search posts, people and #tags" aria-label="Search" autofocus />
+            <button aria-label="search" type="submit"></button>
+        </div>
+    </form>
+</card>
+@if (Model.Query.Length > 0)
+{
+    @if (Model.Users.Count > 0)
+    {
+        <card title="People">
+            <partial name="_UserList" model="@(new UserListModel(Model.Users.Select(u => new UserCardModel(u, false)).ToList()))" />
+        </card>
+    }
+    @if (Model.Tags.Count > 0)
+    {
+        <card title="Tags">
+            <ul class="tag-list">
+                @foreach (var t in Model.Tags)
+                {
+                    <li><a href="/tag/@Uri.EscapeDataString(t.Tag)">#@t.Tag</a> <span class="muted">@Fmt.Plural(t.Count, "post")</span></li>
+                }
+            </ul>
+        </card>
+    }
+    <h2 class="section-title">Posts</h2>
+    <partial name="_PostList" model="@(new PostListModel(Model.Posts, "No posts matched your search."))" />
+}

@@ -1,0 +1,29 @@
+@page
+@model AboutModel
+@{
+    var cfg = Settings.Current;
+    ViewData["Title"] = "About";
+}
+<card title="@($"About {cfg.SiteName}")">
+    <p class="instruction instruction-primary">@cfg.SiteName</p>
+    <p>@cfg.Tagline</p>
+    <p>@ContentFormatter.Format(cfg.AboutText)</p>
+    <fieldset>
+        <legend>Statistics</legend>
+        <table>
+            <tbody>
+                <tr><td>Members</td><td>@Model.Users.ToString("N0")</td></tr>
+                <tr><td>Posts</td><td>@Model.Posts.ToString("N0")</td></tr>
+                <tr><td>Registration</td><td>@(cfg.RegistrationOpen ? "Open" : "Closed")</td></tr>
+            </tbody>
+        </table>
+    </fieldset>
+    @if (Model.Staff.Count > 0)
+    {
+        <fieldset>
+            <legend>Staff</legend>
+            <partial name="_UserList" model="@(new UserListModel(Model.Staff.Select(s => new UserCardModel(s, false)).ToList()))" />
+        </fieldset>
+    }
+    <p>Built with ASP.NET Core and styled with <a href="https://khang-nd.github.io/7.css/" target="_blank" rel="noopener">7.css</a>.</p>
+</card>

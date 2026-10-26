@@ -1,0 +1,35 @@
+@page
+@model ReportModel
+@{
+    ViewData["Title"] = "Report";
+    var cancel = Model.Post is not null ? $"/post/{Model.Post.Id}" : $"/u/{Model.Target!.UserName}";
+}
+<card title="@(Model.Post is not null ? "Report post" : $"Report @{Model.Target!.UserName}")">
+    <p class="instruction instruction-primary">What's wrong with this @(Model.Post is not null ? "post" : "account")?</p>
+    @if (Model.Post is not null)
+    {
+        <partial name="_Post" model="Model.Post" />
+    }
+    <form method="post" class="stack">
+        <input type="hidden" asp-for="PostId" />
+        <input type="hidden" asp-for="UserId" />
+        <fieldset>
+            <legend>Category</legend>
+            @for (var i = 0; i < ReportModel.Categories.Length; i++)
+            {
+                var c = ReportModel.Categories[i];
+                <div class="field-row">
+                    <input type="radio" id="cat-@i" name="Category" value="@c" checked="@(Model.Category == c)" />
+                    <label for="cat-@i">@c</label>
+                </div>
+            }
+            <span asp-validation-for="Category"></span>
+        </fieldset>
+        <label for="reason">Anything else the moderators should know? (optional)</label>
+        <textarea id="reason" asp-for="Reason" rows="4" class="fill"></textarea>
+        <div class="row end">
+            <a role="button" href="@cancel">Cancel</a>
+            <button type="submit" class="default">Send report</button>
+        </div>
+    </form>
+</card>

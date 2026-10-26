@@ -1,0 +1,119 @@
+@inject ViewerContext Viewer
+@{
+    var cfg = Settings.Current;
+    var me = await Viewer.GetUserAsync();
+    var (unreadNotes, unreadMessages) = await Viewer.GetUnreadCountsAsync();
+    var openReports = me?.IsStaff == true ? await Viewer.GetOpenReportCountAsync() : 0;
+    var title = ViewData["Title"] as string;
+    var path = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
+    string Current(string prefix) =>
+        (prefix == "/" ? path == "/" : path == prefix || path.StartsWith(prefix + "/")) ? "page" : "false";
+    var wide = ViewData["NoSidebar"] is true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(string.IsNullOrEmpty(title) ? cfg.SiteName : $"{title} – {cfg.SiteName}")</title>
+    <meta name="description" content="@cfg.Tagline" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="~/lib/7.css/7.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="logo" href="/">@cfg.SiteName.ToLowerInvariant()<span>!</span></a>
+            <form class="header-search" action="/search" method="get" role="search">
+                <div class="searchbox">
+                    <input type="search" name="q" placeholder="search" aria-label="Search" value="@(path == "/search" ? Context.Request.Query["q"].ToString() : "")" />
+                    <button aria-label="search" type="submit"></button>
+                </div>
+            </form>
+            <div class="header-right">
+                @if (me is not null)
+                {
+                    <a role="button" class="default" href="/compose">post</a>
+                    <details class="dropdown">
+                        <summary><img class="avatar sm" src="@(me.AvatarPath ?? $"/avatar/{me.UserName}.svg")" alt="@me.UserName's menu" /></summary>
+                        <ul role="menu">
+                            <li role="menuitem"><a href="/u/@me.UserName">@@@me.UserName</a></li>
+                            <li role="menuitem" class="has-divider"><a href="/settings">settings</a></li>
+                            <li role="menuitem"><button type="submit" form="logout-form">log out</button></li>
+                        </ul>
+                    </details>
+                    <form id="logout-form" method="post" asp-page="/Account/Logout" hidden></form>
+                }
+                else
+                {
+                    <a href="/account/login">log in</a>
+                    @if (cfg.RegistrationOpen)
+                    {
+                        <a role="button" class="default" href="/account/register">sign up</a>
+                    }
+                }
+            </div>
+        </div>
+    </header>
+
+    <div class="container @(wide ? "wide" : "")">
+        <nav class="side" aria-label="Main">
+            <ul class="side-nav">
+                <li><a href="/" aria-current="@Current("/")">home</a></li>
+                <li><a href="/explore" aria-current="@Current("/explore")">explore</a></li>
+                @if (me is not null)
+                {
+                    <li><a href="/notifications" aria-current="@Current("/notifications")">notifications@(unreadNotes > 0 ? $" ({unreadNotes})" : "")</a></li>
+                    @if (cfg.AllowDirectMessages)
+                    {
+                        <li><a href="/messages" aria-current="@Current("/messages")">messages@(unreadMessages > 0 ? $" ({unreadMessages})" : "")</a></li>
+                    }
+                    <li><a href="/bookmarks" aria-current="@Current("/bookmarks")">saved posts</a></li>
+                    <li><a href="/u/@me.UserName" aria-current="@Current("/u/" + me.UserName.ToLowerInvariant())">profile</a></li>
+                    <li><a href="/settings" aria-current="@Current("/settings")">settings</a></li>
+                }
+                <li><a href="/people" aria-current="@Current("/people")">people</a></li>
+                <li><a href="/search" aria-current="@Current("/search")">search</a></li>
+                @if (me?.IsStaff == true)
+                {
+                    <li><a href="/admin" aria-current="@Current("/admin")">admin@(openReports > 0 ? $" ({openReports})" : "")</a></li>
+                }
+            </ul>
+            @if (!wide)
+            {
+                @await Component.InvokeAsync("Sidebar")
+            }
+            <p class="side-foot">
+                <a href="/about">about</a><br />
+                @cfg.FooterText
+            </p>
+        </nav>
+
+        <main id="content" class="main">
+            @if (cfg.AnnouncementEnabled && !string.IsNullOrWhiteSpace(cfg.AnnouncementText))
+            {
+                <div role="tooltip" class="notice" data-dismiss-key="ann-@Fmt.StableHash(cfg.AnnouncementText)">
+                    @ContentFormatter.Format(cfg.AnnouncementText)
+                    <button type="button" data-dismiss>Dismiss</button>
+                </div>
+            }
+            @if (cfg.MaintenanceMode && me?.IsStaff == true)
+            {
+                <div role="tooltip" class="notice">Maintenance mode is on — only staff can use the site. <a href="/admin/settings">Turn it off</a></div>
+            }
+            @if (TempData["Flash"] is string flash)
+            {
+                <div role="tooltip" class="notice">@flash</div>
+            }
+            @if (TempData["Error"] is string err)
+            {
+                <div role="tooltip" class="notice" aria-live="assertive"><b>Error:</b> @err</div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>

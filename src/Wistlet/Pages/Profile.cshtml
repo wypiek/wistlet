@@ -1,0 +1,108 @@
+@page "/u/{userName}/{tab?}"
+@model ProfileModel
+@{
+    var p = Model.Profile;
+    var summary = new UserSummary(p.Id, p.UserName, p.DisplayName, p.AvatarPath, p.IsVerified, p.Role, p.Bio);
+    ViewData["Title"] = $"{p.DisplayName} (@{p.UserName})";
+    var ret = $"/u/{p.UserName}";
+    var websiteOk = Uri.TryCreate(p.Website, UriKind.Absolute, out var wu) && (wu.Scheme == "http" || wu.Scheme == "https");
+    var basePath = $"/u/{p.UserName}";
+    var tabs = new TabsModel("Profile sections",
+    [
+        new("posts", basePath, Model.Tab == "posts"),
+        new("replies", basePath + "/replies", Model.Tab == "replies"),
+        new("media", basePath + "/media", Model.Tab == "media"),
+        new("likes", basePath + "/likes", Model.Tab == "likes"),
+        new("followers", basePath + "/followers", Model.Tab == "followers"),
+        new("following", basePath + "/following", Model.Tab == "following"),
+    ]);
+}
+<card>
+    <div class="profile-head">
+        <img class="avatar lg" src="@summary.AvatarUrl" alt="@p.DisplayName's picture" />
+        <div class="info">
+            <h1>@p.DisplayName</h1>
+            <p class="muted">
+                @@@p.UserName <partial name="_Badges" model="summary" />
+                @if (Model.FollowsMe) { <text>· follows you</text> }
+                @if (p.IsCurrentlyBanned) { <b>· banned</b> }
+            </p>
+            @if (!string.IsNullOrWhiteSpace(p.Bio))
+            {
+                <p>@ContentFormatter.Format(p.Bio)</p>
+            }
+            <p class="muted">
+                @if (!string.IsNullOrWhiteSpace(p.Location)) { <text>@p.Location · </text> }
+                @if (websiteOk) { <a href="@p.Website" rel="nofollow noopener ugc me" target="_blank">@wu!.Host@(wu.AbsolutePath == "/" ? "" : wu.AbsolutePath)</a> <text> · </text> }
+                joined @Fmt.Date(p.CreatedAt)
+            </p>
+            <div class="profile-stats">
+                <span><b>@Model.PostCount</b> posts</span>
+                <a href="@basePath/following"><b>@Model.FollowingCount</b> following</a>
+                <a href="@basePath/followers"><b>@Model.FollowerCount</b> followers</a>
+            </div>
+        </div>
+        <div class="row">
+            @if (Model.IsMe)
+            {
+                <a role="button" href="/settings">edit profile</a>
+            }
+            else if (User.Identity?.IsAuthenticated == true)
+            {
+                @if (!Model.IBlocked && !Model.BlockedMe)
+                {
+                    <form method="post" asp-page="/Act" asp-page-handler="Follow" asp-route-id="@p.Id" asp-route-returnUrl="@ret">
+                        <button type="submit" class="@(Model.IFollow ? "active" : "default")">@(Model.IFollow ? "following" : "follow")</button>
+                    </form>
+                }
+                @if (Model.CanMessage)
+                {
+                    <a role="button" href="/messages/@p.UserName">message</a>
+                }
+                <details class="post-more">
+                    <summary role="button" aria-label="More options">…</summary>
+                    <ul role="menu">
+                        <li role="menuitem"><a href="/report?userId=@p.Id">Report @@@p.UserName…</a></li>
+                        <li role="menuitem"><button type="submit" form="block-form" data-confirm="@(Model.IBlocked ? $"Unblock @{p.UserName}?" : $"Block @{p.UserName}? You won't see each other's posts and they can't message or follow you.")">@(Model.IBlocked ? "Unblock" : "Block") @@@p.UserName</button></li>
+                        @if (User.IsStaff())
+                        {
+                            <li role="menuitem"><a href="/admin/user/@p.Id">Manage in admin</a></li>
+                        }
+                    </ul>
+                </details>
+                <form id="block-form" method="post" asp-page="/Act" asp-page-handler="Block" asp-route-id="@p.Id" asp-route-returnUrl="@ret" hidden></form>
+            }
+            else
+            {
+                <a role="button" class="default" href="/account/login?returnUrl=@Uri.EscapeDataString(ret)">follow</a>
+            }
+        </div>
+    </div>
+</card>
+
+@if (Model.BlockedMe)
+{
+    <card><p>You can't view this account's posts.</p></card>
+}
+else if (Model.Tab is "followers" or "following")
+{
+    <div>
+        <partial name="_Tabs" model="tabs" />
+        <div role="tabpanel">
+            <partial name="_UserList" model="@(new UserListModel(Model.People, Model.Tab == "followers" ? "No followers yet." : "Not following anyone yet."))" />
+        </div>
+    </div>
+}
+else
+{
+    <div class="feed-tabs">
+        <partial name="_Tabs" model="tabs" />
+        <div role="tabpanel" class="stack">
+            @if (Model.IBlocked)
+            {
+                <card><p>You blocked @@@p.UserName. Their posts are hidden from you.</p></card>
+            }
+            <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No replies yet.", "media" => "No images yet.", "likes" => "No liked posts yet.", _ => "No posts yet." }, Model.MoreUrl))" />
+        </div>
+    </div>
+}

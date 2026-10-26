@@ -1,0 +1,15 @@
+# Caddyfile for a Caddy installed on the host (apt/dnf/brew/binary — not Docker).
+# Replace the domain, then e.g.:
+#   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# Caddy obtains and renews the HTTPS certificate automatically.
+
+wistlet.example.com {
+	encode zstd gzip
+
+	# Allow image uploads (the app's own limit is set in the admin panel, max 50 MB).
+	request_body {
+		max_size 55MB
+	}
+
+	reverse_proxy 127.0.0.1:8080
+}

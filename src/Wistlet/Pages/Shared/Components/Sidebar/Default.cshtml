@@ -1,0 +1,11 @@
+@model SidebarModel
+@if (Model.Trending.Count > 0)
+{
+    <h3 class="side-heading">trending tags</h3>
+    <ul class="side-tags">
+        @foreach (var t in Model.Trending)
+        {
+            <li><a href="/tag/@Uri.EscapeDataString(t.Tag)">#@t.Tag</a></li>
+        }
+    </ul>
+}

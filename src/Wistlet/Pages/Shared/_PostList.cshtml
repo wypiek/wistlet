@@ -1,0 +1,18 @@
+@model PostListModel
+@if (Model.Posts.Count == 0)
+{
+    <card><p class="muted">@(Model.EmptyText ?? "Nothing to see here yet.")</p></card>
+}
+else
+{
+    <div class="post-list">
+        @foreach (var post in Model.Posts)
+        {
+            <partial name="_Post" model="post" />
+        }
+    </div>
+    @if (Model.MoreUrl is not null)
+    {
+        <div class="row" style="justify-content:center"><a role="button" href="@Model.MoreUrl">Load older posts</a></div>
+    }
+}

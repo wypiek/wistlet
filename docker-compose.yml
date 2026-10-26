@@ -1,0 +1,25 @@
+# Wistlet behind a Caddy that runs on the host (Docker never pulls a Caddy image).
+# The app is published on 127.0.0.1 only, so the outside world reaches it
+# exclusively through Caddy. See the Caddyfile next to this file.
+services:
+  wistlet:
+    build: .
+    image: wistlet:latest
+    container_name: wistlet
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WISTLET_PORT:-8080}:8080"
+    environment:
+      # Caddy sets X-Forwarded-For/Proto; trust them so HTTPS and client IPs are detected.
+      Wistlet__TrustAllProxies: "true"
+      # Optional: create (or promote) an admin account on start-up.
+      # Otherwise the first account that registers becomes the admin.
+      Wistlet__AdminUser: ${WISTLET_ADMIN_USER:-}
+      Wistlet__AdminPassword: ${WISTLET_ADMIN_PASSWORD:-}
+      Wistlet__AdminEmail: ${WISTLET_ADMIN_EMAIL:-}
+      Wistlet__SeedDemoContent: ${WISTLET_SEED_DEMO:-false}
+    volumes:
+      - wistlet-data:/data
+
+volumes:
+  wistlet-data:

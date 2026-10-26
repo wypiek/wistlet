@@ -1,0 +1,39 @@
+@page "/messages"
+@model Wistlet.Pages.Messages.IndexModel
+@{
+    ViewData["Title"] = "Messages";
+}
+<card title="Messages" status="@Fmt.Plural(Model.Conversations.Count, "conversation")">
+    <form method="post" asp-page-handler="Start" class="row">
+        <label for="to">New message to</label>
+        <input id="to" type="text" name="userName" placeholder="username" required />
+        <button type="submit">Start</button>
+    </form>
+    <br />
+    @if (Model.Conversations.Count == 0)
+    {
+        <p>No conversations yet. Start one above or from someone's profile.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th></th><th>With</th><th>Last message</th><th>When</th></tr></thead>
+                <tbody>
+                    @foreach (var c in Model.Conversations)
+                    {
+                        <tr>
+                            <td><img src="@c.With.AvatarUrl" alt="" width="32" height="32" /></td>
+                            <td><a href="/messages/@c.With.UserName">@c.With.DisplayName</a><br />@@@c.With.UserName</td>
+                            <td>
+                                @if (c.Unread > 0) { <b>@c.Unread new ·</b> }
+                                @(c.LastIsMine ? "You: " : "")@(c.LastBody.Length > 80 ? c.LastBody[..80] + "…" : c.LastBody)
+                            </td>
+                            <td>@Fmt.Time(c.LastAt)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</card>

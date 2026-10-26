@@ -1,0 +1,45 @@
+@page
+@model Wistlet.Pages.Admin.AuditModel
+@{
+    ViewData["Title"] = "Audit log";
+    ViewData["AdminTab"] = "audit";
+}
+<card title="Admin — Audit log" status="@Fmt.Plural(Model.Total, "entry", "entries")">
+    <partial name="_AdminNav" />
+    <article role="tabpanel">
+        <form method="get" class="row">
+            <input type="search" name="q" value="@Model.Q" placeholder="Action, target, details or @@staff" aria-label="Search audit log" />
+            <button type="submit">Search</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th></tr></thead>
+                <tbody>
+                    @foreach (var a in Model.Entries)
+                    {
+                        <tr>
+                            <td>@Fmt.Time(a.CreatedAt)</td>
+                            <td>@if (a.Actor is not null) { <a href="/admin/user/@a.Actor.Id">@@@a.Actor.UserName</a> } else { <text>system</text> }</td>
+                            <td><code>@a.Action</code></td>
+                            <td>@a.Target</td>
+                            <td>@a.Details</td>
+                            <td>@a.IpAddress</td>
+                        </tr>
+                    }
+                    @if (Model.Entries.Count == 0)
+                    {
+                        <tr><td colspan="6">Nothing logged yet.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Pages > 1)
+        {
+            <div class="row">
+                @if (Model.PageNumber > 1) { <a role="button" href="@Model.PageUrl(Model.PageNumber - 1)">‹ Newer</a> }
+                <span>Page @Model.PageNumber of @Model.Pages</span>
+                @if (Model.PageNumber < Model.Pages) { <a role="button" href="@Model.PageUrl(Model.PageNumber + 1)">Older ›</a> }
+            </div>
+        }
+    </article>
+</card>

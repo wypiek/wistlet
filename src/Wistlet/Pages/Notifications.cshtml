@@ -1,0 +1,46 @@
+@page
+@model NotificationsModel
+@{
+    ViewData["Title"] = "Notifications";
+}
+<card title="Notifications" status="@Fmt.Plural(Model.Items.Count(i => !i.IsRead), "new notification")">
+    @if (Model.Items.Count == 0)
+    {
+        <p>You're all caught up. Likes, replies, mentions and new followers show up here.</p>
+    }
+    else
+    {
+        <form method="post" asp-page-handler="Clear" data-confirm="Delete all notifications?">
+            <p><button type="submit">Clear all</button></p>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>When</th><th>Notification</th><th>Post</th></tr></thead>
+                <tbody>
+                    @foreach (var n in Model.Items)
+                    {
+                        var verb = n.Type switch
+                        {
+                            NotificationType.Like => "liked your post",
+                            NotificationType.Reply => "replied to your post",
+                            NotificationType.Follow => "started following you",
+                            NotificationType.Mention => "mentioned you",
+                            _ => "Message from the moderators",
+                        };
+                        var link = n.PostId is int pid ? $"/post/{pid}" : n.Actor is not null ? $"/u/{n.Actor.UserName}" : null;
+                        <tr>
+                            <td>@Fmt.Time(n.CreatedAt)</td>
+                            <td>
+                                @if (!n.IsRead) { <b>New:</b> }
+                                @if (n.Actor is not null) { <a href="/u/@n.Actor.UserName">@n.Actor.DisplayName</a> }
+                                @if (link is not null) { <a href="@link">@verb</a> } else { @verb }
+                                @if (n.Message is not null) { <br />@n.Message }
+                            </td>
+                            <td>@n.PostExcerpt</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</card>
