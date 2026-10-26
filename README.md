@@ -22,8 +22,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 | **Admin dashboard** | **Site settings** |
 | ![The ask inbox with anonymous and signed asks](docs/screenshots/asks.png) | ![A post with two images, their ALT badges and a custom emoji](docs/screenshots/images.png) |
 | **Ask inbox** | **Images with alt text** |
-| ![The avatar menu listing the account's pages](docs/screenshots/pages.png) | |
-| **Switching pages** | |
+| ![The avatar menu listing the account's pages](docs/screenshots/pages.png) | ![A share's page with comments for each post in the chain](docs/screenshots/share-comments.png) |
+| **Switching pages** | **Comments across a share** |
 | ![Admin user management](docs/screenshots/admin-users.png) | <img src="docs/screenshots/mobile.png" alt="A profile on a phone" width="300"> |
 | **User management** | **On a phone** |
 
