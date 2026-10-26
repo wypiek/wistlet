@@ -280,6 +280,8 @@ legend { font-weight: 700; padding: 0 0.4rem; }
 .co-composer textarea { width: 100%; min-height: 7rem; }
 .co-composer > .i-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
 .co-composer > .i-bar > .i-count { margin-left: auto; font-size: 0.875rem; color: rgb(var(--gray1)); }
+/* The file picker gives way first, so the buttons stay on one line with it. */
+.co-composer > .i-bar > input[type="file"] { flex: 1 1 0; min-width: 8rem; }
 
 /* ---------- people lists ---------- */
 
@@ -294,6 +296,8 @@ legend { font-weight: 700; padding: 0 0.4rem; }
 
 .profile-header-image { width: 100%; }
 .project-sidebar { border-radius: 0.5rem; }
+.project-sidebar > .i-fields { flex-wrap: wrap; justify-content: center; column-gap: 1.25rem; row-gap: 0.25rem; }
+.project-sidebar > .i-fields > .i-field > a.i-value { word-break: normal; overflow-wrap: anywhere; }
 .project-sidebar .i-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
 .project-sidebar .i-stats { display: flex; justify-content: center; gap: 1rem; font-size: 0.875rem; margin-top: 0.75rem; }
 .project-sidebar .i-stats a:hover { text-decoration: underline; }
@@ -372,6 +376,8 @@ button.default:hover, a[role=button].default:hover { background: rgb(var(--color
 @media (max-width: 1023px) {
     #page-container > .feed-sidebar-alt:has(> .project-sidebar) { order: 0; margin-bottom: 0; }
     .feed-sidebar-alt:has(> .project-sidebar) > .site-fine-print { display: none; }
+    /* The navigation sits between the header image and the box here, so the avatar must not overlap it. */
+    .feed-sidebar-alt > .project-sidebar.has-header { margin-top: 3.5rem; }
 }
 
 /* cohost caps titled boxes at 24rem (sized for sidebars); in the main column they fill the width. */

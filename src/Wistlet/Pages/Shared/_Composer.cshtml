@@ -37,7 +37,7 @@
             {
                 <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach an image" />
             }
-            <span class="i-count"><span id="@counterId">@cfg.MaxPostLength</span> left</span>
+            <span class="i-count"><span id="@counterId">@cfg.MaxPostLength.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</span> left</span>
             <button type="button" class="co-button is-outline" data-preview>preview</button>
             <button type="submit" class="co-button">@(editing is not null ? "save" : Model.ButtonText)</button>
         </div>

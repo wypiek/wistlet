@@ -16,7 +16,7 @@
     document.querySelectorAll("textarea[data-max]").forEach((ta) => {
         const counter = document.getElementById(ta.dataset.counter);
         const max = parseInt(ta.dataset.max, 10);
-        const update = () => { if (counter) counter.textContent = String(max - ta.value.length); };
+        const update = () => { if (counter) counter.textContent = (max - ta.value.length).toLocaleString("en-US"); };
         ta.addEventListener("input", update);
         update();
         ta.addEventListener("keydown", (e) => {

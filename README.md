@@ -10,6 +10,19 @@ The cohost styles come from the stylesheet preserved by
 `src/Wistlet/wwwroot/lib/cohost/`. Wistlet's own additions (navigation, forms, menus,
 composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tokens.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Home timeline with the composer, a post and trending tags](docs/screenshots/home.png) | ![A post with a CSS crime, opened, and its comment thread](docs/screenshots/post.png) |
+| **Home timeline** | **A CSS crime and its comments** |
+| ![Profile with a header image, the project box and posts](docs/screenshots/profile.png) | ![The composer previewing a post that uses inline styles](docs/screenshots/compose.png) |
+| **Profile with a header image** | **Composer preview** |
+| ![Admin dashboard](docs/screenshots/admin.png) | ![Admin site settings](docs/screenshots/admin-settings.png) |
+| **Admin dashboard** | **Site settings** |
+| ![Admin user management](docs/screenshots/admin-users.png) | <img src="docs/screenshots/mobile.png" alt="A profile on a phone" width="300"> |
+| **User management** | **On a phone** |
+
 ## Features
 
 **Posts, the cohost way**
