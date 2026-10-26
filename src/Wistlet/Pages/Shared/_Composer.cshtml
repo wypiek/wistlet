@@ -1,22 +1,55 @@
 @model ComposerModel
 @{
     var cfg = Settings.Current;
-    var counterId = "counter-" + (Model.ParentId?.ToString() ?? "new");
+    var editing = Model.Editing;
+    var key = editing is not null ? $"edit-{editing.Id}" : Model.ParentId is int pid ? $"c-{pid}" : Model.ShareOfId is int sid ? $"s-{sid}" : "new";
+    var counterId = "counter-" + key;
+    var content = editing?.Content ?? TempData["Draft"] as string;
+    var showOptions = Model.Expanded || !string.IsNullOrEmpty(editing?.ContentWarnings) || editing?.IsAdult == true;
 }
 @if (Context.User.Identity?.IsAuthenticated == true)
 {
-    <form method="post" asp-page="/Act" asp-page-handler="Post" asp-route-returnUrl="@Model.ReturnUrl" enctype="multipart/form-data" class="composer">
-        <input type="hidden" name="parentId" value="@Model.ParentId" />
-        <textarea name="content" rows="3" placeholder="@Model.Placeholder" aria-label="Post text" data-max="@cfg.MaxPostLength" data-counter="@counterId" maxlength="@(cfg.MaxPostLength + 50)">@(TempData["Draft"] as string)</textarea>
-        <div class="row">
-            @if (cfg.AllowImageUploads)
+    <form method="post" asp-page="/Act" asp-page-handler="@(editing is not null ? "Edit" : "Post")" asp-route-id="@editing?.Id"
+          asp-route-returnUrl="@Model.ReturnUrl" enctype="multipart/form-data" class="co-composer">
+        @if (editing is null)
+        {
+            <input type="hidden" name="parentId" value="@Model.ParentId" />
+            <input type="hidden" name="shareOfId" value="@Model.ShareOfId" />
+        }
+        @if (!Model.IsComment)
+        {
+            <input class="i-headline-input" type="text" name="headline" value="@editing?.Headline" maxlength="140" placeholder="headline" aria-label="Headline" />
+        }
+        <textarea name="content" rows="@(Model.IsComment ? 3 : 5)" placeholder="@Model.Placeholder" aria-label="Post body" data-max="@cfg.MaxPostLength" data-counter="@counterId" maxlength="@cfg.MaxPostLength">@content</textarea>
+        @if (!Model.IsComment)
+        {
+            <input type="text" name="tags" value="@(editing is null ? "" : string.Join(", ", editing.Tags))" placeholder="#add tags (comma separated, spaces are fine)" aria-label="Tags" />
+            <details class="i-options" open="@showOptions">
+                <summary>content warnings &amp; 18+</summary>
+                <div class="stack">
+                    <input type="text" name="contentWarnings" value="@editing?.ContentWarnings" placeholder="CWs, comma separated (the post starts collapsed)" aria-label="Content warnings" />
+                    <div class="field-row"><input type="checkbox" id="adult-@key" name="isAdult" value="true" checked="@(editing?.IsAdult == true)" /><label for="adult-@key">this post contains 18+ content</label></div>
+                </div>
+            </details>
+        }
+        <div class="i-bar">
+            @if (cfg.AllowImageUploads && editing is null)
             {
                 <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach an image" />
             }
-            <span class="grow"></span>
-            <span class="muted"><span id="@counterId">@cfg.MaxPostLength</span> characters left</span>
-            <span class="loader" hidden aria-label="Posting…"></span>
-            <button type="submit" class="default">@Model.ButtonText</button>
+            <span class="i-count"><span id="@counterId">@cfg.MaxPostLength</span> left</span>
+            <button type="button" class="co-button is-outline" data-preview>preview</button>
+            <button type="submit" class="co-button">@(editing is not null ? "save" : Model.ButtonText)</button>
+        </div>
+        @if (!Model.IsComment)
+        {
+            <p class="i-hint">Markdown and HTML work, including inline <code>style</code> attributes. Put <code>@PostRenderer.ReadMoreMarker</code> on its own line to add a "read more" break.</p>
+        }
+        <div class="i-preview-pane" hidden>
+            <div class="i-preview-label">preview</div>
+            <div class="co-post-contents">
+                <div class="i-post-body isolate co-contain-paint co-var-post-body-bg"><div class="co-prose prose" data-preview-target></div></div>
+            </div>
         </div>
     </form>
 }

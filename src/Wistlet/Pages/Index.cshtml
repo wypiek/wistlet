@@ -7,12 +7,10 @@
 <h1 class="page-title">@(signedIn ? "your timeline" : "latest posts")</h1>
 @if (signedIn)
 {
-    <card>
-        <partial name="_Composer" model="@(new ComposerModel("/"))" />
-    </card>
+    <partial name="_ComposerBox" model="@(new ComposerModel("/"))" />
     @if (!Model.FollowsAnyone)
     {
-        <card><p>Your timeline shows posts from people you follow. <a href="/explore">Explore</a> or <a href="/people">find people</a> to fill it up.</p></card>
+        <div class="co-info-box is-draft i-info-circle-icon"><div class="i-text">Your timeline shows posts from people you follow. <a href="/explore">Explore</a> or <a href="/people">find people</a> to fill it up.</div></div>
     }
 }
 <partial name="_PostList" model="@(new PostListModel(Model.Posts, signedIn ? "No posts yet. Say hello to the world above!" : null, Model.MoreUrl))" />

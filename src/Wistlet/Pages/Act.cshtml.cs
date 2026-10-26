@@ -13,7 +13,7 @@ namespace Wistlet.Pages;
 /// <summary>Form-post endpoints for social actions. Every handler redirects back to <c>returnUrl</c>.</summary>
 [Authorize]
 [EnableRateLimiting("write")]
-public class ActModel(AppDbContext db, PostService posts, NotificationService notifications, AuditService audit) : PageModel
+public class ActModel(AppDbContext db, PostService posts, NotificationService notifications, AuditService audit, SiteSettingsService settings) : PageModel
 {
     private int Me => User.RequireUserId();
 
@@ -21,18 +21,52 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
 
     private IActionResult Back(string? returnUrl, string fallback = "/") => LocalRedirect(Fmt.SafeReturnUrl(returnUrl, fallback));
 
-    public async Task<IActionResult> OnPostPostAsync(string? content, IFormFile? image, int? parentId, string? returnUrl)
+    public async Task<IActionResult> OnPostPostAsync(string? content, string? headline, string? tags, string? contentWarnings,
+        bool isAdult, IFormFile? image, int? parentId, int? shareOfId, string? returnUrl)
     {
-        var (post, error) = await posts.CreateAsync(Me, content, image, parentId);
+        var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, image, parentId, shareOfId);
+        var (post, error) = await posts.CreateAsync(Me, draft);
         if (error is not null)
         {
             TempData["Error"] = error;
             TempData["Draft"] = content;
             return Back(returnUrl);
         }
-        if (parentId is int pid) return LocalRedirect($"/post/{pid}#post-{post!.Id}");
-        TempData["Flash"] = "Your post is live.";
+        if (parentId is not null) return LocalRedirect($"{Fmt.SafeReturnUrl(returnUrl)}#post-{post!.Id}");
+        TempData["Flash"] = shareOfId is not null ? "Shared!" : "Your post is live.";
+        return shareOfId is not null ? LocalRedirect($"/post/{post!.Id}") : Back(returnUrl);
+    }
+
+    /// <summary>The share button: shares a post without adding anything.</summary>
+    public async Task<IActionResult> OnPostShareAsync(int id, string? returnUrl)
+    {
+        var (_, error) = await posts.CreateAsync(Me, new PostDraft(null, ShareOfId: id));
+        TempData[error is null ? "Flash" : "Error"] = error ?? "Shared to your page.";
         return Back(returnUrl);
+    }
+
+    public async Task<IActionResult> OnPostEditAsync(int id, string? content, string? headline, string? tags, string? contentWarnings, bool isAdult)
+    {
+        var post = await db.Posts.FirstOrDefaultAsync(p => p.Id == id);
+        if (post is null) return NotFound();
+        if (post.AuthorId != Me) return Forbid();
+        var error = await posts.UpdateAsync(post, new PostDraft(content, headline, tags, contentWarnings, isAdult));
+        if (error is not null)
+        {
+            TempData["Error"] = error;
+            return Redirect($"/post/{id}/edit");
+        }
+        TempData["Flash"] = "Post updated.";
+        return Redirect(post.ParentId is int parent ? $"/post/{parent}#post-{id}" : $"/post/{id}");
+    }
+
+    /// <summary>Renders a draft exactly as it will appear, for the composer's preview.</summary>
+    public IActionResult OnPostPreview(string? content)
+    {
+        content ??= "";
+        if (content.Length > settings.Current.MaxPostLength) content = content[..settings.Current.MaxPostLength];
+        var rendered = PostRenderer.Render(content);
+        return new JsonResult(new { html = rendered.Html, hasReadMore = rendered.PreviewHtml is not null });
     }
 
     public async Task<IActionResult> OnPostLikeAsync(int id, string? returnUrl)

@@ -22,7 +22,8 @@
                         var verb = n.Type switch
                         {
                             NotificationType.Like => "liked your post",
-                            NotificationType.Reply => "replied to your post",
+                            NotificationType.Reply => "commented on your post",
+                            NotificationType.Share => "shared your post",
                             NotificationType.Follow => "started following you",
                             NotificationType.Mention => "mentioned you",
                             _ => "Message from the moderators",

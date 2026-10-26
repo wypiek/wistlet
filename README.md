@@ -1,18 +1,37 @@
 # wistlet
 
-A small social network written in ASP.NET Core (.NET 10, Razor Pages, EF Core + SQLite).
-The page layout follows the cohost style — a cherry header, an off-white page, a left-hand
-navigation column and a single feed of posts. Form controls, tabs, menus, tables, fieldsets,
-progress bars and balloons come from [7.css](https://khang-nd.github.io/7.css/).
+A small social network written in ASP.NET Core (.NET 10, Razor Pages, EF Core + SQLite),
+styled after cohost as it looked in 2022: the cherry header bar, off-white page, Atkinson
+Hyperlegible, post boxes with tinted header and footer strips, big avatars beside the feed,
+profile header images with the cherry project box, longan titled boxes and tag pills.
+
+The cohost styles come from the stylesheet preserved by
+[cohost-dl](https://github.com/cpsdqs/cohost-dl) (MIT), vendored in
+`src/Wistlet/wwwroot/lib/cohost/`. Wistlet's own additions (navigation, forms, menus,
+composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tokens.
 
 ## Features
 
+**Posts, the cohost way**
+- Markdown with raw HTML and inline CSS ("CSS crimes"), up to 200 000 characters, an optional
+  headline and an optional image
+- A preview button in the composer that renders the draft through the same sanitizer posts use
+- A `<!--more-->` line splits off the part shown in feeds ("read more"); very tall posts (over
+  twice the window height) are collapsed automatically
+- Tags in a separate field, shown in order below the post (`#tag` pages and trending tags)
+- Content warnings and an 18+ flag: such posts start collapsed, and other people's 18+ posts only
+  appear for viewers who opted in under Settings → Privacy
+- Shares (with or without your own post on top), share chains, and a "deleted by its original
+  author" tombstone when the shared post is gone
+- Comments as nested threads on the post page (not in feeds), editing your own posts and comments
+- `@mentions`, likes and saved posts
+
 **Social**
-- Posts with optional image upload, replies (threads), likes and saved posts
-- `#hashtags` (tag pages, trending tags) and `@mentions`
 - Follow / unfollow, home timeline, explore (latest, top this week, media), people directory
-- Profiles with picture, bio, location and website; posts / replies / media / likes / followers / following tabs
-- Notifications for likes, replies, mentions, new followers and moderator messages
+- Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
+  tagline, pronouns, a Markdown description, location and website; posts / comments / media / likes /
+  followers / following tabs
+- Notifications for likes, comments, shares, mentions, new followers and moderator messages
 - Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
 - Blocking, reporting posts and accounts, search across people, tags and posts
 
@@ -23,7 +42,7 @@ progress bars and balloons come from [7.css](https://khang-nd.github.io/7.css/).
   image uploads and size limit, banned words, direct messages on/off
 - User management: search and filter, edit name/e-mail/role/verified badge, temporary or permanent
   bans with a reason, password reset, sign out all sessions, remove picture, clear profile,
-  moderator messages, delete all posts, delete account
+  remove banner, moderator messages, delete all posts, delete account
 - Post management: search and filter (reported, hidden, pinned, images), hide, pin to Explore, delete
 - Reports queue: dismiss, resolve, hide or delete the post, jump to the author
 - Audit log (admins only) of every moderation action
@@ -36,6 +55,27 @@ registered on a fresh install becomes the admin, or one can be created from envi
 request (bans, password changes and role changes take effect immediately), rate limiting on log-in,
 sign-up and posting, uploads checked by file signature and stored under random names, a strict
 Content-Security-Policy and other security headers.
+
+## CSS crimes
+
+Posts keep what cohost allowed and drop what it removed. The rules follow
+[prechoster](https://github.com/cpsdqs/prechoster)'s documentation of cohost's renderer, and are
+implemented in `Services/PostRenderer.cs` (Markdig for Markdown, AngleSharp for the HTML pass):
+
+- Kept: `div`, `span`, `details`/`summary`, tables, images, audio and video, headings, lists,
+  `ruby`, `mark`, `kbd` and the other text-level elements, with their `style` attributes.
+- Removed with their content: `script`, `style`, `iframe`, `svg`, `canvas`, `form` fields and the
+  like. Unknown elements are unwrapped so their text stays.
+- `class` and event handler attributes are dropped. `id`s get a `user-content-` prefix and `#links`
+  are rewritten to match. `<input>` becomes a disabled checkbox.
+- In `style`: no custom properties (`--x`), no `!important`, `position: fixed` becomes `static`, and
+  `url()` only takes http(s), relative or `data:image/`/`data:font/` URLs. The site's colour tokens
+  (`rgb(var(--color-cherry))` …) and the `spin` and `bounce` keyframes are available.
+- Links get `rel="nofollow noopener noreferrer ugc"`; only http(s), mailto and relative links survive.
+- The post body is a contained box (`isolation`, `contain: paint`), so nothing escapes onto the page.
+
+Posts are rendered once when saved. When the rules change, `PostRenderer.Version` is bumped and
+older posts are re-rendered on start-up.
 
 ## Deploying with Docker Compose and Caddy
 
@@ -98,20 +138,33 @@ dotnet ef migrations add <Name> --project src/Wistlet -o Data/Migrations
 
 Migrations are applied automatically when the app starts.
 
+The sanitizer has unit tests:
+
+```sh
+dotnet test
+```
+
 ## Project layout
 
 ```
 src/Wistlet/
   Data/            EF Core context, migrations, start-up initialisation
   Models/          Entities and view models
-  Services/        Accounts, posts, notifications, messaging, uploads, site settings, audit log
+  Services/        Accounts, posts and the post renderer, notifications, messaging, uploads, site settings, audit log
   Infrastructure/  Auth cookie validation, middleware, tag helpers, formatting helpers
   Pages/           Razor Pages (Admin/, Account/, Messages/ and the social pages)
-  wwwroot/         site.css, site.js, vendored 7.css and Atkinson Hyperlegible
+  wwwroot/         site.css, site.js, vendored cohost styles, Atkinson Hyperlegible and League Mono
+tests/Wistlet.Tests/  Unit tests for the post renderer
 Dockerfile, docker-compose.yml, Caddyfile
 ```
 
 ## Licences
 
-7.css (MIT) and Atkinson Hyperlegible (SIL Open Font Licence) are vendored under
-`src/Wistlet/wwwroot/lib/` together with their licence files.
+These are vendored under `src/Wistlet/wwwroot/lib/` together with their licence files:
+
+- `cohost/`: the cohost stylesheet and prose styles from cohost-dl (MIT). Wistlet's copy
+  points the fonts at the self-hosted files, removes the dark-mode rules (cohost was light-only
+  in 2022) and uses its own egg and capsule mask shapes.
+- `atkinson-hyperlegible/` and `league-mono/`: fonts under the SIL Open Font Licence.
+
+Wistlet is not affiliated with cohost or Anti Software Software Club.

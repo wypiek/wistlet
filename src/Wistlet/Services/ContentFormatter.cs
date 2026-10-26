@@ -6,19 +6,13 @@ using Microsoft.AspNetCore.Html;
 namespace Wistlet.Services;
 
 /// <summary>
-/// Turns plain post text into safe HTML: everything is encoded, then links,
+/// Turns plain text (messages, announcements) into safe HTML: everything is encoded, then links,
 /// #hashtags and @mentions are turned into anchors and newlines into line breaks.
 /// </summary>
 public static partial class ContentFormatter
 {
     [GeneratedRegex(@"(?<url>https?://[^\s<>""]+[^\s<>"".,;:!?)\]'])|(?<![\w@#&])#(?<tag>[\p{L}\p{N}_]{1,64})|(?<![\w@])@(?<user>[A-Za-z0-9_]{1,32})")]
     private static partial Regex TokenRegex();
-
-    [GeneratedRegex(@"(?<![\w@#&])#(?<tag>[\p{L}\p{N}_]{1,64})")]
-    private static partial Regex TagRegex();
-
-    [GeneratedRegex(@"(?<![\w@])@(?<user>[A-Za-z0-9_]{1,32})")]
-    private static partial Regex MentionRegex();
 
     public static IHtmlContent Format(string? text)
     {
@@ -53,10 +47,4 @@ public static partial class ContentFormatter
 
     private static string Encode(string s) =>
         WebUtility.HtmlEncode(s).Replace("\r\n", "\n").Replace("\n", "<br>");
-
-    public static IReadOnlyCollection<string> ExtractTags(string text) =>
-        TagRegex().Matches(text).Select(m => m.Groups["tag"].Value.ToLowerInvariant()).Distinct().Take(20).ToList();
-
-    public static IReadOnlyCollection<string> ExtractMentions(string text) =>
-        MentionRegex().Matches(text).Select(m => m.Groups["user"].Value.ToLowerInvariant()).Distinct().Take(20).ToList();
 }

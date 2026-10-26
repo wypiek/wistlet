@@ -6,7 +6,7 @@
 }
 <card title="Admin — Users" status="@Fmt.Plural(Model.Total, "user") · page @Model.PageNumber of @Model.Pages">
     <partial name="_AdminNav" />
-    <article role="tabpanel">
+    <div class="tab-panel">
         <form method="get" class="row">
             <input type="search" name="q" value="@Model.Q" placeholder="Name, @@handle or e-mail" aria-label="Search users" />
             <select name="status" aria-label="Status">
@@ -64,5 +64,5 @@
                 @if (Model.PageNumber < Model.Pages) { <a role="button" href="@Model.PageUrl(Model.PageNumber + 1)">Next ›</a> }
             </div>
         }
-    </article>
+    </div>
 </card>

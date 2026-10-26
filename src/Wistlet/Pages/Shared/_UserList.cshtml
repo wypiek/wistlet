@@ -9,20 +9,21 @@
 }
 else
 {
-    <ul class="people">
+    <ul class="co-project-list">
         @foreach (var card in Model.Users)
         {
             var u = card.User;
             <li>
-                <a href="/u/@u.UserName" tabindex="-1"><img class="avatar md" src="@u.AvatarUrl" alt="" loading="lazy" /></a>
-                <div class="who">
-                    <a href="/u/@u.UserName">@u.DisplayName</a> <partial name="_Badges" model="u" />
-                    <span>@@@u.UserName@(Model.Compact || string.IsNullOrEmpty(u.Bio) ? "" : " · " + u.Bio)</span>
+                <a href="/u/@u.UserName" tabindex="-1"><img class="co-avatar i-avatar" data-shape="@u.AvatarShape" src="@u.AvatarUrl" alt="" loading="lazy" /></a>
+                <div class="i-names">
+                    <a class="co-project-display-name" href="/u/@u.UserName">@u.DisplayName</a> <partial name="_Badges" model="u" />
+                    <a class="co-project-handle" href="/u/@u.UserName">@@@u.UserName</a>
+                    @if (!Model.Compact && !string.IsNullOrEmpty(u.Bio)) { <span class="i-dek">@u.Bio</span> }
                 </div>
                 @if (card.ShowFollow && meId is int me && me != u.Id)
                 {
                     <form method="post" asp-page="/Act" asp-page-handler="Follow" asp-route-id="@u.Id" asp-route-returnUrl="@ret">
-                        <button type="submit" class="@(card.IsFollowing ? "active" : "")">@(card.IsFollowing ? "following" : "follow")</button>
+                        <button type="submit" class="co-button @(card.IsFollowing ? "is-outline" : "")">@(card.IsFollowing ? "following" : "follow")</button>
                     </form>
                 }
             </li>

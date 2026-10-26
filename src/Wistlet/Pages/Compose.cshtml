@@ -1,10 +1,12 @@
 @page
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@model ComposeModel
 @{
-    ViewData["Title"] = "New post";
+    ViewData["Title"] = Model.Sharing is not null ? "Share a post" : "New post";
 }
-<h1 class="page-title">new post</h1>
-<card>
-    <partial name="_Composer" model="@(new ComposerModel("/"))" />
-</card>
-<p class="muted">Use #hashtags to join a topic and @@mentions to notify people. Ctrl+Enter posts.</p>
+<h1 class="page-title">@(Model.Sharing is not null ? "share a post" : "new post")</h1>
+<partial name="_ComposerBox" model="@(new ComposerModel("/", Placeholder: Model.Sharing is not null ? "add something (optional)" : "what's on your mind?", ButtonText: Model.Sharing is not null ? "share" : "post") { ShareOfId = Model.Sharing?.Id, Expanded = false })" />
+@if (Model.Sharing is not null)
+{
+    <h2 class="section-title">sharing</h2>
+    <partial name="_PostList" model="@(new PostListModel([Model.Sharing]))" />
+}

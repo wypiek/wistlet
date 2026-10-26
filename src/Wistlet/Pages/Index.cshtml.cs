@@ -16,16 +16,11 @@ public class IndexModel(AppDbContext db, PostService posts) : PageModel
     public async Task OnGetAsync(int? before)
     {
         var me = User.GetUserId();
-        var visible = posts.Visible(me, User.IsStaff());
-        IQueryable<Post> feed;
+        var feed = await posts.FeedAsync(me, User.IsStaff());
         if (me is int id)
         {
             FollowsAnyone = await db.Follows.AnyAsync(f => f.FollowerId == id);
-            feed = visible.Where(p => p.AuthorId == id || db.Follows.Any(f => f.FollowerId == id && f.FolloweeId == p.AuthorId));
-        }
-        else
-        {
-            feed = visible.Where(p => p.ParentId == null);
+            feed = feed.Where(p => p.AuthorId == id || db.Follows.Any(f => f.FollowerId == id && f.FolloweeId == p.AuthorId));
         }
 
         var (page, next) = await posts.PageAsync(feed, me, before);

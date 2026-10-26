@@ -1,4 +1,4 @@
 @model UserSummary
-@if (Model.IsVerified) { <abbr class="badge" title="Verified account">✔</abbr> }
-@if (Model.Role == UserRole.Admin) { <span class="badge">admin</span> }
-else if (Model.Role == UserRole.Moderator) { <span class="badge">mod</span> }
+@if (Model.IsVerified) { <abbr class="co-badge" title="Verified account">✔</abbr> }
+@if (Model.Role == UserRole.Admin) { <span class="co-badge">admin</span> }
+else if (Model.Role == UserRole.Moderator) { <span class="co-badge">mod</span> }

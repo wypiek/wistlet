@@ -1,10 +1,9 @@
 @model TabsModel
-@* 7.css tabs are <button>s; each one submits a GET form so navigation works without JavaScript. *@
-<form method="get" action="@Model.Tabs[0].Path">
-    <menu role="tablist" aria-label="@Model.Label">
-        @foreach (var t in Model.Tabs)
-        {
-            <button type="submit" role="tab" formaction="@t.Path" name="@t.Name" value="@t.Value" aria-selected="@(t.Selected ? "true" : "false")">@t.Text</button>
-        }
-    </menu>
-</form>
+@* Pill-style section switcher, like cohost's profile filters. *@
+<nav class="co-tabs" aria-label="@Model.Label">
+    @foreach (var t in Model.Tabs)
+    {
+        var href = t.Name is null ? t.Path : $"{t.Path}?{t.Name}={Uri.EscapeDataString(t.Value ?? "")}";
+        <a href="@href" aria-current="@(t.Selected ? "page" : "false")">@t.Text</a>
+    }
+</nav>

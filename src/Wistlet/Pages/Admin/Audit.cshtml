@@ -6,7 +6,7 @@
 }
 <card title="Admin — Audit log" status="@Fmt.Plural(Model.Total, "entry", "entries")">
     <partial name="_AdminNav" />
-    <article role="tabpanel">
+    <div class="tab-panel">
         <form method="get" class="row">
             <input type="search" name="q" value="@Model.Q" placeholder="Action, target, details or @@staff" aria-label="Search audit log" />
             <button type="submit">Search</button>
@@ -41,5 +41,5 @@
                 @if (Model.PageNumber < Model.Pages) { <a role="button" href="@Model.PageUrl(Model.PageNumber + 1)">Older ›</a> }
             </div>
         }
-    </article>
+    </div>
 </card>

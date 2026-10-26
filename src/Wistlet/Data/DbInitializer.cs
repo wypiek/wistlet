@@ -4,11 +4,13 @@ using Wistlet.Services;
 
 namespace Wistlet.Data;
 
-public class DbInitializer(AppDbContext db, AccountService accounts, IConfiguration config, ILogger<DbInitializer> logger)
+public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, IConfiguration config, ILogger<DbInitializer> logger)
 {
     public async Task InitializeAsync()
     {
         await db.Database.MigrateAsync();
+        var rerendered = await posts.RerenderOutdatedAsync();
+        if (rerendered > 0) logger.LogInformation("Re-rendered {Count} posts with post renderer v{Version}", rerendered, PostRenderer.Version);
         await EnsureAdminAsync();
         if (config.GetValue("Wistlet:SeedDemoContent", false) && !await db.Posts.AnyAsync())
             await SeedDemoAsync();
@@ -61,23 +63,39 @@ public class DbInitializer(AppDbContext db, AccountService accounts, IConfigurat
         }
         users[0].IsVerified = true;
 
-        var posts = new (int Author, string Text)[]
+        var demoPosts = new (int Author, string? Headline, string Text, string Tags)[]
         {
-            (0, "Welcome to #Wistlet! Follow a few people to fill up your timeline."),
-            (1, "Just finished a great book. Recommendations welcome! #books"),
-            (2, "Tip: use #hashtags so people can find your posts. #tips"),
-            (3, "Anyone up for a puzzle swap this weekend? #books"),
-            (0, "Hey @pete, did you know you can save posts for later? #tips"),
+            (0, "welcome to wistlet!", "Follow a few people to fill up your timeline.\n\nPosts are **Markdown**, and HTML with inline styles works too.", "wistlet, welcome"),
+            (1, null, "Just finished a great book. Recommendations welcome!", "books"),
+            (2, null, "Tip: tags go in the tags box under your post, and they can have spaces in them.", "tips, how to use wistlet"),
+            (3, "a tiny css crime", CssCrimeDemo, "css crimes, the cohost global feed"),
+            (0, null, "Hey @pete, did you know you can save posts for later?", "tips"),
         };
-        var t = DateTime.UtcNow.AddHours(-posts.Length);
-        foreach (var (author, text) in posts)
+        var t = DateTime.UtcNow.AddHours(-demoPosts.Length);
+        foreach (var (author, headline, text, tags) in demoPosts)
         {
-            var post = new Post { AuthorId = users[author].Id, Content = text, CreatedAt = t = t.AddMinutes(37) };
-            foreach (var tag in ContentFormatter.ExtractTags(text)) post.Tags.Add(new PostTag { Tag = tag });
+            var rendered = PostRenderer.Render(text);
+            var post = new Post
+            {
+                AuthorId = users[author].Id, Headline = headline, Content = text, CreatedAt = t = t.AddMinutes(37),
+                RenderedHtml = rendered.Html, RenderedPreviewHtml = rendered.PreviewHtml, RenderVersion = PostRenderer.Version,
+            };
+            var parsed = PostRenderer.ParseTags(tags);
+            for (var i = 0; i < parsed.Count; i++) post.Tags.Add(new PostTag { Tag = parsed[i], Position = i });
             db.Posts.Add(post);
         }
         for (var i = 1; i < users.Count; i++)
             db.Follows.Add(new Follow { FollowerId = users[i].Id, FolloweeId = users[0].Id });
         await db.SaveChangesAsync();
     }
+
+    /// <summary>A small post in cohost's "CSS crimes" tradition: inline styles, details/summary and the built-in spin keyframes.</summary>
+    private const string CssCrimeDemo = """
+        <div style="display: grid; place-items: center; padding: 1.5rem; border-radius: 1rem; background: linear-gradient(135deg, rgb(255 216 168), rgb(229 107 111));">
+        <details style="cursor: pointer;">
+        <summary style="list-style: none; font-weight: bold; color: rgb(131 37 79);">press the egg</summary>
+        <div style="margin-top: 1rem; width: 4rem; height: 5rem; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: rgb(255 249 242); box-shadow: 0 4px 10px rgb(0 0 0 / 0.3); animation: spin 3s linear infinite;"></div>
+        </details>
+        </div>
+        """;
 }

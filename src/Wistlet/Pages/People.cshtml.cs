@@ -27,7 +27,7 @@ public class PeopleModel(AppDbContext db) : PageModel
         };
         var list = await users.Take(100).Select(u => new
         {
-            Summary = new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Bio),
+            Summary = new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Bio, u.AvatarShape),
             Following = db.Follows.Any(f => f.FollowerId == me && f.FolloweeId == u.Id),
         }).ToListAsync();
         People = list.Select(x => new UserCardModel(x.Summary, me > 0, x.Following)).ToList();

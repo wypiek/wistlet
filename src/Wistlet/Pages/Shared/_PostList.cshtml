@@ -1,18 +1,37 @@
 @model PostListModel
 @if (Model.Posts.Count == 0)
 {
-    <card><p class="muted">@(Model.EmptyText ?? "Nothing to see here yet.")</p></card>
+    <div class="co-info-box is-tombstone i-info-circle-icon">@(Model.EmptyText ?? "Nothing to see here yet.")</div>
 }
 else
 {
-    <div class="post-list">
+    <div class="@(Model.Preview ? "feed-posts" : "project-profile-posts")">
         @foreach (var post in Model.Posts)
         {
-            <partial name="_Post" model="post" />
+            @if (Model.Preview)
+            {
+                <div class="co-post-preview">
+                    <a class="i-large-avatar co-drop-shadow" href="/u/@post.Author.UserName" title="@@@post.Author.UserName" tabindex="-1">
+                        <img class="co-avatar i-avatar" data-shape="@post.Author.AvatarShape" src="@post.Author.AvatarUrl" alt="@post.Author.UserName" loading="lazy" />
+                    </a>
+                    <partial name="_Post" model="post" />
+                </div>
+            }
+            else
+            {
+                <partial name="_Post" model="post" />
+            }
+        }
+        @if (Model.MoreUrl is not null)
+        {
+            <nav class="co-pagination-eggs">
+                <span class="i-spacer"></span>
+                <a class="i-button is-next co-drop-shadow" href="@Model.MoreUrl" aria-label="older posts">
+                    <div class="i-egg">
+                        <svg class="i-arrow" width="24" height="24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+                    </div>
+                </a>
+            </nav>
         }
     </div>
-    @if (Model.MoreUrl is not null)
-    {
-        <div class="row" style="justify-content:center"><a role="button" href="@Model.MoreUrl">Load older posts</a></div>
-    }
 }

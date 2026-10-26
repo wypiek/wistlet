@@ -5,7 +5,7 @@
     ViewData["Title"] = "About";
 }
 <card title="@($"About {cfg.SiteName}")">
-    <p class="instruction instruction-primary">@cfg.SiteName</p>
+    <p class="lede">@cfg.SiteName</p>
     <p>@cfg.Tagline</p>
     <p>@ContentFormatter.Format(cfg.AboutText)</p>
     <fieldset>
@@ -25,5 +25,5 @@
             <partial name="_UserList" model="@(new UserListModel(Model.Staff.Select(s => new UserCardModel(s, false)).ToList()))" />
         </fieldset>
     }
-    <p>Built with ASP.NET Core and styled with <a href="https://khang-nd.github.io/7.css/" target="_blank" rel="noopener">7.css</a>.</p>
+    <p>Built with ASP.NET Core. The look is modelled on cohost, using styles preserved by <a href="https://github.com/cpsdqs/cohost-dl" target="_blank" rel="noopener">cohost-dl</a>.</p>
 </card>

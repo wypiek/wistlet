@@ -32,9 +32,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasOne(p => p.Author).WithMany(u => u.Posts).HasForeignKey(p => p.AuthorId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(p => p.Parent).WithMany(p => p.Replies).HasForeignKey(p => p.ParentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.SharedPost).WithMany().HasForeignKey(p => p.SharedPostId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(p => p.SharedPostId);
             e.HasIndex(p => p.CreatedAt);
             e.HasIndex(p => new { p.AuthorId, p.CreatedAt });
             e.HasIndex(p => p.ParentId);
+            e.HasIndex(p => p.RootId);
         });
 
         b.Entity<PostTag>(e =>

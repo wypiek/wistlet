@@ -20,7 +20,7 @@ public class AboutModel(AppDbContext db) : PageModel
         Staff = await db.Users.AsNoTracking()
             .Where(u => u.Role != UserRole.User)
             .OrderByDescending(u => u.Role).ThenBy(u => u.UserName)
-            .Select(u => new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Role == UserRole.Admin ? "Administrator" : "Moderator"))
+            .Select(u => new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Role == UserRole.Admin ? "Administrator" : "Moderator", u.AvatarShape))
             .ToListAsync();
     }
 }

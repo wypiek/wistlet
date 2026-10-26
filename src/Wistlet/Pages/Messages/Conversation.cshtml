@@ -16,7 +16,7 @@
         }
         @foreach (var m in Model.Messages)
         {
-            <div role="tooltip" class="@(m.SenderId == Model.Me ? "is-left" : "")">
+            <div class="bubble @(m.SenderId == Model.Me ? "is-mine" : "")">
                 @ContentFormatter.Format(m.Body)<br />
                 <small>@(m.SenderId == Model.Me ? "You" : o.DisplayName) · @Fmt.Time(m.CreatedAt)</small>
             </div>

@@ -4,15 +4,15 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 namespace Wistlet.Infrastructure;
 
 /// <summary>
-/// Renders a content card: <c>&lt;card title="Settings"&gt;…&lt;/card&gt;</c>.
+/// Renders cohost's titled box: <c>&lt;card title="Settings"&gt;…&lt;/card&gt;</c>.
 /// </summary>
 [HtmlTargetElement("card")]
 public class CardTagHelper : TagHelper
 {
-    /// <summary>Optional heading shown at the top of the card.</summary>
+    /// <summary>Optional heading shown in the box's header strip.</summary>
     public string? Title { get; set; }
 
-    /// <summary>Extra classes for the card element.</summary>
+    /// <summary>Extra classes for the box element.</summary>
     public string? Class { get; set; }
 
     /// <summary>Optional footer text (counts, dates…).</summary>
@@ -25,13 +25,13 @@ public class CardTagHelper : TagHelper
         var enc = HtmlEncoder.Default;
         output.TagName = "section";
         output.TagMode = TagMode.StartTagAndEndTag;
-        output.Attributes.SetAttribute("class", $"card {Class}".Trim());
+        output.Attributes.SetAttribute("class", $"co-titled-box {Class}".Trim());
         if (Id is not null) output.Attributes.SetAttribute("id", Id);
 
-        var head = string.IsNullOrEmpty(Title) ? "" : $"<header class=\"card-head\"><h2>{enc.Encode(Title)}</h2></header>";
-        output.PreContent.SetHtmlContent(head + "<div class=\"card-body\">");
+        var head = string.IsNullOrEmpty(Title) ? "" : $"<h2 class=\"i-header\">{enc.Encode(Title)}</h2>";
+        output.PreContent.SetHtmlContent(head + "<div class=\"i-contents\">");
 
-        var foot = Status is null ? "" : $"<footer class=\"card-foot\">{enc.Encode(Status)}</footer>";
+        var foot = Status is null ? "" : $"<footer class=\"i-footer\">{enc.Encode(Status)}</footer>";
         output.PostContent.SetHtmlContent("</div>" + foot);
     }
 }

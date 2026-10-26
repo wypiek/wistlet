@@ -1,29 +1,28 @@
 @page "/post/{id:int}"
 @model PostModel
 @{
-    var excerpt = Model.Post.Content.Length > 40 ? Model.Post.Content[..40] + "…" : Model.Post.Content;
-    ViewData["Title"] = $"{Model.Post.Author.DisplayName}: “{excerpt}”";
+    var title = Model.Post.Headline ?? (Model.Post.Content.Length > 40 ? Model.Post.Content[..40] + "…" : Model.Post.Content);
+    ViewData["Title"] = $"{Model.Post.Author.DisplayName}: “{title}”";
+    ViewData["ExpandPosts"] = true;
 }
-@if (Model.Ancestors.Count > 0)
-{
-    <div class="post-list">
-        @foreach (var a in Model.Ancestors)
-        {
-            <partial name="_Post" model="a" />
-        }
-    </div>
-}
-<partial name="_Post" model="Model.Post" />
+<partial name="_PostList" model="@(new PostListModel([Model.Post]))" view-data="ViewData" />
 
-<h2 class="section-title" id="reply">@Fmt.Plural(Model.Post.ReplyCount, "reply", "replies")</h2>
-@if (User.Identity?.IsAuthenticated == true)
-{
-    <card>
-        <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.Post.Id}", Model.Post.Id, $"reply to @{Model.Post.Author.UserName}…", "reply"))" />
-    </card>
-}
-else
-{
-    <card><p><a href="/account/login?returnUrl=/post/@Model.Post.Id">Log in</a> to join the conversation.</p></card>
-}
-<partial name="_PostList" model="@(new PostListModel(Model.Replies, "No replies yet."))" />
+<div class="co-comments" id="comments">
+    <h4 class="i-header">@Fmt.Plural(Model.CommentCount, "comment") on <a class="i-post-ref" href="#post-@Model.Post.Id">@@@Model.Post.Author.UserName's post</a></h4>
+    @foreach (var c in Model.TopLevelComments)
+    {
+        <div class="i-thread">
+            <partial name="_CommentTree" model="@(new CommentTreeModel(c, Model.Children, Model.Post.Id))" />
+        </div>
+    }
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="i-thread" id="reply">
+            <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.Post.Id}", Model.Post.Id, $"comment as @{User.Identity!.Name}…", "comment") { IsComment = true })" />
+        </div>
+    }
+    else
+    {
+        <div class="co-info-box is-tombstone i-info-circle-icon"><div class="i-text"><a href="/account/login?returnUrl=/post/@Model.Post.Id">Log in</a> to comment.</div></div>
+    }
+</div>

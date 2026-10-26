@@ -1,0 +1,59 @@
+@model CommentTreeModel
+@{
+    var c = Model.Comment;
+    var meId = Context.User.GetUserId();
+    var canDelete = meId == c.Author.Id || Context.User.IsStaff();
+    var full = c.CreatedAt.ToString("ddd, MMM d, yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " UTC";
+    var children = Model.Children[c.Id].ToList();
+}
+<div class="co-comment-tree">
+    <article class="co-comment-item" id="post-@c.Id">
+        <a class="i-big-avatar co-drop-shadow" href="/u/@c.Author.UserName" title="@@@c.Author.UserName" tabindex="-1">
+            <img class="i-avatar co-avatar" data-shape="@c.Author.AvatarShape" src="@c.Author.AvatarUrl" alt="@c.Author.UserName" loading="lazy" />
+        </a>
+        <div class="i-comment">
+            <div class="i-header">
+                <img class="i-avatar co-avatar" data-shape="@c.Author.AvatarShape" src="@c.Author.AvatarUrl" alt="@c.Author.UserName" loading="lazy" />
+                <a class="co-project-display-name" rel="author" href="/u/@c.Author.UserName" title="@c.Author.DisplayName">@c.Author.DisplayName</a>
+                <a class="co-project-handle" href="/u/@c.Author.UserName">@@@c.Author.UserName</a>
+                <partial name="_Badges" model="c.Author" />
+                <time class="i-timestamp" datetime="@c.CreatedAt.ToString("o")" title="@full"><a href="#post-@c.Id">@Fmt.AgoLong(c.CreatedAt)@(c.EditedAt is not null ? " (edited)" : "")</a></time>
+            </div>
+            @if (c.IsHidden) { <div class="co-info-box is-warning i-shield-exclam-icon">Hidden by a moderator.</div> }
+            <div class="i-contents prose co-prose isolate co-contain-paint">@Html.Raw(c.Html)</div>
+            @if (c.ImagePath is not null)
+            {
+                <a class="i-attachment" href="@c.ImagePath" target="_blank" rel="noopener"><img src="@c.ImagePath" alt="Image attached to the comment" loading="lazy" /></a>
+            }
+            @if (meId is not null)
+            {
+                <div class="i-comment-actions">
+                    @if (Model.Depth < 8)
+                    {
+                        <details class="i-reply">
+                            <summary>reply</summary>
+                            <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.RootId}", c.Id, $"reply to @{c.Author.UserName}…", "reply") { IsComment = true })" />
+                        </details>
+                    }
+                    @if (meId == c.Author.Id) { <a href="/post/@c.Id/edit">edit</a> }
+                    @if (meId != c.Author.Id) { <a href="/report?postId=@c.Id">report</a> }
+                    @if (canDelete)
+                    {
+                        <form method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@c.Id" asp-route-returnUrl="/post/@Model.RootId#comments" data-confirm="Delete this comment and its replies?">
+                            <button type="submit" class="i-link-button">delete</button>
+                        </form>
+                    }
+                </div>
+            }
+        </div>
+    </article>
+    @if (children.Count > 0)
+    {
+        <div class="i-replies">
+            @foreach (var child in children)
+            {
+                <partial name="_CommentTree" model="@(new CommentTreeModel(child, Model.Children, Model.RootId, Model.Depth + 1))" />
+            }
+        </div>
+    }
+</div>

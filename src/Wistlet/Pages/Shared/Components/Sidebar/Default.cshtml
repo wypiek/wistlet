@@ -1,11 +1,34 @@
 @model SidebarModel
+@{
+    var cfg = Settings.Current;
+}
+@if (!Model.SignedIn)
+{
+    <section class="co-themed-titled-box">
+        <h2 class="i-header">welcome to @cfg.SiteName.ToLowerInvariant()!</h2>
+        <div class="i-contents">
+            <p>@cfg.Tagline</p>
+            <div class="row">
+                @if (cfg.RegistrationOpen)
+                {
+                    <a class="co-button" href="/account/register">sign up</a>
+                }
+                <a class="co-button is-outline" href="/account/login">log in</a>
+            </div>
+        </div>
+    </section>
+}
 @if (Model.Trending.Count > 0)
 {
-    <h3 class="side-heading">trending tags</h3>
-    <ul class="side-tags">
-        @foreach (var t in Model.Trending)
-        {
-            <li><a href="/tag/@Uri.EscapeDataString(t.Tag)">#@t.Tag</a></li>
-        }
-    </ul>
+    <details class="co-themed-titled-box" open>
+        <summary class="i-header">trending tags</summary>
+        <div class="i-contents feed-related-tag-list">
+            <div class="i-tag-list">
+                @foreach (var t in Model.Trending)
+                {
+                    <a class="co-tag-button is-small" href="/tag/@Uri.EscapeDataString(t.Tag)" title="@Fmt.Plural(t.Count, "post") this week">@t.Tag</a>
+                }
+            </div>
+        </div>
+    </details>
 }

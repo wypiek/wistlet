@@ -6,8 +6,6 @@
 <h1 class="page-title">#@Model.Tag</h1>
 @if (User.Identity?.IsAuthenticated == true)
 {
-    <card>
-        <partial name="_Composer" model="@(new ComposerModel($"/tag/{Model.Tag}", Placeholder: $"Say something about #{Model.Tag}…"))" />
-    </card>
+    <partial name="_ComposerBox" model="@(new ComposerModel($"/tag/{Model.Tag}", Placeholder: $"say something about #{Model.Tag}…"))" />
 }
 <partial name="_PostList" model="@(new PostListModel(Model.Posts, $"No posts tagged #{Model.Tag} yet.", Model.MoreUrl))" />

@@ -8,7 +8,7 @@
 }
 <card title="@($"Admin — @{u.UserName}")">
     <partial name="_AdminNav" />
-    <article role="tabpanel">
+    <div class="tab-panel">
         <div class="row">
             <a role="button" href="/admin/users">All users</a>
             <a role="button" href="/u/@u.UserName">Public profile</a>
@@ -16,7 +16,7 @@
 
         @if (TempData["TempPassword"] is string temp)
         {
-            <div role="tooltip" class="balloon">Temporary password: <code>@temp</code> — it won't be shown again.</div>
+            <div class="co-info-box is-draft i-info-circle-icon">Temporary password: <code>@temp</code> — it won't be shown again.</div>
         }
         @if (!Model.CanManage && !Model.IsSelf)
         {
@@ -128,6 +128,10 @@
                     {
                         <form method="post" asp-page-handler="RemoveAvatar" asp-route-id="@u.Id"><button type="submit">Remove picture</button></form>
                     }
+                    @if (u.BannerPath is not null)
+                    {
+                        <form method="post" asp-page-handler="RemoveBanner" asp-route-id="@u.Id"><button type="submit">Remove banner</button></form>
+                    }
                     <form method="post" asp-page-handler="ClearProfile" asp-route-id="@u.Id" data-confirm="Clear bio, location and website?"><button type="submit">Clear profile text</button></form>
                     <form method="post" asp-page-handler="DeletePosts" asp-route-id="@u.Id" data-confirm="Delete ALL posts by @@@u.UserName? This can't be undone."><button type="submit">Delete all posts</button></form>
                 </div>
@@ -184,5 +188,5 @@
                 </table>
             </div>
         }
-    </article>
+    </div>
 </card>

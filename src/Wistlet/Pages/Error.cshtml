@@ -6,7 +6,7 @@
     ViewData["NoSidebar"] = true;
 }
 <card title="@($"{Model.Code} — {title}")" class="narrow">
-    <p class="instruction instruction-primary">@title</p>
+    <p class="lede">@title</p>
     <p>@message</p>
     @if (Model.Code >= 500)
     {

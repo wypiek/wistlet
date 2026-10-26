@@ -1,0 +1,20 @@
+@model IconModel
+@* Small outline icons (24×24, drawn with currentColor) used for post actions. *@
+@switch (Model.Name)
+{
+    case "reply":
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 18.5 3.5 21V6.5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2Z" /></svg>
+        break;
+    case "heart":
+        <svg class="icon @(Model.Filled ? "filled" : "")" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-8.5-5-8.5-11A4.5 4.5 0 0 1 12 6.6a4.5 4.5 0 0 1 8.5 2.9c0 6-8.5 11-8.5 11Z" /></svg>
+        break;
+    case "bookmark":
+        <svg class="icon @(Model.Filled ? "filled" : "")" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1Z" /></svg>
+        break;
+    case "share":
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 12.8-5.3L19.5 9m0-4.5V9H15M19.5 12a7.5 7.5 0 0 1-12.8 5.3L4.5 15m0 4.5V15H9" /></svg>
+        break;
+    case "more":
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="18.5" cy="12" r="1.4" /></svg>
+        break;
+}

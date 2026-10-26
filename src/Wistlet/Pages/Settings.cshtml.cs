@@ -48,18 +48,21 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         if (Tab == "blocked")
         {
             Blocked = await db.Blocks.Where(b => b.BlockerId == Me.Id)
-                .Select(b => new UserSummary(b.Blocked.Id, b.Blocked.UserName, b.Blocked.DisplayName, b.Blocked.AvatarPath, b.Blocked.IsVerified, b.Blocked.Role, ""))
+                .Select(b => new UserSummary(b.Blocked.Id, b.Blocked.UserName, b.Blocked.DisplayName, b.Blocked.AvatarPath, b.Blocked.IsVerified, b.Blocked.Role, "", b.Blocked.AvatarShape))
                 .ToListAsync();
         }
     }
 
-    public async Task<IActionResult> OnPostProfileAsync(string? displayName, string? bio, string? location, string? website, IFormFile? avatar, bool removeAvatar)
+    public async Task<IActionResult> OnPostProfileAsync(string? displayName, string? bio, string? location, string? website,
+        IFormFile? avatar, bool removeAvatar, IFormFile? banner, bool removeBanner, string? pronouns, string? dek, string? avatarShape)
     {
         var me = await LoadAsync();
         displayName = (displayName ?? "").Trim();
         website = (website ?? "").Trim();
         if (displayName.Length is 0 or > 50) return Fail("profile", "Display names must be 1–50 characters.");
-        if ((bio ?? "").Length > 300) return Fail("profile", "Your bio can be at most 300 characters.");
+        if ((bio ?? "").Length > 5000) return Fail("profile", "Your description can be at most 5,000 characters.");
+        if ((pronouns ?? "").Length > 40) return Fail("profile", "Pronouns can be at most 40 characters.");
+        if ((dek ?? "").Length > 100) return Fail("profile", "The tagline can be at most 100 characters.");
         if ((location ?? "").Length > 60) return Fail("profile", "Location can be at most 60 characters.");
         if (website.Length > 0)
         {
@@ -68,23 +71,34 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
                 return Fail("profile", "That website address doesn't look right.");
         }
 
-        if (avatar is { Length: > 0 })
+        // Store both new images before touching the old ones, so a failed upload changes nothing.
+        var (avatarUrl, avatarError) = await uploads.SaveImageAsync(avatar, "avatars", maxMbOverride: 2);
+        if (avatarError is not null) return Fail("profile", avatarError);
+        var (bannerUrl, bannerError) = await uploads.SaveImageAsync(banner, "banners", maxMbOverride: 4);
+        if (bannerError is not null)
         {
-            var (url, error) = await uploads.SaveImageAsync(avatar, "avatars", maxMbOverride: 2);
-            if (error is not null) return Fail("profile", error);
-            uploads.Delete(me.AvatarPath);
-            me.AvatarPath = url;
+            uploads.Delete(avatarUrl);
+            return Fail("profile", bannerError);
         }
-        else if (removeAvatar)
+
+        if (avatarUrl is not null || removeAvatar)
         {
             uploads.Delete(me.AvatarPath);
-            me.AvatarPath = null;
+            me.AvatarPath = avatarUrl;
+        }
+        if (bannerUrl is not null || removeBanner)
+        {
+            uploads.Delete(me.BannerPath);
+            me.BannerPath = bannerUrl;
         }
 
         me.DisplayName = displayName;
         me.Bio = (bio ?? "").Trim();
         me.Location = (location ?? "").Trim();
         me.Website = website;
+        me.Pronouns = (pronouns ?? "").Trim();
+        me.Dek = (dek ?? "").Trim();
+        me.AvatarShape = AvatarShapes.Resolve(avatarShape);
         await db.SaveChangesAsync();
         return Done("profile", "Profile saved.");
     }
@@ -128,11 +142,12 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         return Done("account", "All other sessions have been signed out.");
     }
 
-    public async Task<IActionResult> OnPostPrivacyAsync(MessagePrivacy messagePrivacy)
+    public async Task<IActionResult> OnPostPrivacyAsync(MessagePrivacy messagePrivacy, bool showAdultContent)
     {
         var me = await LoadAsync();
         if (!Enum.IsDefined(messagePrivacy)) return Fail("privacy", "Unknown option.");
         me.MessagePrivacy = messagePrivacy;
+        me.ShowAdultContent = showAdultContent;
         await db.SaveChangesAsync();
         return Done("privacy", "Privacy settings saved.");
     }
@@ -149,6 +164,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
 
         var images = await db.Posts.Where(p => p.AuthorId == me.Id && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
         images.Add(me.AvatarPath);
+        images.Add(me.BannerPath);
         db.Users.Remove(me);
         await db.SaveChangesAsync();
         foreach (var img in images) uploads.Delete(img);

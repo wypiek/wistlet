@@ -39,7 +39,8 @@ public class User
     [MaxLength(64)]
     public string SecurityStamp { get; set; } = Guid.NewGuid().ToString("N");
 
-    [MaxLength(300)]
+    /// <summary>Profile description (Markdown, rendered like a post).</summary>
+    [MaxLength(5000)]
     public string Bio { get; set; } = "";
 
     [MaxLength(60)]
@@ -50,6 +51,24 @@ public class User
 
     [MaxLength(200)]
     public string? AvatarPath { get; set; }
+
+    /// <summary>One of cohost's avatar shapes: squircle, circle, roundrect, egg, capsule-big, capsule-small.</summary>
+    [MaxLength(20)]
+    public string AvatarShape { get; set; } = "squircle";
+
+    [MaxLength(40)]
+    public string Pronouns { get; set; } = "";
+
+    /// <summary>Short line under the name (cohost's "dek").</summary>
+    [MaxLength(100)]
+    public string Dek { get; set; } = "";
+
+    /// <summary>Whether 18+ posts appear in this user's feeds.</summary>
+    public bool ShowAdultContent { get; set; }
+
+    /// <summary>Wide header image shown at the top of the profile.</summary>
+    [MaxLength(200)]
+    public string? BannerPath { get; set; }
 
     public UserRole Role { get; set; } = UserRole.User;
     public bool IsVerified { get; set; }
@@ -77,14 +96,43 @@ public class Post
     public int AuthorId { get; set; }
     public User Author { get; set; } = null!;
 
-    [MaxLength(5000)]
+    /// <summary>Optional title shown above the body.</summary>
+    [MaxLength(140)]
+    public string? Headline { get; set; }
+
+    /// <summary>Markdown source (raw HTML with inline styles allowed).</summary>
+    [MaxLength(200_000)]
     public string Content { get; set; } = "";
+
+    /// <summary>Sanitized HTML rendered from <see cref="Content"/>.</summary>
+    public string RenderedHtml { get; set; } = "";
+
+    /// <summary>Rendered part before the read-more marker, if the post has one.</summary>
+    public string? RenderedPreviewHtml { get; set; }
+
+    /// <summary><see cref="Services.PostRenderer.Version"/> used for the stored HTML.</summary>
+    public int RenderVersion { get; set; }
+
+    /// <summary>Comma-separated content warnings; posts with any are collapsed.</summary>
+    [MaxLength(500)]
+    public string? ContentWarnings { get; set; }
+
+    /// <summary>18+ posts are collapsed, and only shown in feeds to people who opted in.</summary>
+    public bool IsAdult { get; set; }
+
+    /// <summary>True for shares ("rechosts"). <see cref="SharedPostId"/> is null if the shared post was deleted.</summary>
+    public bool IsShare { get; set; }
+    public int? SharedPostId { get; set; }
+    public Post? SharedPost { get; set; }
 
     [MaxLength(200)]
     public string? ImagePath { get; set; }
 
     public int? ParentId { get; set; }
     public Post? Parent { get; set; }
+
+    /// <summary>For comments: the top-level post of the thread (so whole threads can be counted).</summary>
+    public int? RootId { get; set; }
     public List<Post> Replies { get; set; } = [];
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -108,6 +156,9 @@ public class PostTag
 
     [MaxLength(64)]
     public string Tag { get; set; } = "";
+
+    /// <summary>Order the author typed the tags in.</summary>
+    public int Position { get; set; }
 }
 
 public class Like
@@ -153,6 +204,7 @@ public enum NotificationType
     Follow = 2,
     Mention = 3,
     System = 4,
+    Share = 5,
 }
 
 public class Notification
@@ -249,4 +301,11 @@ public class SiteSetting
     public string Key { get; set; } = "";
 
     public string Value { get; set; } = "";
+}
+
+public static class AvatarShapes
+{
+    public static readonly IReadOnlyList<string> All = ["squircle", "circle", "roundrect", "egg", "capsule-big", "capsule-small"];
+
+    public static string Resolve(string? shape) => shape is not null && All.Contains(shape) ? shape : "squircle";
 }

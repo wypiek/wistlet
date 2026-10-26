@@ -210,7 +210,11 @@ namespace Wistlet.Data.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(5000)
+                        .HasMaxLength(200000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentWarnings")
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -219,9 +223,16 @@ namespace Wistlet.Data.Migrations
                     b.Property<DateTime?>("EditedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Headline")
+                        .HasMaxLength(140)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ImagePath")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAdult")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsHidden")
                         .HasColumnType("INTEGER");
@@ -229,7 +240,26 @@ namespace Wistlet.Data.Migrations
                     b.Property<bool>("IsPinned")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsShare")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RenderVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RenderedHtml")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RenderedPreviewHtml")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RootId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SharedPostId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -237,6 +267,10 @@ namespace Wistlet.Data.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("RootId");
+
+                    b.HasIndex("SharedPostId");
 
                     b.HasIndex("AuthorId", "CreatedAt");
 
@@ -251,6 +285,9 @@ namespace Wistlet.Data.Migrations
                     b.Property<string>("Tag")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("PostId", "Tag");
 
@@ -340,6 +377,11 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AvatarShape")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BanReason")
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
@@ -347,12 +389,21 @@ namespace Wistlet.Data.Migrations
                     b.Property<DateTime?>("BannedUntil")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BannerPath")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Bio")
                         .IsRequired()
-                        .HasMaxLength(300)
+                        .HasMaxLength(5000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dek")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("DisplayName")
@@ -391,6 +442,11 @@ namespace Wistlet.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Pronouns")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
 
@@ -398,6 +454,9 @@ namespace Wistlet.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("ShowAdultContent")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -562,9 +621,16 @@ namespace Wistlet.Data.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("Wistlet.Models.Post", "SharedPost")
+                        .WithMany()
+                        .HasForeignKey("SharedPostId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Author");
 
                     b.Navigation("Parent");
+
+                    b.Navigation("SharedPost");
                 });
 
             modelBuilder.Entity("Wistlet.Models.PostTag", b =>

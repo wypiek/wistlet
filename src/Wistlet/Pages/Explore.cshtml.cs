@@ -15,7 +15,7 @@ public class ExploreModel(PostService posts) : PageModel
     public async Task OnGetAsync(string? tab, int? before)
     {
         var me = User.GetUserId();
-        var visible = posts.Visible(me, User.IsStaff());
+        var visible = await posts.FeedAsync(me, User.IsStaff());
         Tab = tab is "top" or "media" ? tab : "latest";
 
         if (before is null && Tab == "latest")
@@ -33,7 +33,7 @@ public class ExploreModel(PostService posts) : PageModel
                     me, 30);
                 break;
             case "media":
-                var (media, nextMedia) = await posts.PageAsync(visible.Where(p => p.ImagePath != null), me, before);
+                var (media, nextMedia) = await posts.PageAsync(topLevel.Where(p => p.ImagePath != null), me, before);
                 Posts = media;
                 MoreUrl = nextMedia is int nm ? $"/explore?tab=media&before={nm}" : null;
                 break;

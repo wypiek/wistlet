@@ -1,0 +1,5 @@
+@model PostView
+@if (Model.ImagePath is not null)
+{
+    <a class="i-attachment" href="@Model.ImagePath" target="_blank" rel="noopener"><img src="@Model.ImagePath" alt="Image attached to the post" loading="lazy" /></a>
+}

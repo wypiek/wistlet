@@ -6,7 +6,7 @@
 }
 <card title="Admin — Reports" status="@Fmt.Plural(Model.Items.Count, "report") shown">
     <partial name="_AdminNav" />
-    <article role="tabpanel">
+    <div class="tab-panel">
         <form method="get" class="row">
             <label for="status">Show</label>
             <select id="status" name="status">
@@ -72,5 +72,5 @@
                 }
             </fieldset>
         }
-    </article>
+    </div>
 </card>

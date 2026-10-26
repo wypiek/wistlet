@@ -38,8 +38,9 @@ public class SiteConfig
     [Display(Name = "Maintenance message"), StringLength(500)]
     public string MaintenanceMessage { get; set; } = "We're doing some maintenance. Please check back soon.";
 
-    [Display(Name = "Maximum post length"), Range(20, 5000)]
-    public int MaxPostLength { get; set; } = 500;
+    // cohost allowed roughly 200 KiB per post, which is what CSS crimes need.
+    [Display(Name = "Maximum post length (characters)"), Range(20, 200_000)]
+    public int MaxPostLength { get; set; } = 200_000;
 
     [Display(Name = "Allow image uploads in posts")]
     public bool AllowImageUploads { get; set; } = true;
@@ -60,7 +61,7 @@ public class SiteConfig
     public string BannedWords { get; set; } = "";
 
     [Display(Name = "Footer text"), StringLength(200)]
-    public string FooterText { get; set; } = "Powered by Wistlet · Styled with 7.css";
+    public string FooterText { get; set; } = "Powered by Wistlet";
 
     // A method rather than a property so model binding doesn't touch it.
     public IEnumerable<string> GetBannedWords() =>

@@ -35,7 +35,7 @@ public class IndexModel(AppDbContext db, SiteSettingsService settings) : PageMod
         var otherIds = latest.Select(x => x.Other).ToList();
         var users = await db.Users.AsNoTracking()
             .Where(u => otherIds.Contains(u.Id))
-            .Select(u => new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, ""))
+            .Select(u => new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, "", u.AvatarShape))
             .ToDictionaryAsync(u => u.Id);
         var unread = await db.Messages
             .Where(m => m.RecipientId == me && m.ReadAt == null)

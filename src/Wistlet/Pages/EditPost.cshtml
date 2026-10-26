@@ -1,0 +1,7 @@
+@page "/post/{id:int}/edit"
+@model EditPostModel
+@{
+    ViewData["Title"] = "Edit post";
+}
+<h1 class="page-title">edit post</h1>
+<partial name="_ComposerBox" model="@(new ComposerModel($"/post/{Model.Post.Id}") { Editing = Model.Post, IsComment = Model.Post.ParentId is not null })" />

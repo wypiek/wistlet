@@ -159,6 +159,17 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
         return Back("Profile picture removed.");
     }
 
+    public async Task<IActionResult> OnPostRemoveBannerAsync(int id)
+    {
+        if (!await LoadAsync(id)) return NotFound();
+        if (!CanManage) return Denied("You can't manage this account.");
+        uploads.Delete(Target.BannerPath);
+        Target.BannerPath = null;
+        audit.Log("user.remove-banner", $"@{Target.UserName}");
+        await db.SaveChangesAsync();
+        return Back("Profile banner removed.");
+    }
+
     public async Task<IActionResult> OnPostClearProfileAsync(int id)
     {
         if (!await LoadAsync(id)) return NotFound();
@@ -207,6 +218,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
 
         var images = await db.Posts.Where(p => p.AuthorId == id && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
         images.Add(Target.AvatarPath);
+        images.Add(Target.BannerPath);
         audit.Log("user.delete", $"@{Target.UserName}", $"e-mail {Target.Email}");
         db.Users.Remove(Target);
         await db.SaveChangesAsync();

@@ -78,13 +78,10 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
                 return Page();
         }
 
-        var query = visible.Where(p => p.AuthorId == user.Id);
-        query = Tab switch
-        {
-            "replies" => query.Where(p => p.ParentId != null),
-            "media" => query.Where(p => p.ImagePath != null),
-            _ => query.Where(p => p.ParentId == null),
-        };
+        var query = Tab == "replies"
+            ? visible.Where(p => p.AuthorId == user.Id && p.ParentId != null)
+            : (await posts.FeedAsync(me, staff)).Where(p => p.AuthorId == user.Id);
+        if (Tab == "media") query = query.Where(p => p.ImagePath != null);
         var (page, next) = await posts.PageAsync(query, me, before);
         Posts = page;
         MoreUrl = next is int n ? $"{baseUrl}?before={n}" : null;
@@ -103,7 +100,7 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             .Take(200)
             .Select(u => new
             {
-                Summary = new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Bio),
+                Summary = new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Bio, u.AvatarShape),
                 Following = db.Follows.Any(f => f.FollowerId == viewer && f.FolloweeId == u.Id),
             })
             .ToListAsync();

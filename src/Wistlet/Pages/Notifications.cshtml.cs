@@ -24,7 +24,7 @@ public class NotificationsModel(AppDbContext db) : PageModel
             .Take(100)
             .Select(n => new Item(
                 n.Id, n.Type, n.IsRead, n.CreatedAt,
-                n.Actor == null ? null : new UserSummary(n.Actor.Id, n.Actor.UserName, n.Actor.DisplayName, n.Actor.AvatarPath, n.Actor.IsVerified, n.Actor.Role, ""),
+                n.Actor == null ? null : new UserSummary(n.Actor.Id, n.Actor.UserName, n.Actor.DisplayName, n.Actor.AvatarPath, n.Actor.IsVerified, n.Actor.Role, "", n.Actor.AvatarShape),
                 n.PostId,
                 n.Post == null ? null : n.Post.Content.Substring(0, Math.Min(140, n.Post.Content.Length)),
                 n.Message))

@@ -15,7 +15,7 @@ public class TagModel(PostService posts) : PageModel
     {
         Tag = tag.Trim().TrimStart('#').ToLowerInvariant();
         var me = User.GetUserId();
-        var query = posts.Visible(me, User.IsStaff()).Where(p => p.Tags.Any(t => t.Tag == Tag));
+        var query = (await posts.FeedAsync(me, User.IsStaff())).Where(p => p.Tags.Any(t => t.Tag == Tag));
         var (page, next) = await posts.PageAsync(query, me, before);
         Posts = page;
         MoreUrl = next is int n ? $"/tag/{Uri.EscapeDataString(Tag)}?before={n}" : null;

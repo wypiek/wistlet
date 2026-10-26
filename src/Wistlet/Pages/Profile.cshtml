@@ -2,71 +2,106 @@
 @model ProfileModel
 @{
     var p = Model.Profile;
-    var summary = new UserSummary(p.Id, p.UserName, p.DisplayName, p.AvatarPath, p.IsVerified, p.Role, p.Bio);
-    ViewData["Title"] = $"{p.DisplayName} (@{p.UserName})";
+    var summary = new UserSummary(p.Id, p.UserName, p.DisplayName, p.AvatarPath, p.IsVerified, p.Role, p.Bio, p.AvatarShape);
+    ViewData["Title"] = $"@{p.UserName}";
     var ret = $"/u/{p.UserName}";
     var websiteOk = Uri.TryCreate(p.Website, UriKind.Absolute, out var wu) && (wu.Scheme == "http" || wu.Scheme == "https");
     var basePath = $"/u/{p.UserName}";
     var tabs = new TabsModel("Profile sections",
     [
         new("posts", basePath, Model.Tab == "posts"),
-        new("replies", basePath + "/replies", Model.Tab == "replies"),
+        new("comments", basePath + "/replies", Model.Tab == "replies"),
         new("media", basePath + "/media", Model.Tab == "media"),
         new("likes", basePath + "/likes", Model.Tab == "likes"),
         new("followers", basePath + "/followers", Model.Tab == "followers"),
         new("following", basePath + "/following", Model.Tab == "following"),
     ]);
 }
-<card>
-    <div class="profile-head">
-        <img class="avatar lg" src="@summary.AvatarUrl" alt="@p.DisplayName's picture" />
-        <div class="info">
-            <h1>@p.DisplayName</h1>
-            <p class="muted">
-                @@@p.UserName <partial name="_Badges" model="summary" />
-                @if (Model.FollowsMe) { <text>· follows you</text> }
-                @if (p.IsCurrentlyBanned) { <b>· banned</b> }
-            </p>
-            @if (!string.IsNullOrWhiteSpace(p.Bio))
-            {
-                <p>@ContentFormatter.Format(p.Bio)</p>
-            }
-            <p class="muted">
-                @if (!string.IsNullOrWhiteSpace(p.Location)) { <text>@p.Location · </text> }
-                @if (websiteOk) { <a href="@p.Website" rel="nofollow noopener ugc me" target="_blank">@wu!.Host@(wu.AbsolutePath == "/" ? "" : wu.AbsolutePath)</a> <text> · </text> }
-                joined @Fmt.Date(p.CreatedAt)
-            </p>
-            <div class="profile-stats">
-                <span><b>@Model.PostCount</b> posts</span>
-                <a href="@basePath/following"><b>@Model.FollowingCount</b> following</a>
-                <a href="@basePath/followers"><b>@Model.FollowerCount</b> followers</a>
+@section BaseHeader {
+    @if (p.BannerPath is not null)
+    {
+        <img class="profile-header-image co-container" src="@p.BannerPath" alt="" role="presentation" />
+    }
+}
+@section Aside {
+    <div class="project-sidebar @(p.BannerPath is not null ? "has-header" : "")">
+        <div class="i-details">
+            <div class="i-avatar-container co-drop-shadow">
+                <img class="i-avatar co-avatar" data-shape="@AvatarShapes.Resolve(p.AvatarShape)" src="@summary.AvatarUrl" alt="@p.UserName" />
+            </div>
+            <div class="i-details">
+                <h1 class="i-display-name"><a href="@basePath">@p.DisplayName</a></h1>
+                <div class="i-handle"><a href="@basePath">@@@p.UserName</a></div>
+                @if (!string.IsNullOrWhiteSpace(p.Dek))
+                {
+                    <div class="i-dek">@p.Dek</div>
+                }
+                <div class="i-badges">
+                    @if (p.IsVerified) { <text>✔ verified · </text> }
+                    @if (p.Role == UserRole.Admin) { <text>admin · </text> } else if (p.Role == UserRole.Moderator) { <text>moderator · </text> }
+                    @if (Model.FollowsMe) { <text>follows you · </text> }
+                    @if (p.IsCurrentlyBanned) { <b>banned · </b> }
+                    joined @Fmt.Date(p.CreatedAt)
+                </div>
             </div>
         </div>
-        <div class="row">
+        <ul class="i-fields">
+            @if (!string.IsNullOrWhiteSpace(p.Pronouns))
+            {
+                <li class="i-field">
+                    <svg class="i-icon" viewBox="0 0 24 24" height="16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" /></svg>
+                    <span class="i-value">@p.Pronouns</span>
+                </li>
+            }
+            @if (!string.IsNullOrWhiteSpace(p.Location))
+            {
+                <li class="i-field">
+                    <svg class="i-icon" viewBox="0 0 24 24" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" /><circle cx="12" cy="10" r="2.3" /></svg>
+                    <span class="i-value">@p.Location</span>
+                </li>
+            }
+            @if (websiteOk)
+            {
+                <li class="i-field">
+                    <svg class="i-icon" viewBox="0 0 24 24" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+                    <a class="i-value" href="@p.Website" rel="me nofollow noopener ugc" target="_blank">@wu!.Host@(wu.AbsolutePath == "/" ? "" : wu.AbsolutePath)</a>
+                </li>
+            }
+        </ul>
+        @if (!string.IsNullOrWhiteSpace(p.Bio))
+        {
+            <div class="i-description prose prose-invert prose-stone isolate co-contain-paint">@Html.Raw(PostRenderer.RenderFragment(p.Bio))</div>
+        }
+        <div class="i-stats">
+            <span><b>@Model.PostCount</b> posts</span>
+            <a href="@basePath/following"><b>@Model.FollowingCount</b> following</a>
+            <a href="@basePath/followers"><b>@Model.FollowerCount</b> followers</a>
+        </div>
+        <div class="i-actions">
             @if (Model.IsMe)
             {
-                <a role="button" href="/settings">edit profile</a>
+                <a class="co-button is-light" href="/settings">edit profile</a>
             }
             else if (User.Identity?.IsAuthenticated == true)
             {
                 @if (!Model.IBlocked && !Model.BlockedMe)
                 {
                     <form method="post" asp-page="/Act" asp-page-handler="Follow" asp-route-id="@p.Id" asp-route-returnUrl="@ret">
-                        <button type="submit" class="@(Model.IFollow ? "active" : "default")">@(Model.IFollow ? "following" : "follow")</button>
+                        <button type="submit" class="co-button @(Model.IFollow ? "is-outline" : "is-light")">@(Model.IFollow ? "following" : "follow")</button>
                     </form>
                 }
                 @if (Model.CanMessage)
                 {
-                    <a role="button" href="/messages/@p.UserName">message</a>
+                    <a class="co-button is-outline" href="/messages/@p.UserName">message</a>
                 }
-                <details class="post-more">
-                    <summary role="button" aria-label="More options">…</summary>
-                    <ul role="menu">
-                        <li role="menuitem"><a href="/report?userId=@p.Id">Report @@@p.UserName…</a></li>
-                        <li role="menuitem"><button type="submit" form="block-form" data-confirm="@(Model.IBlocked ? $"Unblock @{p.UserName}?" : $"Block @{p.UserName}? You won't see each other's posts and they can't message or follow you.")">@(Model.IBlocked ? "Unblock" : "Block") @@@p.UserName</button></li>
+                <details class="co-dropdown">
+                    <summary class="co-button is-outline" aria-label="More options">…</summary>
+                    <ul class="co-menu" role="menu">
+                        <li role="menuitem"><a href="/report?userId=@p.Id">report @@@p.UserName…</a></li>
+                        <li role="menuitem"><button type="submit" form="block-form" data-confirm="@(Model.IBlocked ? $"Unblock @{p.UserName}?" : $"Block @{p.UserName}? You won't see each other's posts and they can't message or follow you.")">@(Model.IBlocked ? "unblock" : "block") @@@p.UserName</button></li>
                         @if (User.IsStaff())
                         {
-                            <li role="menuitem"><a href="/admin/user/@p.Id">Manage in admin</a></li>
+                            <li role="menuitem" class="is-divided"><a href="/admin/user/@p.Id">manage in admin</a></li>
                         }
                     </ul>
                 </details>
@@ -74,35 +109,31 @@
             }
             else
             {
-                <a role="button" class="default" href="/account/login?returnUrl=@Uri.EscapeDataString(ret)">follow</a>
+                <a class="co-button is-light" href="/account/login?returnUrl=@Uri.EscapeDataString(ret)">follow</a>
             }
         </div>
     </div>
-</card>
+}
 
 @if (Model.BlockedMe)
 {
-    <card><p>You can't view this account's posts.</p></card>
-}
-else if (Model.Tab is "followers" or "following")
-{
-    <div>
-        <partial name="_Tabs" model="tabs" />
-        <div role="tabpanel">
-            <partial name="_UserList" model="@(new UserListModel(Model.People, Model.Tab == "followers" ? "No followers yet." : "Not following anyone yet."))" />
-        </div>
-    </div>
+    <div class="co-info-box is-warning i-shield-exclam-icon">You can't view this account's posts.</div>
 }
 else
 {
-    <div class="feed-tabs">
-        <partial name="_Tabs" model="tabs" />
-        <div role="tabpanel" class="stack">
-            @if (Model.IBlocked)
-            {
-                <card><p>You blocked @@@p.UserName. Their posts are hidden from you.</p></card>
-            }
-            <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No replies yet.", "media" => "No images yet.", "likes" => "No liked posts yet.", _ => "No posts yet." }, Model.MoreUrl))" />
-        </div>
-    </div>
+    <partial name="_Tabs" model="tabs" />
+    @if (Model.Tab is "followers" or "following")
+    {
+        <card>
+            <partial name="_UserList" model="@(new UserListModel(Model.People, Model.Tab == "followers" ? "No followers yet." : "Not following anyone yet."))" />
+        </card>
+    }
+    else
+    {
+        @if (Model.IBlocked)
+        {
+            <div class="co-info-box is-warning i-shield-exclam-icon">You blocked @@@p.UserName. Their posts are hidden from you.</div>
+        }
+        <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No comments yet.", "media" => "No images yet.", "likes" => "No liked posts yet.", _ => "No posts yet." }, Model.MoreUrl, Preview: false))" />
+    }
 }
