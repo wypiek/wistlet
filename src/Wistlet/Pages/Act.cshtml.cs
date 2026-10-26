@@ -22,13 +22,13 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
     private IActionResult Back(string? returnUrl, string fallback = "/") => LocalRedirect(Fmt.SafeReturnUrl(returnUrl, fallback));
 
     public async Task<IActionResult> OnPostPostAsync(string? content, string? headline, string? tags, string? contentWarnings,
-        bool isAdult, List<IFormFile>? images, List<string>? alt, int? parentId, int? shareOfId, int? askId,
+        bool isAdult, List<IFormFile>? images, List<string>? alt, List<string>? row, int? parentId, int? shareOfId, int? askId,
         bool commentsLocked, bool sharesLocked, string? save, string? returnUrl)
     {
         var asDraft = save == "draft";
         var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, images, parentId, shareOfId)
         {
-            AltTexts = alt, AskId = askId, IsDraft = asDraft, CommentsLocked = commentsLocked, SharesLocked = sharesLocked,
+            AltTexts = alt, Rows = row, AskId = askId, IsDraft = asDraft, CommentsLocked = commentsLocked, SharesLocked = sharesLocked,
         };
         var (post, error) = await posts.CreateAsync(Me, draft);
         if (error is not null)
@@ -83,7 +83,8 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
     }
 
     public async Task<IActionResult> OnPostEditAsync(int id, string? content, string? headline, string? tags, string? contentWarnings, bool isAdult,
-        List<IFormFile>? images, List<string>? alt, Dictionary<int, string>? existingAlt, List<int>? removeAttachment,
+        List<IFormFile>? images, List<string>? alt, List<string>? row, Dictionary<int, string>? existingAlt, Dictionary<int, string>? existingRow,
+        List<int>? removeAttachment,
         bool commentsLocked, bool sharesLocked, string? save)
     {
         var post = await db.Posts.FirstOrDefaultAsync(p => p.Id == id);
@@ -91,7 +92,7 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         if (post.AuthorId != Me) return Forbid();
         var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, images)
         {
-            AltTexts = alt, ExistingAltTexts = existingAlt, RemoveAttachments = removeAttachment,
+            AltTexts = alt, Rows = row, ExistingAltTexts = existingAlt, ExistingRows = existingRow, RemoveAttachments = removeAttachment,
             CommentsLocked = commentsLocked, SharesLocked = sharesLocked,
         };
         var error = await posts.UpdateAsync(post, draft);
@@ -278,13 +279,15 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
     }
 
     /// <summary>Follows, silences or CWs a tag (or undoes it).</summary>
-    public async Task<IActionResult> OnPostTagAsync(string? tag, TagPreferenceKind kind, string? returnUrl)
+    public async Task<IActionResult> OnPostTagAsync(string? tag, TagPreferenceKind kind, string? returnUrl, [FromServices] TagService tagService)
     {
         var parsed = PostRenderer.ParseTags(tag);
         if (parsed.Count == 0 || !Enum.IsDefined(kind)) return Back(returnUrl);
-        var name = parsed[0];
-        var existing = await db.TagPreferences.FindAsync(Me, name, kind);
-        if (existing is not null) db.TagPreferences.Remove(existing);
+        var name = tagService.Canonical(parsed[0]);
+        // Undoing also clears the setting for any synonym of the tag.
+        var group = tagService.Group(name);
+        var existing = await db.TagPreferences.Where(t => t.UserId == Me && t.Kind == kind && group.Contains(t.Tag)).ToListAsync();
+        if (existing.Count > 0) db.TagPreferences.RemoveRange(existing);
         else db.TagPreferences.Add(new TagPreference { UserId = Me, Tag = name, Kind = kind });
         await db.SaveChangesAsync();
         return Back(returnUrl, $"/tag/{Uri.EscapeDataString(name)}");

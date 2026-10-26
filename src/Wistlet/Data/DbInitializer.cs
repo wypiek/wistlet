@@ -4,13 +4,14 @@ using Wistlet.Services;
 
 namespace Wistlet.Data;
 
-public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, EmojiService emoji, IConfiguration config, ILogger<DbInitializer> logger)
+public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, EmojiService emoji, TagService tags, IConfiguration config, ILogger<DbInitializer> logger)
 {
     public async Task InitializeAsync()
     {
         await db.Database.MigrateAsync();
         await SeedEmojiAsync();
         await emoji.ReloadAsync();
+        await tags.ReloadAsync();
         var rerendered = await posts.RerenderOutdatedAsync();
         if (rerendered > 0) logger.LogInformation("Re-rendered {Count} posts with post renderer v{Version}", rerendered, PostRenderer.Version);
         await EnsureAdminAsync();

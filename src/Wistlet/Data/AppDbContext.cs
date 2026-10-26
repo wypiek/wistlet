@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TagPreference> TagPreferences => Set<TagPreference>();
     public DbSet<CustomEmoji> CustomEmoji => Set<CustomEmoji>();
     public DbSet<LinkPreview> LinkPreviews => Set<LinkPreview>();
+    public DbSet<TagSynonym> TagSynonyms => Set<TagSynonym>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -80,6 +81,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<CustomEmoji>(e => e.HasIndex(x => x.Shortcode).IsUnique());
         b.Entity<LinkPreview>(e => e.HasIndex(x => x.Url).IsUnique());
+        b.Entity<TagSynonym>(e => e.HasIndex(x => x.Canonical));
 
         b.Entity<PostTag>(e =>
         {

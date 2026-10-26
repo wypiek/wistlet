@@ -124,7 +124,11 @@
     <hr class="co-hairline" />
     <div class="co-thread-footer">
         <div class="i-comments">
-            @if (Model.IsDraft) { <span>draft</span> } else { <a href="/post/@Model.Id#comments">@Fmt.Plural(Model.ReplyCount, "comment")</a> }
+            @if (Model.IsDraft) { <span>draft</span> }
+            else
+            {
+                <a href="/post/@Model.Id#comments">@Fmt.Plural(Model.ReplyCount, "comment")@(Model.SharedReplyCount > 0 ? $" + {Model.SharedReplyCount:N0} on shared posts" : "")</a>
+            }
             @if (Model.CommentsLocked) { <span class="i-locked" title="Only the author can comment">· comments locked</span> }
             @if (Model.SharesLocked) { <span class="i-locked" title="Nobody can share this post">· shares locked</span> }
         </div>

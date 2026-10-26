@@ -31,7 +31,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 
 **Posts, the cohost way**
 - Markdown with raw HTML and inline CSS ("CSS crimes"), up to 200 000 characters, an optional
-  headline, and up to 10 images, each with alt text (shown with an ALT badge and in the lightbox)
+  headline, and up to 10 images, each with alt text (shown with an ALT badge and in the lightbox).
+  You choose which row each image goes in (up to four side by side), like cohost's attachment rows
 - Custom emoji (`:egg:`) managed by admins, usable in posts, comments and profile descriptions
 - A preview button in the composer that renders the draft through the same sanitizer posts use
 - A `<!--more-->` line splits off the part shown in feeds ("read more"); very tall posts (over
@@ -41,7 +42,9 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
   appear for viewers who opted in under Settings → Privacy
 - Shares (with or without your own post on top), share chains, and a "deleted by its original
   author" tombstone when the shared post is gone
-- Comments as nested threads on the post page (not in feeds), editing your own posts and comments
+- Comments as nested threads on the post page (not in feeds), editing your own posts and comments.
+  A share's page has a comment section for every post in the share chain, and its footer counts
+  them as "N comments + M on shared posts"
 - Drafts: save a post for later, share its link with people before publishing, publish it from the
   drafts page
 - Lock comments (only you can comment) or shares (nobody can share) per post
@@ -58,6 +61,9 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 **Tags**
 - Follow tags: their posts join your home timeline, and they're listed in the sidebar
 - Silence tags (their posts disappear from your feeds) or CW them (their posts start collapsed)
+- Tag synonyms, set by moderators: an alias (#tf) counts as its main tag (#transformers) on tag
+  pages, in followed / silenced / CW'd tags, trending tags and profile tag pages
+- Choose your page's pinned tags, or leave it to show the ones you use most
 
 **Pages**
 - One login can run several pages (up to 10), each with its own handle, profile, posts, followers,
@@ -78,6 +84,9 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 
 **Social**
 - Follow / unfollow, home timeline, explore (latest, top this week, media), people directory
+- Home timeline extras from cohost's dashboard: a "N new posts — refresh" button that appears while
+  you read, a "you're all caught up" line where your last visit ended, and remembered filters to
+  show or hide shares, shares with comments and answered asks
 - Private pages: only followers you approve see your posts, follows become requests you approve or
   decline, and private posts can't be shared
 - Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
@@ -101,6 +110,7 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
   remove banner, moderator messages, delete all posts, delete account
 - Post management: search and filter (reported, hidden, pinned, images), hide, pin to Explore, delete
 - Custom emoji (admins only): upload an image under a shortcode; posts that use it update right away
+- Tag synonyms: make one tag count as another
 - Accounts and their extra pages: the user list shows which account a page belongs to; password
   resets and sign-outs apply to the account, and banning an account hides all of its pages
 - Reports queue: dismiss, resolve, hide or delete the post, jump to the author

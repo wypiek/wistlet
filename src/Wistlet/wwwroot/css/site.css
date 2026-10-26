@@ -454,14 +454,16 @@ button.default:hover, a[role=button].default:hover { background: rgb(var(--color
 /* ---------- cohost post mechanics ---------- */
 
 /* Attached image above the body text. */
-/* Post images: one per row when alone, then rows of two (cohost's attachment rows). */
-.co-attachments { display: grid; grid-template-columns: 1fr; gap: 2px; }
-.co-attachments:not([data-count="1"]) { grid-template-columns: 1fr 1fr; }
-.co-attachments[data-count="3"] > .i-attachment:first-child { grid-column: span 2; }
-.co-attachments > .i-attachment { position: relative; display: block; background: rgb(var(--color-notBlack)); }
-.co-attachments > .i-attachment > img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.co-attachments[data-count="1"] > .i-attachment > img { height: auto; max-height: 48rem; object-fit: contain; }
-.co-attachments:not([data-count="1"]) > .i-attachment { aspect-ratio: 1; }
+/* Post images in rows (cohost's attachment rows): each row splits its width between up to four images. */
+.co-attachments { display: flex; flex-direction: column; gap: 2px; }
+.co-attachments > .i-row { display: grid; grid-template-columns: repeat(var(--cols, 1), 1fr); gap: 2px; }
+.co-attachments > .i-row[data-count="2"] { --cols: 2; }
+.co-attachments > .i-row[data-count="3"] { --cols: 3; }
+.co-attachments > .i-row[data-count="4"] { --cols: 4; }
+.co-attachments .i-attachment { position: relative; display: block; background: rgb(var(--color-notBlack)); }
+.co-attachments .i-attachment > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.co-attachments > .i-row[data-count="1"] .i-attachment > img { height: auto; max-height: 48rem; object-fit: contain; }
+.co-attachments > .i-row:not([data-count="1"]) > .i-attachment { aspect-ratio: 1; }
 .co-attachments .i-alt-badge {
     position: absolute;
     left: 0.5rem;
@@ -612,3 +614,23 @@ img.co-emoji.is-large { height: 2rem; }
     .co-embed.is-card > .i-image { width: 100%; aspect-ratio: 1.91; }
     .co-embed.is-card > .i-text, .co-embed.is-card > .i-image + .i-text { padding: 0.625rem 0.75rem; }
 }
+
+/* ---------- timeline extras ---------- */
+
+.feed-filters > form.i-filter { margin: 0; }
+.feed-filters button.i-state { border: 0; background: none; font: inherit; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: inherit; color: rgb(var(--color-cherry)); white-space: nowrap; line-height: 1; }
+.feed-filters > .i-filter[data-state="false"] > button.i-state:first-of-type,
+.feed-filters > .i-filter[data-state="true"] > button.i-state:last-of-type { background: rgb(var(--color-cherry)); color: rgb(var(--color-notWhite)); font-weight: 700; }
+.feed-filters button.i-state:hover { text-decoration: underline; }
+@media (max-width: 479px) {
+    /* cohost's compact phone pills: one toggle per filter (forms end with hidden inputs, so match buttons by type). */
+    .feed-filters > .i-filter[data-state="false"] > button.i-state:last-of-type,
+    .feed-filters > .i-filter[data-state="true"] > button.i-state:first-of-type { position: absolute; inset: 0; opacity: 0; }
+    .feed-filters > .i-filter[data-state="true"] > button.i-state:last-of-type { background: rgb(var(--color-foreground-700)); }
+}
+
+.new-posts-button { position: sticky; top: 0.75rem; z-index: 20; align-self: center; box-shadow: var(--co-shadow); }
+
+.co-caught-up { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0; color: rgb(var(--gray2)); font-size: 0.875rem; }
+.co-caught-up::before, .co-caught-up::after { content: ""; flex: 1; border-top: 2px dashed rgb(var(--color-foreground-300)); }
+@media (min-width: 1024px) { .feed-posts > .co-caught-up { margin-left: 5rem; } }

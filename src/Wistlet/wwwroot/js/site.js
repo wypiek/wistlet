@@ -94,7 +94,16 @@
                 alt.maxLength = 1000;
                 alt.placeholder = "describe this image for people who can't see it";
                 alt.setAttribute("aria-label", `Description for image ${i + 1}`);
-                row.append(img, alt);
+                // Which row of the layout the image goes in; "auto" pairs images up after the chosen rows.
+                const rowPick = document.createElement("select");
+                rowPick.name = "row";
+                rowPick.setAttribute("aria-label", `Row for image ${i + 1}`);
+                rowPick.append(new Option("row: auto", "auto"));
+                for (let r = 1; r <= 10; r++) rowPick.append(new Option(`row ${r}`, String(r)));
+                const fields = document.createElement("div");
+                fields.className = "stack";
+                fields.append(alt, rowPick);
+                row.append(img, fields);
                 list.append(row);
             });
             list.hidden = list.childElementCount === 0;
@@ -193,6 +202,26 @@
         frame.className = "i-frame";
         link.replaceWith(frame);
     });
+
+    // Home timeline: check for new posts every minute and offer a button to load them.
+    const newPosts = document.querySelector("[data-new-posts]");
+    if (newPosts) {
+        const check = async () => {
+            if (document.hidden) return;
+            try {
+                const res = await fetch(newPosts.dataset.newPosts, { credentials: "same-origin" });
+                if (!res.ok) return;
+                const { count } = await res.json();
+                if (count > 0) {
+                    newPosts.textContent = `${count} new post${count === 1 ? "" : "s"} — refresh`;
+                    newPosts.hidden = false;
+                }
+            } catch { /* offline; try again later */ }
+        };
+        newPosts.addEventListener("click", () => { window.location.href = "/"; });
+        setInterval(check, 60000);
+        document.addEventListener("visibilitychange", check);
+    }
 
     // Like cohost, collapse very tall post bodies (over twice the window height) behind "read more".
     document.querySelectorAll(".co-post-contents > .i-post-body").forEach((body) => {

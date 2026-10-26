@@ -38,7 +38,16 @@
                         <img src="@a.Url" alt="" />
                         <div class="stack">
                             <textarea name="existingAlt[@a.Id]" rows="2" maxlength="1000" placeholder="describe this image for people who can't see it" aria-label="Image description">@a.AltText</textarea>
-                            <div class="field-row"><input type="checkbox" id="rm-@a.Id" name="removeAttachment" value="@a.Id" /><label for="rm-@a.Id">remove this image</label></div>
+                            <div class="row">
+                                <label for="row-@a.Id">row</label>
+                                <select id="row-@a.Id" name="existingRow[@a.Id]">
+                                    @for (var r = 1; r <= PostService.MaxRows; r++)
+                                    {
+                                        <option value="@r" selected="@(a.Row + 1 == r)">@r</option>
+                                    }
+                                </select>
+                                <span class="field-row"><input type="checkbox" id="rm-@a.Id" name="removeAttachment" value="@a.Id" /><label for="rm-@a.Id">remove this image</label></span>
+                            </div>
                         </div>
                     </div>
                 }

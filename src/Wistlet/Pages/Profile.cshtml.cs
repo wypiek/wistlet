@@ -8,7 +8,7 @@ using Wistlet.Services;
 
 namespace Wistlet.Pages;
 
-public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsService settings) : PageModel
+public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsService settings, TagService tagService) : PageModel
 {
     public User Profile { get; private set; } = null!;
     public string Tab { get; private set; } = "posts";
@@ -115,13 +115,20 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         if (BlockedMe || IsLockedOut) return Page();
 
         var visible = posts.Visible(me, staff);
-        PinnedTags = await db.PostTags
-            .Where(t => t.Post.AuthorId == user.Id && t.Post.ParentId == null && !t.Post.IsHidden)
-            .GroupBy(t => t.Tag)
-            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
-            .Select(g => g.Key)
-            .Take(10)
-            .ToListAsync();
+        // Pinned tags: the ones the page chose, or else the ones it uses most.
+        PinnedTags = PostRenderer.ParseTags(user.PinnedTags).ToList();
+        if (PinnedTags.Count == 0)
+        {
+            var used = await db.PostTags
+                .Where(t => t.Post.AuthorId == user.Id && t.Post.ParentId == null && !t.Post.IsHidden && !t.Post.IsDraft)
+                .GroupBy(t => t.Tag)
+                .Select(g => new { Tag = g.Key, Count = g.Count() })
+                .ToListAsync();
+            PinnedTags = used.GroupBy(u => tagService.Canonical(u.Tag))
+                .Select(g => new { Tag = g.Key, Count = g.Sum(u => u.Count) })
+                .OrderByDescending(t => t.Count).ThenBy(t => t.Tag)
+                .Select(t => t.Tag).Take(10).ToList();
+        }
         var baseUrl = Tab switch
         {
             "posts" => FilterUrl(HideShares, HideReplies, HideAsks),
@@ -146,7 +153,11 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             ? visible.Where(p => p.AuthorId == user.Id && p.ParentId != null)
             : (await posts.FeedAsync(me, staff)).Where(p => p.AuthorId == user.Id);
         if (Tab == "media") query = query.Where(p => p.Attachments.Any());
-        if (Tab == "tagged") query = query.Where(p => p.Tags.Any(t => t.Tag == Tagged));
+        if (Tab == "tagged")
+        {
+            var group = tagService.Group(Tagged!);
+            query = query.Where(p => p.Tags.Any(t => group.Contains(t.Tag)));
+        }
         if (Tab == "posts")
         {
             // A share with nothing added is a "share"; one with its own text, headline or image is a "reply".

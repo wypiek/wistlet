@@ -85,7 +85,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
 
     public async Task<IActionResult> OnPostProfileAsync(string? displayName, string? bio, string? location, string? website,
         IFormFile? avatar, bool removeAvatar, IFormFile? banner, bool removeBanner, string? pronouns, string? dek, string? avatarShape,
-        List<string>? contactService, List<string>? contactValue, List<string>? contactPrivate)
+        List<string>? contactService, List<string>? contactValue, List<string>? contactPrivate, string? pinnedTags)
     {
         var me = await LoadAsync();
         displayName = (displayName ?? "").Trim();
@@ -145,6 +145,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         me.Dek = (dek ?? "").Trim();
         me.AvatarShape = AvatarShapes.Resolve(avatarShape);
         me.ContactCard = card.Count > 0 ? ContactCardItem.Serialize(card) : "";
+        me.PinnedTags = string.Join(", ", PostRenderer.ParseTags(pinnedTags).Take(10));
         await db.SaveChangesAsync();
         return Done("profile", "Profile saved.");
     }

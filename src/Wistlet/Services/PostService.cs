@@ -4,7 +4,7 @@ using Wistlet.Models;
 
 namespace Wistlet.Services;
 
-public class PostService(AppDbContext db, SiteSettingsService settings, UploadService uploads, NotificationService notifications, EmojiService emoji, LinkPreviewService previews)
+public class PostService(AppDbContext db, SiteSettingsService settings, UploadService uploads, NotificationService notifications, EmojiService emoji, LinkPreviewService previews, TagService tagService)
 {
     /// <summary>Most images one post can carry.</summary>
     public const int MaxAttachments = 10;
@@ -50,10 +50,15 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             q = q.Where(p => p.AuthorId == me || (!p.IsAdult && !(p.SharedPost != null && p.SharedPost.IsAdult)));
         if (viewerId is not null)
         {
-            var silenced = db.TagPreferences.Where(t => t.UserId == me && t.Kind == TagPreferenceKind.Silence).Select(t => t.Tag);
-            q = q.Where(p => p.AuthorId == me ||
-                             (!p.Tags.Any(t => silenced.Contains(t.Tag)) &&
-                              !(p.SharedPost != null && p.SharedPost.Tags.Any(t => silenced.Contains(t.Tag)))));
+            // Silencing a tag silences its synonyms too.
+            var silenced = tagService.Expand(await db.TagPreferences
+                .Where(t => t.UserId == me && t.Kind == TagPreferenceKind.Silence).Select(t => t.Tag).ToListAsync());
+            if (silenced.Count > 0)
+            {
+                q = q.Where(p => p.AuthorId == me ||
+                                 (!p.Tags.Any(t => silenced.Contains(t.Tag)) &&
+                                  !(p.SharedPost != null && p.SharedPost.Tags.Any(t => silenced.Contains(t.Tag)))));
+            }
         }
         return q;
     }
@@ -77,7 +82,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             IsAdult = p.IsAdult,
             IsShare = p.IsShare,
             SharedPostId = p.SharedPostId,
-            Attachments = p.Attachments.OrderBy(a => a.Position).Select(a => new AttachmentView(a.Id, a.Path, a.AltText)).ToList(),
+            Attachments = p.Attachments.OrderBy(a => a.Position).Select(a => new AttachmentView(a.Id, a.Path, a.AltText, a.Row)).ToList(),
             EmbedUrlsRaw = p.EmbedUrls,
             Ask = p.Ask == null ? null : new AskView(p.Ask.Id, p.Ask.Content,
                 p.Ask.IsAnonymous || p.Ask.Sender == null ? null
@@ -145,7 +150,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
     private async Task ApplyTagWarningsAsync(List<PostView> posts, int? viewerId)
     {
         if (viewerId is not int me || posts.Count == 0) return;
-        var warned = await db.TagPreferences.Where(t => t.UserId == me && t.Kind == TagPreferenceKind.Warn).Select(t => t.Tag).ToListAsync();
+        var warned = tagService.Expand(await db.TagPreferences.Where(t => t.UserId == me && t.Kind == TagPreferenceKind.Warn).Select(t => t.Tag).ToListAsync());
         if (warned.Count == 0) return;
         foreach (var post in posts)
             for (var p = post; p is not null; p = p.SharedFrom)
@@ -181,13 +186,16 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             IsAdult = p.IsAdult,
             IsShare = p.IsShare,
             SharedPostId = p.SharedPostId,
-            Attachments = p.Attachments.OrderBy(a => a.Position).Select(a => new AttachmentView(a.Id, a.Path, a.AltText)).ToList(),
+            Attachments = p.Attachments.OrderBy(a => a.Position).Select(a => new AttachmentView(a.Id, a.Path, a.AltText, a.Row)).ToList(),
             EmbedUrlsRaw = p.EmbedUrls,
             Ask = p.Ask == null ? null : new AskView(p.Ask.Id, p.Ask.Content,
                 p.Ask.IsAnonymous || p.Ask.Sender == null ? null
                     : new UserSummary(p.Ask.Sender.Id, p.Ask.Sender.UserName, p.Ask.Sender.DisplayName, p.Ask.Sender.AvatarPath, p.Ask.Sender.IsVerified, p.Ask.Sender.Role, "", p.Ask.Sender.AvatarShape),
                 p.Ask.CreatedAt),
             SharesLocked = p.SharesLocked,
+            CommentsLocked = p.CommentsLocked,
+            AuthorIsPrivate = p.Author.IsPrivate,
+            ReplyCount = db.Posts.Count(c => (c.RootId == p.Id || c.ParentId == p.Id) && !c.IsHidden),
             CreatedAt = p.CreatedAt,
             EditedAt = p.EditedAt,
             IsHidden = p.IsHidden,
@@ -229,6 +237,34 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             ? "Your post contains a word that isn't allowed on this site."
             : null;
     }
+
+    /// <summary>Most rows an image layout can have.</summary>
+    public const int MaxRows = 10;
+
+    /// <summary>
+    /// Works out each image's row. Images with a chosen row (1-based) go there; the rest ("auto") follow
+    /// in pairs after the chosen rows. With nothing chosen: one image alone, three as one + two, else pairs.
+    /// Rows are numbered from 0 with no gaps.
+    /// </summary>
+    public static int[] LayoutRows(IReadOnlyList<int?> chosen)
+    {
+        var n = chosen.Count;
+        var rows = new int[n];
+        if (chosen.All(c => c is null))
+        {
+            for (var i = 0; i < n; i++) rows[i] = n == 3 ? (i == 0 ? 0 : 1) : i / 2;
+            return rows;
+        }
+        var start = chosen.Max(c => c ?? 0);
+        var autos = 0;
+        for (var i = 0; i < n; i++)
+            rows[i] = chosen[i] is int c ? c - 1 : start + autos++ / 2;
+        var order = rows.Distinct().Order().ToList();
+        return rows.Select(r => order.IndexOf(r)).ToArray();
+    }
+
+    private static int? ParseRow(string? value) =>
+        int.TryParse(value, out var r) && r is >= 1 and <= MaxRows ? r : null;
 
     /// <summary>Stores uploaded images as attachments (positions continue after <paramref name="startAt"/>).</summary>
     private async Task<(List<PostAttachment> Saved, string? Error)> SaveAttachmentsAsync(IReadOnlyList<IFormFile> images, IReadOnlyList<string>? alts, int startAt)
@@ -303,6 +339,8 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         if (images.Count > 0 && !cfg.AllowImageUploads) return (null, "Image uploads are currently disabled.");
         var (attachments, uploadError) = await SaveAttachmentsAsync(images, draft.AltTexts, 0);
         if (uploadError is not null) return (null, uploadError);
+        var layout = LayoutRows(attachments.Select((_, i) => ParseRow(draft.Rows is { } r && i < r.Count ? r[i] : null)).ToList());
+        for (var i = 0; i < attachments.Count; i++) attachments[i].Row = layout[i];
 
         var rendered = Render(content);
         var isDraft = draft.IsDraft && !isComment;
@@ -449,6 +487,13 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             keeping[i].Position = i;
             if (draft.ExistingAltTexts?.TryGetValue(keeping[i].Id, out var alt) == true) keeping[i].AltText = (alt ?? "").Trim();
         }
+        // Existing images keep their row unless a new one was picked; new images use theirs (or "auto").
+        var chosen = keeping.Select(a => (int?)(draft.ExistingRows?.TryGetValue(a.Id, out var r) == true ? ParseRow(r) ?? a.Row + 1 : a.Row + 1))
+            .Concat(added.Select((_, i) => ParseRow(draft.Rows is { } r && i < r.Count ? r[i] : null)))
+            .ToList();
+        var layout = LayoutRows(chosen);
+        var all = keeping.Concat(added).ToList();
+        for (var i = 0; i < all.Count; i++) all[i].Row = layout[i];
         db.PostAttachments.RemoveRange(removing);
         foreach (var a in added) { a.PostId = post.Id; db.PostAttachments.Add(a); }
 
@@ -518,9 +563,14 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             .Where(t => t.Post.CreatedAt >= since && !t.Post.IsHidden && !t.Post.IsAdult && !t.Post.IsDraft && !t.Post.Author.IsPrivate)
             .GroupBy(t => t.Tag)
             .Select(g => new { Tag = g.Key, Count = g.Count() })
+            .OrderByDescending(t => t.Count)
+            .Take(count * 5)
+            .ToListAsync();
+        // Synonyms count together, under the canonical tag.
+        return rows.GroupBy(r => tagService.Canonical(r.Tag))
+            .Select(g => new TrendingTag(g.Key, g.Sum(r => r.Count)))
             .OrderByDescending(t => t.Count).ThenBy(t => t.Tag)
             .Take(count)
-            .ToListAsync();
-        return rows.Select(r => new TrendingTag(r.Tag, r.Count)).ToList();
+            .ToList();
     }
 }

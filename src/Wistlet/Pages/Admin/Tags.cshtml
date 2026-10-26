@@ -1,0 +1,54 @@
+@page
+@model Wistlet.Pages.Admin.TagsModel
+@{
+    ViewData["Title"] = "Tags";
+    ViewData["AdminTab"] = "tags";
+}
+<card title="Admin — Tags" status="@Fmt.Plural(Model.Groups.Count, "synonym group")">
+    <partial name="_AdminNav" />
+    <div class="tab-panel">
+        <p>
+            Synonyms make one tag count as another, the way cohost merged tags like #tf and #transformers. Posts keep the
+            tags their authors typed, but the tag pages, followed / silenced / CW'd tags, trending tags and profile tag
+            pages treat them as one. The alias's tag page redirects to the main tag.
+        </p>
+        <fieldset>
+            <legend>Add a synonym</legend>
+            <form method="post" asp-page-handler="Add" class="form-grid">
+                <label for="alias">Alias</label>
+                <input id="alias" type="text" name="alias" required maxlength="64" placeholder="tf" />
+                <label for="canonical">Counts as</label>
+                <input id="canonical" type="text" name="canonical" required maxlength="64" placeholder="transformers" />
+                <span></span>
+                <div><button type="submit" class="default">Add synonym</button></div>
+            </form>
+        </fieldset>
+        @if (Model.Groups.Count > 0)
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Main tag</th><th>Synonyms</th><th>Posts</th></tr></thead>
+                    <tbody>
+                        @foreach (var g in Model.Groups)
+                        {
+                            <tr>
+                                <td><a href="/tag/@Uri.EscapeDataString(g.Canonical)">#@g.Canonical</a></td>
+                                <td>
+                                    <div class="row">
+                                        @foreach (var a in g.Aliases)
+                                        {
+                                            <form method="post" asp-page-handler="Remove" asp-route-alias="@a" class="row" data-confirm="Make #@a its own tag again?">
+                                                <span>#@a</span><button type="submit" class="co-button is-outline is-small" aria-label="Remove #@a">remove</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                                <td>@g.Posts</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</card>

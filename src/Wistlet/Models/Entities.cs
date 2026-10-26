@@ -91,6 +91,18 @@ public class User
     /// <summary>Whether people who aren't signed in may send (anonymous) asks.</summary>
     public bool LoggedOutAsksAllowed { get; set; }
 
+    /// <summary>Tags shown as "pinned tags" on the profile, comma separated; empty means the most used ones.</summary>
+    [MaxLength(1000)]
+    public string PinnedTags { get; set; } = "";
+
+    /// <summary>Home timeline: newest post id the page has seen, for the "you're caught up" marker.</summary>
+    public int? FeedSeenUpTo { get; set; }
+
+    /// <summary>Home timeline filters, like cohost's dashboard settings.</summary>
+    public bool FeedHideShares { get; set; }
+    public bool FeedHideReplies { get; set; }
+    public bool FeedHideAsks { get; set; }
+
     /// <summary>The profile's contact card, as JSON (see <see cref="ContactCardItem"/>).</summary>
     [MaxLength(4000)]
     public string ContactCard { get; set; } = "";
@@ -222,6 +234,9 @@ public class PostAttachment
     public string AltText { get; set; } = "";
 
     public int Position { get; set; }
+
+    /// <summary>Which row of the post's image layout this image sits in (rows hold up to four images).</summary>
+    public int Row { get; set; }
 }
 
 /// <summary>A question sent to a page. It stays in the recipient's inbox until answered (as a post) or deleted.</summary>
@@ -306,6 +321,19 @@ public class TagPreference
     public string Tag { get; set; } = "";
 
     public TagPreferenceKind Kind { get; set; }
+}
+
+/// <summary>Treats <see cref="Alias"/> as the same tag as <see cref="Canonical"/> (e.g. #tf and #transformers).</summary>
+public class TagSynonym
+{
+    [Key]
+    [MaxLength(64)]
+    public string Alias { get; set; } = "";
+
+    [MaxLength(64)]
+    public string Canonical { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>Site emoji, written as <c>:shortcode:</c> in posts.</summary>

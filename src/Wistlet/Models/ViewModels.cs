@@ -77,11 +77,14 @@ public class PostView
         }
     }
 
+    /// <summary>Comments on the posts this share passes along (cohost's "+ N on shared posts").</summary>
+    public int SharedReplyCount => ShareTree.Sum(p => p.ReplyCount);
+
     /// <summary>The post a share ultimately points at (or this post).</summary>
     public PostView Root => ShareTree.Count > 0 ? ShareTree[0] : this;
 }
 
-public record AttachmentView(int Id, string Url, string AltText);
+public record AttachmentView(int Id, string Url, string AltText, int Row = 0);
 
 /// <summary>A link shown as an embed: a YouTube player, or a preview card when the page's details were fetched.</summary>
 public record EmbedView(string Url, string? YouTubeId, string? Title, string? Description, string? ImageUrl, string? SiteName)
@@ -110,6 +113,12 @@ public record PostDraft(
     /// <summary>When editing: new alt text for existing attachments, by attachment id.</summary>
     public IReadOnlyDictionary<int, string>? ExistingAltTexts { get; init; }
 
+    /// <summary>Chosen layout row (1-based, or "auto") for each new image, in the same order.</summary>
+    public IReadOnlyList<string>? Rows { get; init; }
+
+    /// <summary>When editing: chosen row for existing attachments, by attachment id.</summary>
+    public IReadOnlyDictionary<int, string>? ExistingRows { get; init; }
+
     /// <summary>When editing: attachments to remove.</summary>
     public IReadOnlyList<int>? RemoveAttachments { get; init; }
 
@@ -124,7 +133,11 @@ public record PostDraft(
 public record TrendingTag(string Tag, int Count);
 
 /// <summary>Options passed to the shared post partial.</summary>
-public record PostListModel(IReadOnlyList<PostView> Posts, string? EmptyText = null, string? MoreUrl = null, bool Preview = true);
+public record PostListModel(IReadOnlyList<PostView> Posts, string? EmptyText = null, string? MoreUrl = null, bool Preview = true)
+{
+    /// <summary>Show a "you're caught up" marker above this post (the first one seen on an earlier visit).</summary>
+    public int? CaughtUpBeforeId { get; init; }
+}
 
 public record ComposerModel(string ReturnUrl, int? ParentId = null, string Placeholder = "what's on your mind?", string ButtonText = "post")
 {

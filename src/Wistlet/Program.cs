@@ -90,6 +90,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<SiteSettingsService>();
 builder.Services.AddSingleton<UploadService>();
 builder.Services.AddSingleton<EmojiService>();
+builder.Services.AddSingleton<TagService>();
 builder.Services.AddSingleton<LinkPreviewService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<LinkPreviewService>());
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

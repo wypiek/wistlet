@@ -8,6 +8,10 @@ else
     <div class="@(Model.Preview ? "feed-posts" : "project-profile-posts")">
         @foreach (var post in Model.Posts)
         {
+            @if (post.Id == Model.CaughtUpBeforeId)
+            {
+                <div class="co-caught-up" role="separator"><span>you're all caught up — below are posts you've seen</span></div>
+            }
             @if (Model.Preview)
             {
                 <div class="co-post-preview">

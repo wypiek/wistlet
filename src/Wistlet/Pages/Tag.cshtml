@@ -26,6 +26,10 @@
         </div>
     }
 </div>
+@if (Model.Synonyms.Count > 0)
+{
+    <p class="muted tag-synonyms">Also includes posts tagged @string.Join(", ", Model.Synonyms.Select(s => "#" + s)).</p>
+}
 @if (Model.Prefs.Contains(TagPreferenceKind.Silence))
 {
     <div class="co-info-box is-warning i-info-circle-icon"><div class="i-text">You silenced #@Model.Tag, so its posts are hidden, here too.</div></div>

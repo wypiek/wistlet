@@ -438,6 +438,9 @@ namespace Wistlet.Data.Migrations
                     b.Property<int>("PostId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Row")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PostId", "Position");
@@ -552,6 +555,27 @@ namespace Wistlet.Data.Migrations
                     b.ToTable("TagPreferences");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.TagSynonym", b =>
+                {
+                    b.Property<string>("Alias")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Canonical")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Alias");
+
+                    b.HasIndex("Canonical");
+
+                    b.ToTable("TagSynonyms");
+                });
+
             modelBuilder.Entity("Wistlet.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -612,6 +636,18 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("FeedHideAsks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("FeedHideReplies")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("FeedHideShares")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FeedSeenUpTo")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsBanned")
                         .HasColumnType("INTEGER");
 
@@ -645,6 +681,11 @@ namespace Wistlet.Data.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PinnedTags")
+                        .IsRequired()
+                        .HasMaxLength(1000)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Pronouns")

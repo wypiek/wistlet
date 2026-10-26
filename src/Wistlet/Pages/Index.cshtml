@@ -8,9 +8,23 @@
 @if (signedIn)
 {
     <partial name="_ComposerBox" model="@(new ComposerModel("/"))" />
+    <div class="project-profile-filters feed-filters" aria-label="Timeline filters">
+        @foreach (var (key, hidden) in new[] { ("shares", Model.HideShares), ("replies", Model.HideReplies), ("asks", Model.HideAsks) })
+        {
+            <form method="post" asp-page-handler="Filter" class="i-filter" data-state="@(hidden ? "true" : "false")">
+                <button type="submit" class="i-state" name="hide" value="false" aria-pressed="@(!hidden ? "true" : "false")"><span class="i-state">show</span> <span class="i-label">@key</span></button>
+                <input type="hidden" name="which" value="@key" />
+                <button type="submit" class="i-state" name="hide" value="true" aria-pressed="@(hidden ? "true" : "false")"><span class="i-state">hide</span> <span class="i-label">@key</span></button>
+            </form>
+        }
+    </div>
+    @if (Model.NewestId is int newest)
+    {
+        <button type="button" class="co-button new-posts-button" data-new-posts="/?handler=NewCount&after=@newest" hidden></button>
+    }
     @if (!Model.FollowsAnyone)
     {
         <div class="co-info-box is-draft i-info-circle-icon"><div class="i-text">Your timeline shows posts from people you follow. <a href="/explore">Explore</a> or <a href="/people">find people</a> to fill it up.</div></div>
     }
 }
-<partial name="_PostList" model="@(new PostListModel(Model.Posts, signedIn ? "No posts yet. Say hello to the world above!" : null, Model.MoreUrl))" />
+<partial name="_PostList" model="@(new PostListModel(Model.Posts, signedIn ? "No posts yet. Say hello to the world above!" : null, Model.MoreUrl) { CaughtUpBeforeId = Model.CaughtUpBeforeId })" />

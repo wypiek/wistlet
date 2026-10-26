@@ -4,32 +4,35 @@
     var title = Model.Post.Headline ?? (Model.Post.Content.Length > 40 ? Model.Post.Content[..40] + "…" : Model.Post.Content);
     ViewData["Title"] = $"{Model.Post.Author.DisplayName}: “{title}”";
     ViewData["ExpandPosts"] = true;
+    var here = $"/post/{Model.Post.Id}";
 }
 <partial name="_PostList" model="@(new PostListModel([Model.Post]))" view-data="ViewData" />
 
-@if (!Model.Post.IsDraft)
+@foreach (var part in Model.Sections)
 {
-<div class="co-comments" id="comments">
-    <h4 class="i-header">@Fmt.Plural(Model.CommentCount, "comment") on <a class="i-post-ref" href="#post-@Model.Post.Id">@@@Model.Post.Author.UserName's post</a></h4>
-    @foreach (var c in Model.TopLevelComments)
-    {
-        <div class="i-thread">
-            <partial name="_CommentTree" model="@(new CommentTreeModel(c, Model.Children, Model.Post.Id, CanReply: Model.CanComment))" />
-        </div>
-    }
-    @if (!Model.CanComment)
-    {
-        <div class="co-info-box is-tombstone i-info-circle-icon"><div class="i-text">Comments on this post are locked.</div></div>
-    }
-    else if (User.Identity?.IsAuthenticated == true)
-    {
-        <div class="i-thread" id="reply">
-            <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.Post.Id}", Model.Post.Id, $"comment as @{User.Identity!.Name}…", "comment") { IsComment = true })" />
-        </div>
-    }
-    else
-    {
-        <div class="co-info-box is-tombstone i-info-circle-icon"><div class="i-text"><a href="/account/login?returnUrl=/post/@Model.Post.Id">Log in</a> to comment.</div></div>
-    }
-</div>
+    var target = part.Target;
+    var isMain = target.Id == Model.Post.Id;
+    <div class="co-comments" id="@(isMain ? "comments" : $"comments-{target.Id}")">
+        <h4 class="i-header">@Fmt.Plural(part.Count, "comment") on <a class="i-post-ref" href="#@part.Anchor">@@@target.Author.UserName's post</a></h4>
+        @foreach (var c in part.TopLevel)
+        {
+            <div class="i-thread">
+                <partial name="_CommentTree" model="@(new CommentTreeModel(c, part.Children, Model.Post.Id, CanReply: part.CanComment))" />
+            </div>
+        }
+        @if (!part.CanComment)
+        {
+            <div class="co-info-box is-tombstone i-info-circle-icon"><div class="i-text">Comments on this post are locked.</div></div>
+        }
+        else if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="i-thread" id="@(isMain ? "reply" : $"reply-{target.Id}")">
+                <partial name="_Composer" model="@(new ComposerModel(here, target.Id, $"comment on @{target.Author.UserName}'s post as @{User.Identity!.Name}…", "comment") { IsComment = true })" />
+            </div>
+        }
+        else
+        {
+            <div class="co-info-box is-tombstone i-info-circle-icon"><div class="i-text"><a href="/account/login?returnUrl=@here">Log in</a> to comment.</div></div>
+        }
+    </div>
 }
