@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+.vs/
+.vscode/
+.idea/
+src/Wistlet/data/
+data/
+.env

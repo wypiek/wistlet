@@ -1,0 +1,134 @@
+@model PostView
+@* Mirrors cohost's post box: thread header, then the share chain (one thread item per post that
+   added something), then the footer. Plain posts show their contents straight after the header. *@
+@{
+    var meId = Context.User.GetUserId();
+    var staff = Context.User.IsStaff();
+    var mine = meId == Model.Author.Id;
+    var here = Context.Request.Path + Context.Request.QueryString;
+    var ret = here + "#post-" + Model.Id;
+    var f = "pf" + Model.Id + "-" + Guid.NewGuid().ToString("N")[..6];
+    var expand = ViewData["ExpandPosts"] is true;
+    var tree = Model.ShareTree;
+}
+<article class="co-post-box" id="post-@Model.Id">
+    <div class="co-thread-header">
+        <partial name="_PostHeader" model="@(new PostHeaderModel(Model, Model.IsShare ? Model.SharedFrom : null))" />
+        @if (meId is not null)
+        {
+            <div class="i-action-button-container">
+                <details class="co-dropdown post-more">
+                    <summary class="co-action" aria-label="post options"><partial name="_Icon" model="@(new IconModel("more"))" /></summary>
+                    <ul class="co-menu" role="menu">
+                        <li role="menuitem"><a href="/post/@Model.Id">open post</a></li>
+                        @if (Model.ParentId is null)
+                        {
+                            <li role="menuitem"><a href="/compose?share=@Model.Id">share with a comment…</a></li>
+                        }
+                        @if (mine && !Model.IsTransparentShare)
+                        {
+                            <li role="menuitem"><a href="/post/@Model.Id/edit">edit post</a></li>
+                        }
+                        @if (!mine)
+                        {
+                            <li role="menuitem"><a href="/report?postId=@Model.Id">report post…</a></li>
+                        }
+                        @if (staff)
+                        {
+                            <li role="menuitem" class="is-divided"><button type="submit" form="@f-pin">@(Model.IsPinned ? "unpin from explore" : "pin to explore")</button></li>
+                            <li role="menuitem"><button type="submit" form="@f-hide">@(Model.IsHidden ? "unhide post" : "hide post")</button></li>
+                        }
+                        @if (mine || staff)
+                        {
+                            <li role="menuitem" class="is-divided"><button type="submit" form="@f-delete" data-confirm="Delete this post? This can't be undone.">delete post</button></li>
+                        }
+                    </ul>
+                </details>
+            </div>
+        }
+    </div>
+
+    @if (Model.IsHidden)
+    {
+        <hr class="co-hairline" />
+        <div class="co-draft-info-box-container">
+            <div class="co-info-box is-warning i-shield-exclam-icon">This post was hidden by a moderator. Only staff can see it.</div>
+        </div>
+    }
+
+    @if (Model.IsShare)
+    {
+        @if (Model.SharedFrom is null)
+        {
+            <hr class="co-hairline" />
+            <div class="co-post-tombstone">
+                <div class="co-info-box is-tombstone i-exclam-circle-icon">
+                    @(Model.SharedPostId is null ? "Sorry! This post has been deleted by its original author." : "This post is unavailable.")
+                </div>
+            </div>
+        }
+        @foreach (var item in tree.Where(t => !t.IsTransparentShare))
+        {
+            <hr class="co-hairline" />
+            <div class="co-thread-item" id="post-@Model.Id-from-@item.Id">
+                <div class="i-header"><partial name="_PostHeader" model="@(new PostHeaderModel(item))" /></div>
+                <partial name="_PostContents" model="@(new PostContentsModel(item, expand))" />
+            </div>
+        }
+        @if (!Model.IsTransparentShare)
+        {
+            <hr class="co-hairline" />
+            <div class="co-thread-item">
+                <div class="i-header"><partial name="_PostHeader" model="@(new PostHeaderModel(Model))" /></div>
+                <partial name="_PostContents" model="@(new PostContentsModel(Model, expand))" />
+            </div>
+        }
+        else if (Model.Tags.Count > 0)
+        {
+            <hr class="co-hairline" />
+            <div class="i-transparent-share-tags">
+                <div class="i-header"><a class="i-handle" href="/u/@Model.Author.UserName">@@@Model.Author.UserName</a> shared with:</div>
+                <partial name="_PostTags" model="Model.Tags" />
+            </div>
+        }
+    }
+    else
+    {
+        <hr class="co-hairline" />
+        <partial name="_PostContents" model="@(new PostContentsModel(Model, expand))" />
+    }
+
+    <hr class="co-hairline" />
+    <div class="co-thread-footer">
+        <div class="i-comments">
+            <a href="/post/@Model.Id#comments">@Fmt.Plural(Model.ReplyCount, "comment")</a>
+        </div>
+        <div class="i-actions">
+            @if (meId is null)
+            {
+                <a class="co-action" href="/account/login?returnUrl=@Uri.EscapeDataString("/post/" + Model.Id)" title="like" aria-label="like"><partial name="_Icon" model="@(new IconModel("heart"))" /> @(Model.LikeCount > 0 ? Model.LikeCount : "")</a>
+            }
+            else
+            {
+                @if (Model.ParentId is null)
+                {
+                    <button type="submit" form="@f-share" class="co-action" title="share" aria-label="share"><partial name="_Icon" model="@(new IconModel("share"))" /></button>
+                }
+                <button type="submit" form="@f-bookmark" class="co-action" title="@(Model.BookmarkedByMe ? "unsave" : "save")" aria-label="@(Model.BookmarkedByMe ? "unsave" : "save")" aria-pressed="@(Model.BookmarkedByMe ? "true" : "false")"><partial name="_Icon" model="@(new IconModel("bookmark", Model.BookmarkedByMe))" /></button>
+                <button type="submit" form="@f-like" class="co-action" title="@(Model.LikedByMe ? "unlike" : "like")" aria-label="@(Model.LikedByMe ? "unlike" : "like")" aria-pressed="@(Model.LikedByMe ? "true" : "false")"><partial name="_Icon" model="@(new IconModel("heart", Model.LikedByMe))" /> @(Model.LikeCount > 0 ? Model.LikeCount : "")</button>
+                <form id="@f-like" method="post" asp-page="/Act" asp-page-handler="Like" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+                <form id="@f-bookmark" method="post" asp-page="/Act" asp-page-handler="Bookmark" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+                <form id="@f-share" method="post" asp-page="/Act" asp-page-handler="Share" asp-route-id="@Model.Id" asp-route-returnUrl="@here" hidden></form>
+                @if (staff)
+                {
+                    <form id="@f-pin" method="post" asp-page="/Act" asp-page-handler="Pin" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+                    <form id="@f-hide" method="post" asp-page="/Act" asp-page-handler="Hide" asp-route-id="@Model.Id" asp-route-returnUrl="@ret" hidden></form>
+                }
+                @if (mine || staff)
+                {
+                    <form id="@f-delete" method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@Model.Id" asp-route-returnUrl="@here" hidden></form>
+                }
+            }
+        </div>
+    </div>
+</article>

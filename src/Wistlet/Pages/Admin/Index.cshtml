@@ -1,0 +1,70 @@
+@page
+@model Wistlet.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin";
+    ViewData["AdminTab"] = "dashboard";
+}
+<card title="Admin — Dashboard">
+    <partial name="_AdminNav" />
+    <div class="tab-panel">
+        <div class="admin-cols">
+            <fieldset>
+                <legend>At a glance</legend>
+                <table>
+                    <tbody>
+                        @foreach (var s in Model.Stats)
+                        {
+                            <tr>
+                                <td>@if (s.Link is not null) { <a href="@s.Link">@s.Label</a> } else { @s.Label }</td>
+                                <td><b>@s.Value</b></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </fieldset>
+            <fieldset>
+                <legend>System information</legend>
+                <table>
+                    <tbody>
+                        @foreach (var (label, value) in Model.SystemInfo)
+                        {
+                            <tr><td>@label</td><td>@value</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </fieldset>
+        </div>
+
+        <div class="admin-cols">
+            <fieldset>
+                <legend>New members (last 14 days)</legend>
+                <partial name="_Bars" model="Model.Signups" />
+            </fieldset>
+            <fieldset>
+                <legend>Posts (last 14 days)</legend>
+                <partial name="_Bars" model="Model.PostsPerDay" />
+            </fieldset>
+        </div>
+
+        <fieldset>
+            <legend>Newest members</legend>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th></th><th>User</th><th>E-mail</th><th>Joined</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var u in Model.RecentUsers)
+                        {
+                            <tr>
+                                <td><img src="@(u.AvatarPath ?? $"/avatar/{u.UserName}.svg")" alt="" width="24" height="24" /></td>
+                                <td>@u.DisplayName (@@@u.UserName)</td>
+                                <td>@u.Email</td>
+                                <td>@Fmt.Time(u.CreatedAt)</td>
+                                <td><a role="button" href="/admin/user/@u.Id">Manage</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+    </div>
+</card>

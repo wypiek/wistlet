@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Wistlet/Wistlet.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Wistlet.Tests/Wistlet.Tests.csproj" />
+  </Folder>
+</Solution>

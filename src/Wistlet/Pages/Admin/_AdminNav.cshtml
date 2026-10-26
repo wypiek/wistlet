@@ -1,0 +1,12 @@
+@inject ViewerContext Viewer
+@{
+    var current = ViewData["AdminTab"] as string ?? "";
+    var open = await Viewer.GetOpenReportCountAsync();
+    var tabs = new List<TabItem> { new("Dashboard", "/admin", current == "dashboard") };
+    if (User.IsAdmin()) tabs.Add(new("Site settings", "/admin/settings", current == "settings"));
+    tabs.Add(new("Users", "/admin/users", current == "users"));
+    tabs.Add(new("Posts", "/admin/posts", current == "posts"));
+    tabs.Add(new(open > 0 ? $"Reports ({open})" : "Reports", "/admin/reports", current == "reports"));
+    if (User.IsAdmin()) tabs.Add(new("Audit log", "/admin/audit", current == "audit"));
+}
+<partial name="_Tabs" model="@(new TabsModel("Admin sections", tabs))" />

@@ -1,0 +1,17 @@
+@model List<Wistlet.Pages.Admin.IndexModel.Day>
+@{
+    var max = Math.Max(1, Model.Max(d => d.Count));
+}
+@* One bar per day, scaled to the busiest day. *@
+<table>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <tr>
+                <td>@d.Date.ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture)</td>
+                <td style="width:55%"><div class="bar" role="img" aria-label="@d.Count"><span style="width:@(Math.Round(d.Count * 100.0 / max, 1).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div></td>
+                <td>@d.Count</td>
+            </tr>
+        }
+    </tbody>
+</table>

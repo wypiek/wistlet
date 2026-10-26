@@ -1,0 +1,24 @@
+@page "/account/login"
+@model Wistlet.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Log in";
+    ViewData["NoSidebar"] = true;
+}
+<card title="@($"Log in to {Settings.Current.SiteName}")" class="narrow">
+    <form method="post" class="form-grid">
+        <div asp-validation-summary="ModelOnly" class="full" role="alert"></div>
+        <label asp-for="Login"></label>
+        <div><input asp-for="Login" autocomplete="username" autofocus /> <span asp-validation-for="Login"></span></div>
+        <label asp-for="Password"></label>
+        <div><input asp-for="Password" autocomplete="current-password" /> <span asp-validation-for="Password"></span></div>
+        <span></span>
+        <div><input asp-for="Remember" /><label asp-for="Remember"></label></div>
+        <input type="hidden" asp-for="ReturnUrl" />
+        <span></span>
+        <div><button type="submit" class="default">Log in</button></div>
+    </form>
+    @if (Settings.Current.RegistrationOpen)
+    {
+        <p>New here? <a href="/account/register@(Model.ReturnUrl is null ? "" : "?returnUrl=" + Uri.EscapeDataString(Model.ReturnUrl))">Create an account</a></p>
+    }
+</card>

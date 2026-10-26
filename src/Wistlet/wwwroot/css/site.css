@@ -1,0 +1,438 @@
+/* Wistlet additions on top of lib/cohost/cohost.css.
+   cohost.css provides the page shell, post boxes, titled boxes, info boxes,
+   tag buttons and pagination eggs; this file adds the pieces Wistlet needs
+   (navigation, forms, buttons, menus, tabs, composer, lists, tables, chat,
+   admin) using the same colour tokens. */
+
+:root {
+    --line: 191 186 181;
+    --gray1: 130 127 124;
+    --gray2: 104 102 100;
+    --gray3: 74 72 71;
+    --co-shadow: 0 4px 5px rgba(25, 25, 25, .14), 0 1px 10px rgba(25, 25, 25, .12), 0 2px 4px rgba(0, 0, 0, .2);
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- header ---------- */
+
+#page-header > .i-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0 0.75rem;
+}
+
+#page-header > .i-header > .i-logo {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+#page-header .i-search { flex: 1; max-width: 20rem; }
+#page-header .i-search input {
+    width: 100%;
+    border: 0;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: rgb(var(--color-foreground-700));
+    color: rgb(var(--color-notWhite));
+}
+#page-header .i-search input::placeholder { color: rgb(var(--color-foreground-200)); }
+#page-header .i-search input:focus { outline: 2px solid rgb(var(--color-accent)); outline-offset: 0; }
+
+#page-header .i-user { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+#page-header .i-user .i-link:hover { color: rgb(var(--color-accent)); }
+#page-header .i-user .i-avatar { width: 2rem; height: 2rem; display: block; }
+
+/* ---------- page grid ---------- */
+
+#page-container {
+    padding: 2rem 0.75rem 0;
+}
+
+#page-container > .site-nav { order: 0; }
+#page-container > .page-contents { display: flex; flex-direction: column; gap: 1.5rem; }
+#page-container > .feed-sidebar-alt { order: 4; margin-bottom: 4rem; }
+
+@media (min-width: 1024px) {
+    #page-container { padding-top: 4rem; }
+    #page-container > .site-nav { order: 1; }
+    #page-container.is-wide > .page-contents { grid-column: span 3; }
+}
+
+.site-nav ul { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.site-nav a { display: flex; align-items: center; gap: 0.5rem; color: rgb(var(--color-notBlack)); }
+.site-nav a:hover { color: rgb(var(--color-cherry)); text-decoration: underline; }
+.site-nav a[aria-current=page] { color: rgb(var(--color-cherry)); font-weight: 700; }
+.site-nav .i-count {
+    background: rgb(var(--color-cherry));
+    color: rgb(var(--color-notWhite));
+    border-radius: 9999px;
+    padding: 0 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    font-weight: 700;
+}
+
+@media (min-width: 1024px) {
+    .site-nav { position: sticky; top: 1.5rem; align-self: start; }
+    .site-nav ul { flex-direction: column; gap: 0.5rem; font-size: 1.125rem; }
+}
+
+.site-fine-print { order: 9; font-size: 0.875rem; color: rgb(var(--gray1)); padding: 0 0.75rem; }
+
+/* ---------- typography ---------- */
+
+.page-title { font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; }
+.section-title { font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; }
+.lede { font-size: 1.25rem; font-weight: 700; color: rgb(var(--color-cherry)); margin-bottom: 0.75rem; }
+.muted { color: rgb(var(--gray2)); }
+p + p { margin-top: 0.75rem; }
+
+.co-titled-box > .i-contents a:not([class]):not([role]):not(.co-tabs > a),
+.co-info-box a { color: rgb(var(--color-cherry)); text-decoration: underline; }
+
+.co-badge { color: rgb(var(--gray2)); font-size: 0.75rem; text-decoration: none; }
+
+/* ---------- boxes ---------- */
+
+.co-titled-box > .i-header { font-weight: 700; letter-spacing: 0.02em; }
+.co-titled-box > .i-contents { display: flex; flex-direction: column; gap: 0.75rem; }
+.co-titled-box > .i-footer {
+    background: rgb(var(--color-notWhite));
+    border-top: 1px solid rgb(var(--line));
+    border-radius: 0 0 0.5rem 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: rgb(var(--gray1));
+}
+.co-themed-titled-box > .i-contents { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.co-themed-titled-box > .i-contents.feed-related-tag-list { padding: 0; }
+
+.co-info-box > .i-text { flex: 1; min-width: 0; }
+.co-info-box > .i-dismiss { font-size: 1.25rem; line-height: 1; padding: 0 0.25rem; color: inherit; }
+
+.narrow { width: 100%; max-width: 28rem; margin: 0 auto; }
+
+/* ---------- buttons ---------- */
+
+.co-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4ch;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgb(var(--color-cherry));
+    color: rgb(var(--color-notWhite));
+    font-weight: 700;
+    line-height: 1.25rem;
+    border: 2px solid rgb(var(--color-cherry));
+    cursor: pointer;
+    white-space: nowrap;
+}
+.co-button:hover { background: rgb(var(--color-foreground-600)); border-color: rgb(var(--color-foreground-600)); }
+.co-button:active { background: rgb(var(--color-foreground-700)); }
+.co-button:disabled { opacity: 0.5; cursor: default; }
+
+.co-button.is-outline { background: transparent; color: rgb(var(--color-cherry)); }
+.co-button.is-outline:hover { background: rgb(var(--color-foreground-100)); }
+
+.co-button.is-light { background: rgb(var(--color-notWhite)); border-color: rgb(var(--color-notWhite)); color: rgb(var(--color-cherry)); }
+.co-button.is-light:hover { background: rgb(var(--color-accent)); border-color: rgb(var(--color-accent)); color: rgb(var(--color-notBlack)); }
+
+.co-button.is-small { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
+
+/* Plain icon buttons used for post actions. */
+.co-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: rgb(var(--color-cherry));
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1;
+}
+.co-action:hover { color: rgb(var(--color-foreground-700)); }
+.co-action:focus-visible { outline: 2px solid rgb(var(--color-cherry)); outline-offset: 2px; border-radius: 2px; }
+
+.icon { width: 1.5rem; height: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.icon.filled { fill: currentColor; }
+.icon circle { fill: currentColor; stroke: none; }
+
+/* ---------- form fields ---------- */
+
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number],
+input[type=search], select, textarea {
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.5rem;
+    background: rgb(255 255 255);
+    padding: 0.5rem 0.75rem;
+    color: rgb(var(--color-notBlack));
+    line-height: 1.5rem;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid rgb(var(--color-cherry)); outline-offset: -1px; }
+textarea { resize: vertical; }
+input[type=checkbox], input[type=radio] { accent-color: rgb(var(--color-cherry)); width: 1rem; height: 1rem; vertical-align: -0.125rem; margin-right: 0.4rem; }
+input[type=file] { font-size: 0.875rem; max-width: 100%; }
+input[type=file]::file-selector-button {
+    border: 2px solid rgb(var(--color-cherry));
+    background: transparent;
+    color: rgb(var(--color-cherry));
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    margin-right: 0.5rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+label { cursor: default; }
+.field-row { display: flex; align-items: center; padding: 0.15rem 0; }
+
+fieldset {
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    min-width: 0;
+}
+legend { font-weight: 700; padding: 0 0.4rem; }
+
+.form-grid { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: 0.75rem 1rem; align-items: center; }
+.form-grid > .full { grid-column: 1 / -1; }
+.form-grid input[type=text], .form-grid input[type=password], .form-grid input[type=email],
+.form-grid input[type=url], .form-grid input[type=number], .form-grid textarea, .form-grid select { width: 100%; }
+@media (max-width: 600px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.row.end { justify-content: flex-end; }
+.stack { display: flex; flex-direction: column; gap: 0.75rem; }
+.fill { width: 100%; }
+
+.field-validation-error, .validation-summary-errors { color: rgb(var(--color-cherry)); font-weight: 700; }
+.validation-summary-valid { display: none; }
+
+/* ---------- menus ---------- */
+
+.co-dropdown { position: relative; }
+.co-dropdown > summary { list-style: none; cursor: pointer; }
+.co-dropdown > summary::-webkit-details-marker { display: none; }
+
+.co-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    z-index: 30;
+    min-width: 12rem;
+    background: rgb(var(--color-notWhite));
+    color: rgb(var(--color-notBlack));
+    border-radius: 0.5rem;
+    box-shadow: var(--co-shadow);
+    padding: 0.25rem 0;
+    font-size: 1rem;
+    line-height: 1.5rem;
+}
+.co-menu > li > a, .co-menu > li > button { display: block; width: 100%; text-align: left; padding: 0.4rem 1rem; }
+.co-menu > li > a:hover, .co-menu > li > button:hover { background: rgb(var(--color-foreground-100)); color: rgb(var(--color-foreground-700)); }
+.co-menu > li.is-divided { border-top: 1px solid rgb(var(--line)); margin-top: 0.25rem; padding-top: 0.25rem; }
+
+/* ---------- tabs (cohost's profile-filter pills) ---------- */
+
+.co-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    width: fit-content;
+    max-width: 100%;
+    background: rgb(var(--color-foreground-300));
+    border-radius: 0.5rem;
+    line-height: 1;
+}
+.co-tabs > a { padding: 0.5rem 0.75rem; border-radius: 0.5rem; color: rgb(var(--color-foreground-700)); }
+.co-tabs > a:hover { text-decoration: underline; }
+.co-tabs > a[aria-current=page] { background: rgb(var(--color-cherry)); color: rgb(var(--color-notWhite)); font-weight: 700; }
+
+.tab-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* ---------- posts (additions) ---------- */
+
+.co-thread-header > .i-action-button-container { color: rgb(var(--color-cherry)); }
+.co-thread-header .co-menu { top: calc(100% + 0.25rem); }
+.co-post-contents > .i-context {
+    padding: 0.75rem 0.75rem 0;
+    font-size: 0.875rem;
+    color: rgb(var(--gray2));
+    display: flex;
+    gap: 1rem;
+}
+.co-post-contents > .i-context a { font-weight: 700; }
+.co-post-contents > .i-context a:hover { text-decoration: underline; }
+.co-post-contents .co-prose a { color: inherit; }
+.co-post-contents .co-prose img { margin: 1rem 0 0; border-radius: 0.25rem; }
+.co-post-contents .co-prose p:first-child { margin-top: 0; }
+.co-post-contents .co-prose p:last-child { margin-bottom: 0; }
+
+.co-thread-footer > .i-actions { display: flex; align-items: center; gap: 1rem; }
+.co-thread-footer > .i-comments > a:hover { text-decoration: underline; }
+
+/* ---------- composer ---------- */
+
+.co-composer { display: flex; flex-direction: column; gap: 0.75rem; }
+.co-composer textarea { width: 100%; min-height: 7rem; }
+.co-composer > .i-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.co-composer > .i-bar > .i-count { margin-left: auto; font-size: 0.875rem; color: rgb(var(--gray1)); }
+
+/* ---------- people lists ---------- */
+
+.co-project-list > li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-top: 1px solid rgb(var(--line)); }
+.co-project-list > li:first-child { border-top: 0; padding-top: 0; }
+.co-project-list > li:last-child { padding-bottom: 0; }
+.co-project-list .i-avatar { width: 3rem; height: 3rem; display: block; }
+.co-project-list .i-names { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; }
+.co-project-list .i-dek { flex-basis: 100%; font-size: 0.875rem; color: rgb(var(--gray3)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- profile ---------- */
+
+.profile-header-image { width: 100%; }
+.project-sidebar { border-radius: 0.5rem; }
+.project-sidebar .i-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+.project-sidebar .i-stats { display: flex; justify-content: center; gap: 1rem; font-size: 0.875rem; margin-top: 0.75rem; }
+.project-sidebar .i-stats a:hover { text-decoration: underline; }
+.project-sidebar .co-menu { left: 50%; right: auto; transform: translateX(-50%); }
+.project-sidebar .co-button.is-outline { color: rgb(var(--color-notWhite)); border-color: rgb(var(--color-notWhite)); }
+.project-sidebar .co-button.is-outline:hover { background: rgb(var(--color-foreground-700)); }
+.project-sidebar .co-button.is-light:hover { background: rgb(var(--color-accent)); }
+
+@media (min-width: 1024px) {
+    /* On profile pages the cohost project box sits in the right-hand column. */
+    .feed-sidebar-alt > .project-sidebar { padding: 0 1rem 1rem; }
+}
+
+/* ---------- tables ---------- */
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+th { text-align: left; font-weight: 700; background: rgb(var(--color-notWhite)); }
+th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgb(var(--line)); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+td img { display: inline-block; vertical-align: middle; }
+
+/* ---------- messages ---------- */
+
+.chat { display: flex; flex-direction: column; gap: 0.75rem; max-height: 60vh; overflow-y: auto; padding: 0.25rem; }
+.chat .bubble {
+    max-width: 75%;
+    align-self: flex-start;
+    background: rgb(var(--color-notWhite));
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.75rem 0.75rem 0.75rem 0.25rem;
+    padding: 0.5rem 0.75rem;
+    overflow-wrap: anywhere;
+}
+.chat .bubble.is-mine {
+    align-self: flex-end;
+    background: rgb(var(--color-foreground-100));
+    border-color: rgb(var(--color-foreground-200));
+    border-radius: 0.75rem 0.75rem 0.25rem 0.75rem;
+}
+.chat .bubble small { display: block; color: rgb(var(--gray1)); font-size: 0.75rem; }
+
+/* ---------- admin ---------- */
+
+.admin-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+.admin-cols > * { min-width: 0; }
+
+.bar { height: 0.75rem; border-radius: 9999px; background: rgb(var(--color-notWhite)); border: 1px solid rgb(var(--line)); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: rgb(var(--color-cherry)); }
+
+blockquote { border-left: 3px solid rgb(var(--color-foreground-300)); padding-left: 0.75rem; color: rgb(var(--gray3)); }
+code { font-family: "League Mono", ui-monospace, monospace; font-size: 0.875em; }
+
+/* Plain buttons and link-buttons in forms get cohost's button look:
+   outlined by default, filled cherry when marked .default (the primary action). */
+button:not([class]), a[role=button], button.default {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border: 2px solid rgb(var(--color-cherry));
+    color: rgb(var(--color-cherry));
+    background: transparent;
+    font-weight: 700;
+    line-height: 1.25rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+button:not([class]):hover, a[role=button]:hover { background: rgb(var(--color-foreground-100)); }
+button.default, a[role=button].default { background: rgb(var(--color-cherry)); color: rgb(var(--color-notWhite)); }
+button.default:hover, a[role=button].default:hover { background: rgb(var(--color-foreground-600)); border-color: rgb(var(--color-foreground-600)); }
+.co-menu > li > button { border: 0; border-radius: 0; background: none; color: inherit; font-weight: 400; justify-content: flex-start; white-space: normal; }
+
+/* On small screens the profile box comes before the posts. */
+@media (max-width: 1023px) {
+    #page-container > .feed-sidebar-alt:has(> .project-sidebar) { order: 0; margin-bottom: 0; }
+    .feed-sidebar-alt:has(> .project-sidebar) > .site-fine-print { display: none; }
+}
+
+/* cohost caps titled boxes at 24rem (sized for sidebars); in the main column they fill the width. */
+.page-contents > .co-titled-box, .page-contents .co-titled-box { max-width: none; width: 100%; }
+
+/* cohost's post box scrolls wide content horizontally, which would clip the "…" menu;
+   the post body already clips its own overflow, so let the box itself overflow. */
+.co-post-box { overflow: visible; }
+.co-post-box > .co-thread-header { border-radius: 0.5rem 0.5rem 0 0; }
+.co-post-box > .co-thread-footer { border-radius: 0 0 0.5rem 0.5rem; }
+
+/* Under a profile header image the content starts right below it, as on cohost. */
+.profile-header-image + #page-container { padding-top: 1.5rem; }
+
+@media (max-width: 767px) {
+    #page-header .i-search { display: none; }
+}
+
+/* Composer next to the poster's big avatar, like a post on the dashboard. */
+.co-post-preview > .co-titled-box { max-width: none; }
+
+/* ---------- cohost post mechanics ---------- */
+
+/* Attached image above the body text. */
+.i-post-body > .i-attachment { display: block; }
+.i-post-body > .i-attachment > img { display: block; width: 100%; height: auto; }
+
+/* Composer fields: headline, tags, warnings, preview. */
+.co-composer .i-headline-input { font-size: 1.25rem; font-weight: 700; }
+.co-composer > .i-options > summary { cursor: pointer; font-size: 0.875rem; color: rgb(var(--gray2)); }
+.co-composer > .i-options > .stack { margin-top: 0.5rem; }
+.co-composer > .i-hint { font-size: 0.8125rem; color: rgb(var(--gray1)); }
+.co-composer > .i-preview-pane { border: 1px dashed rgb(var(--line)); border-radius: 0.5rem; background: rgb(255 255 255); }
+.co-composer > .i-preview-pane > .i-preview-label {
+    font-family: "League Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 0.5rem 0.75rem 0;
+    color: rgb(var(--gray1));
+}
+
+/* Comments. */
+.co-comments > .i-header { font-size: 1.125rem; font-weight: 700; }
+.co-comments .co-comment-item .i-contents { position: relative; }
+.co-comments .co-comment-item .i-contents > :first-child { margin-top: 0; }
+.co-comments .co-comment-item .i-contents > :last-child { margin-bottom: 0; }
+.co-comments .i-attachment img { max-height: 20rem; width: auto; border-radius: 0.25rem; }
+.co-comment-item .i-comment-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.25rem 1rem; font-size: 0.875rem; color: rgb(var(--gray1)); }
+.co-comment-item .i-comment-actions a:hover, .co-comment-item .i-comment-actions summary:hover, .i-link-button:hover { text-decoration: underline; color: rgb(var(--color-cherry)); }
+.co-comment-item .i-comment-actions > details { flex-basis: 100%; order: 9; }
+.co-comment-item .i-comment-actions > details > summary { cursor: pointer; list-style: none; width: fit-content; }
+.co-comment-item .i-comment-actions > details > summary::-webkit-details-marker { display: none; }
+.co-comment-item .i-comment-actions > details[open] > summary { margin-bottom: 0.5rem; font-weight: 700; }
+.co-comment-item .i-comment-actions form { display: inline; }
+.i-link-button { color: inherit; font-size: inherit; padding: 0; border: 0; background: none; cursor: pointer; }
+@media (min-width: 1024px) {
+    .co-comment-item > .i-big-avatar { display: block; }
+    .co-comment-item > .i-comment > .i-header > .i-avatar { display: none; }
+}
+
+/* Profile description on the cherry box. */
+.project-sidebar > .i-description { margin-top: 0.75rem; max-width: 100%; color: rgb(var(--color-notWhite)); position: relative; }
+.project-sidebar > .i-description a { color: rgb(var(--color-accent)); }
+.project-sidebar .i-badges { font-size: 0.875rem; opacity: 0.85; }

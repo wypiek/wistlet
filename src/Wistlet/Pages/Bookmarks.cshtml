@@ -1,0 +1,7 @@
+@page
+@model BookmarksModel
+@{
+    ViewData["Title"] = "Saved posts";
+}
+<h1 class="page-title">saved posts</h1>
+<partial name="_PostList" model="@(new PostListModel(Model.Posts, "You haven't saved anything yet. Use the Save button on any post to keep it here."))" />

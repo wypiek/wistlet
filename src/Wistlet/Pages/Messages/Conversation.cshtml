@@ -1,0 +1,39 @@
+@page "/messages/{userName}"
+@model Wistlet.Pages.Messages.ConversationModel
+@{
+    var o = Model.Other;
+    ViewData["Title"] = $"Chat with {o.DisplayName}";
+}
+<card title="@($"Conversation with {o.DisplayName} (@{o.UserName})")">
+    <div class="row">
+        <a role="button" href="/messages">All messages</a>
+        <a role="button" href="/u/@o.UserName">View profile</a>
+    </div>
+    <div class="chat" aria-live="polite">
+        @if (Model.Messages.Count == 0)
+        {
+            <p>This is the start of your conversation with @o.DisplayName.</p>
+        }
+        @foreach (var m in Model.Messages)
+        {
+            <div class="bubble @(m.SenderId == Model.Me ? "is-mine" : "")">
+                @ContentFormatter.Format(m.Body)<br />
+                <small>@(m.SenderId == Model.Me ? "You" : o.DisplayName) · @Fmt.Time(m.CreatedAt)</small>
+            </div>
+        }
+    </div>
+    @if (Model.CannotSendReason is not null)
+    {
+        <p>@Model.CannotSendReason</p>
+    }
+    else
+    {
+        <form method="post" class="stack">
+            <textarea class="composer-text" name="Body" rows="2" placeholder="Write a message…" aria-label="Message" maxlength="2000" data-max="2000" data-counter="msg-counter" required></textarea>
+            <div class="row end">
+                <span><span id="msg-counter">2000</span> characters left</span>
+                <button type="submit" class="default">Send</button>
+            </div>
+        </form>
+    }
+</card>

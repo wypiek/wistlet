@@ -1,0 +1,30 @@
+@page
+@model ExploreModel
+@{
+    ViewData["Title"] = "Explore";
+    var empty = Model.Tab switch
+    {
+        "top" => "Nothing popular this week yet.",
+        "media" => "No images have been posted yet.",
+        _ => "Nobody has posted anything yet. Be the first!",
+    };
+    var tabs = new TabsModel("Explore views",
+    [
+        new("latest", "/explore", Model.Tab == "latest"),
+        new("top this week", "/explore", Model.Tab == "top", "tab", "top"),
+        new("media", "/explore", Model.Tab == "media", "tab", "media"),
+    ]);
+}
+<h1 class="page-title">explore</h1>
+<div class="stack">
+    <partial name="_Tabs" model="tabs" />
+    <div class="tab-panel">
+        @if (Model.Pinned.Count > 0)
+        {
+            <h2 class="section-title">Pinned</h2>
+            <partial name="_PostList" model="new PostListModel(Model.Pinned)" />
+            <h2 class="section-title">Latest</h2>
+        }
+        <partial name="_PostList" model="new PostListModel(Model.Posts, empty, Model.MoreUrl)" />
+    </div>
+</div>

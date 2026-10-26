@@ -1,0 +1,18 @@
+@page
+@model PeopleModel
+@{
+    ViewData["Title"] = "People";
+    var tabs = new TabsModel("Sort people",
+    [
+        new("popular", "/people", Model.Sort == "popular"),
+        new("newest", "/people", Model.Sort == "new", "sort", "new"),
+        new("recently active", "/people", Model.Sort == "active", "sort", "active"),
+    ]);
+}
+<h1 class="page-title">people</h1>
+<div>
+    <partial name="_Tabs" model="tabs" />
+    <div class="tab-panel">
+        <partial name="_UserList" model="new UserListModel(Model.People)" />
+    </div>
+</div>

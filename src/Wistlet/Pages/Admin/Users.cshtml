@@ -1,0 +1,68 @@
+@page
+@model Wistlet.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "Users";
+    ViewData["AdminTab"] = "users";
+}
+<card title="Admin — Users" status="@Fmt.Plural(Model.Total, "user") · page @Model.PageNumber of @Model.Pages">
+    <partial name="_AdminNav" />
+    <div class="tab-panel">
+        <form method="get" class="row">
+            <input type="search" name="q" value="@Model.Q" placeholder="Name, @@handle or e-mail" aria-label="Search users" />
+            <select name="status" aria-label="Status">
+                <option value="all" selected="@(Model.Status == "all")">Everyone</option>
+                <option value="staff" selected="@(Model.Status == "staff")">Staff</option>
+                <option value="verified" selected="@(Model.Status == "verified")">Verified</option>
+                <option value="banned" selected="@(Model.Status == "banned")">Banned</option>
+            </select>
+            <select name="sort" aria-label="Sort">
+                <option value="new" selected="@(Model.Sort == "new")">Newest first</option>
+                <option value="old" selected="@(Model.Sort == "old")">Oldest first</option>
+                <option value="name" selected="@(Model.Sort == "name")">By name</option>
+                <option value="active" selected="@(Model.Sort == "active")">Recently active</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>User</th><th>E-mail</th><th>Role</th><th>Status</th><th>Posts</th><th>Followers</th><th>Joined</th><th>Last seen</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        var u = r.User;
+                        <tr>
+                            <td><a href="/admin/user/@u.Id">@u.DisplayName</a><br />@@@u.UserName</td>
+                            <td>@u.Email</td>
+                            <td>@u.Role</td>
+                            <td>
+                                @if (u.IsCurrentlyBanned) { <b>Banned</b> }
+                                else if (u.IsBanned) { <text>Ban expired</text> }
+                                @if (u.IsVerified) { <text>Verified</text> }
+                                @if (r.Reports > 0) { <a href="/admin/reports">@r.Reports open reports</a> }
+                            </td>
+                            <td>@r.Posts</td>
+                            <td>@r.Followers</td>
+                            <td>@Fmt.Date(u.CreatedAt)</td>
+                            <td>@(u.LastSeenAt is DateTime ls ? Fmt.Ago(ls) : "never")</td>
+                            <td><a role="button" href="/admin/user/@u.Id">Manage</a></td>
+                        </tr>
+                    }
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="9">No users match.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Pages > 1)
+        {
+            <div class="row">
+                @if (Model.PageNumber > 1) { <a role="button" href="@Model.PageUrl(Model.PageNumber - 1)">‹ Previous</a> }
+                <span>Page @Model.PageNumber of @Model.Pages</span>
+                @if (Model.PageNumber < Model.Pages) { <a role="button" href="@Model.PageUrl(Model.PageNumber + 1)">Next ›</a> }
+            </div>
+        }
+    </div>
+</card>

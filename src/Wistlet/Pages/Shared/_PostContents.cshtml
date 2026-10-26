@@ -1,0 +1,61 @@
+@model PostContentsModel
+@* cohost's post contents: optional CW / 18+ collapser, headline, body (with read-more), tags. *@
+@{
+    var p = Model.Post;
+    var warnings = p.Warnings;
+    var collapsed = warnings.Count > 0 || p.IsAdult;
+    // The same post can appear twice on a page (e.g. inside a share), so element ids get a unique suffix.
+    var uid = $"{p.Id}-{Guid.NewGuid().ToString("N")[..6]}";
+}
+@if (collapsed)
+{
+    <div class="co-post-collapser has-css-state">
+        <input class="i-expanded-state" type="checkbox" id="post-collapser-@uid" />
+        <div class="i-collapsed">
+            @if (p.IsAdult)
+            {
+                <div class="co-info-box is-18-plus i-info-circle-icon">This post contains 18+ content.</div>
+            }
+            @if (warnings.Count > 0)
+            {
+                <div class="co-info-box is-warning i-shield-exclam-icon">
+                    <div>This post has content warnings for: <span class="i-cws">@string.Join(", ", warnings).</span></div>
+                </div>
+            }
+            <div class="i-buttons">
+                <label class="i-button i-expand-collapsed-button" for="post-collapser-@uid">show post</label>
+            </div>
+            <partial name="_PostTags" model="p.Tags" />
+        </div>
+        <div class="i-expanded">
+            @if (warnings.Count > 0)
+            {
+                <div class="i-collapse-header">
+                    <div class="co-info-box is-warning i-shield-exclam-icon">
+                        <div class="i-contents">
+                            @if (p.IsAdult) { <div class="i-adult">This post contains 18+ content.</div> }
+                            <div class="i-cws">CWs: <span class="i-cws">@string.Join(", ", warnings).</span></div>
+                        </div>
+                    </div>
+                    <label class="i-button i-collapse-button" for="post-collapser-@uid">hide post</label>
+                </div>
+            }
+            else
+            {
+                <div class="i-collapse-header is-inline">
+                    <div class="i-headline">
+                        @if (p.Headline is not null) { <a class="prose" href="/post/@p.Id"><h3>@p.Headline</h3></a> }
+                    </div>
+                    <div class="co-info-box is-18-plus">18+</div>
+                    <label class="i-button i-collapse-button" for="post-collapser-@uid">hide post</label>
+                </div>
+            }
+            <partial name="_PostBody" model="@(new PostBodyModel(p, Model.Expand, warnings.Count == 0, uid))" />
+        </div>
+    </div>
+}
+else
+{
+    <partial name="_PostBody" model="@(new PostBodyModel(p, Model.Expand, false, uid))" />
+}
+

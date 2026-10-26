@@ -1,0 +1,47 @@
+@model PostBodyModel
+@{
+    var post = Model.Post;
+    var uid = Model.Uid;
+    // isolate + contain: paint keep positioned/animated "CSS crimes" inside the post box, as on cohost.
+    const string bodyClass = "i-post-body isolate co-contain-paint co-var-post-body-bg";
+}
+<div class="co-post-contents">
+    @if (post.ParentAuthorUserName is not null || post.IsPinned)
+    {
+        <div class="i-context">
+            @if (post.ParentAuthorUserName is not null) { <span>comment on <a href="/post/@post.ParentId">@@@post.ParentAuthorUserName's post</a></span> }
+            @if (post.IsPinned) { <span>pinned to explore</span> }
+        </div>
+    }
+    @if (post.Headline is not null && !Model.SkipHeadline)
+    {
+        <div class="i-headline"><a class="prose" href="/post/@post.Id"><h3>@post.Headline</h3></a></div>
+    }
+    @if (post.PreviewHtml is not null)
+    {
+        <div class="i-expandable has-css-state">
+            <input class="i-expanded-state" type="checkbox" id="post-expanded-@uid" checked="@Model.Expand" />
+            <div class="@bodyClass i-preview">
+                <partial name="_PostAttachment" model="post" />
+                <div class="co-prose prose">@Html.Raw(post.PreviewHtml)</div>
+                <label class="i-read-more co-read-more-read-less" for="post-expanded-@uid">read more</label>
+            </div>
+            <div class="@bodyClass i-full">
+                <partial name="_PostAttachment" model="post" />
+                <div class="co-prose prose">@Html.Raw(post.Html)</div>
+                <label class="i-read-less co-read-more-read-less" for="post-expanded-@uid">read less</label>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(post.Html) || post.ImagePath is not null)
+    {
+        <div class="@bodyClass">
+            <partial name="_PostAttachment" model="post" />
+            @if (!string.IsNullOrWhiteSpace(post.Html))
+            {
+                <div class="co-prose prose">@Html.Raw(post.Html)</div>
+            }
+        </div>
+    }
+    <partial name="_PostTags" model="post.Tags" />
+</div>

@@ -1,0 +1,28 @@
+@page "/post/{id:int}"
+@model PostModel
+@{
+    var title = Model.Post.Headline ?? (Model.Post.Content.Length > 40 ? Model.Post.Content[..40] + "…" : Model.Post.Content);
+    ViewData["Title"] = $"{Model.Post.Author.DisplayName}: “{title}”";
+    ViewData["ExpandPosts"] = true;
+}
+<partial name="_PostList" model="@(new PostListModel([Model.Post]))" view-data="ViewData" />
+
+<div class="co-comments" id="comments">
+    <h4 class="i-header">@Fmt.Plural(Model.CommentCount, "comment") on <a class="i-post-ref" href="#post-@Model.Post.Id">@@@Model.Post.Author.UserName's post</a></h4>
+    @foreach (var c in Model.TopLevelComments)
+    {
+        <div class="i-thread">
+            <partial name="_CommentTree" model="@(new CommentTreeModel(c, Model.Children, Model.Post.Id))" />
+        </div>
+    }
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="i-thread" id="reply">
+            <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.Post.Id}", Model.Post.Id, $"comment as @{User.Identity!.Name}…", "comment") { IsComment = true })" />
+        </div>
+    }
+    else
+    {
+        <div class="co-info-box is-tombstone i-info-circle-icon"><div class="i-text"><a href="/account/login?returnUrl=/post/@Model.Post.Id">Log in</a> to comment.</div></div>
+    }
+</div>

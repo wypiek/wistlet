@@ -1,0 +1,14 @@
+@model ComposerModel
+@inject ViewerContext Viewer
+@{ var me = await Viewer.GetUserAsync(); }
+@if (me is not null)
+{
+    <div class="co-post-preview">
+        <a class="i-large-avatar co-drop-shadow" href="/u/@me.UserName" tabindex="-1">
+            <img class="co-avatar i-avatar" data-shape="@AvatarShapes.Resolve(me.AvatarShape)" src="@(me.AvatarPath ?? $"/avatar/{me.UserName}.svg")" alt="@me.UserName" />
+        </a>
+        <card>
+            <partial name="_Composer" model="Model" />
+        </card>
+    </div>
+}

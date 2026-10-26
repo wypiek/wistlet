@@ -1,0 +1,14 @@
+@model IReadOnlyList<string>
+@if (Model.Count > 0)
+{
+    <div class="i-tags">
+        <div class="i-collapser">
+            <div class="i-items">
+                @foreach (var tag in Model)
+                {
+                    <a class="i-tag" href="/tag/@Uri.EscapeDataString(tag)">#@tag</a>
+                }
+            </div>
+        </div>
+    </div>
+}

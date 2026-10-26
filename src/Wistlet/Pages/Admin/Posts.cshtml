@@ -1,0 +1,62 @@
+@page
+@model Wistlet.Pages.Admin.PostsModel
+@{
+    ViewData["Title"] = "Posts";
+    ViewData["AdminTab"] = "posts";
+}
+<card title="Admin — Posts" status="@Fmt.Plural(Model.Total, "post") · page @Model.PageNumber of @Model.Pages">
+    <partial name="_AdminNav" />
+    <div class="tab-panel">
+        <form method="get" class="row">
+            <input type="search" name="q" value="@Model.Q" placeholder="Text or @@author" aria-label="Search posts" />
+            <select name="filter" aria-label="Filter">
+                <option value="all" selected="@(Model.Filter == "all")">All posts</option>
+                <option value="reported" selected="@(Model.Filter == "reported")">With open reports</option>
+                <option value="hidden" selected="@(Model.Filter == "hidden")">Hidden</option>
+                <option value="pinned" selected="@(Model.Filter == "pinned")">Pinned</option>
+                <option value="media" selected="@(Model.Filter == "media")">With images</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>#</th><th>Author</th><th>Content</th><th>Posted</th><th>Likes</th><th>Replies</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td><a href="/post/@r.Id">@r.Id</a></td>
+                            <td><a href="/admin/user/@r.AuthorId">@@@r.AuthorUserName</a></td>
+                            <td>@(r.ParentId is not null ? "(reply) " : "")@(r.ImagePath is not null ? "(image) " : "")@(r.Content.Length > 120 ? r.Content[..120] + "…" : r.Content)</td>
+                            <td>@Fmt.Time(r.CreatedAt)</td>
+                            <td>@r.Likes</td>
+                            <td>@r.Replies</td>
+                            <td>
+                                @if (r.IsHidden) { <b>Hidden</b> }
+                                @if (r.IsPinned) { <text>Pinned</text> }
+                                @if (r.Reports > 0) { <a href="/admin/reports">@r.Reports reports</a> }
+                            </td>
+                            <td><div class="row">
+                                <form method="post" asp-page="/Act" asp-page-handler="Hide" asp-route-id="@r.Id" asp-route-returnUrl="@Model.Self"><button type="submit">@(r.IsHidden ? "Unhide" : "Hide")</button></form>
+                                <form method="post" asp-page="/Act" asp-page-handler="Pin" asp-route-id="@r.Id" asp-route-returnUrl="@Model.Self"><button type="submit">@(r.IsPinned ? "Unpin" : "Pin")</button></form>
+                                <form method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@r.Id" asp-route-returnUrl="@Model.Self" data-confirm="Delete post #@r.Id?"><button type="submit">Delete</button></form>
+                            </div></td>
+                        </tr>
+                    }
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="8">No posts match.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Pages > 1)
+        {
+            <div class="row">
+                @if (Model.PageNumber > 1) { <a role="button" href="@Model.PageUrl(Model.PageNumber - 1)">‹ Previous</a> }
+                <span>Page @Model.PageNumber of @Model.Pages</span>
+                @if (Model.PageNumber < Model.Pages) { <a role="button" href="@Model.PageUrl(Model.PageNumber + 1)">Next ›</a> }
+            </div>
+        }
+    </div>
+</card>

@@ -1,0 +1,9 @@
+@model TabsModel
+@* Pill-style section switcher, like cohost's profile filters. *@
+<nav class="co-tabs" aria-label="@Model.Label">
+    @foreach (var t in Model.Tabs)
+    {
+        var href = t.Name is null ? t.Path : $"{t.Path}?{t.Name}={Uri.EscapeDataString(t.Value ?? "")}";
+        <a href="@href" aria-current="@(t.Selected ? "page" : "false")">@t.Text</a>
+    }
+</nav>

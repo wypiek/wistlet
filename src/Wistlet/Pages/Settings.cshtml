@@ -1,0 +1,168 @@
+@page
+@model SettingsModel
+@{
+    ViewData["Title"] = "Settings";
+    var me = Model.Me;
+    var cfg = Settings.Current;
+    var tabs = new TabsModel("Settings sections",
+    [
+        new("Profile", "/settings", Model.Tab == "profile"),
+        new("Account", "/settings", Model.Tab == "account", "tab", "account"),
+        new("Privacy", "/settings", Model.Tab == "privacy", "tab", "privacy"),
+        new("Blocked accounts", "/settings", Model.Tab == "blocked", "tab", "blocked"),
+    ]);
+}
+<card title="Settings">
+    <partial name="_Tabs" model="tabs" />
+    <div class="tab-panel">
+        @switch (Model.Tab)
+        {
+            case "profile":
+                <form method="post" asp-page-handler="Profile" enctype="multipart/form-data" class="form-grid">
+                    <label>Picture</label>
+                    <div class="row">
+                        <img src="@(me.AvatarPath ?? $"/avatar/{me.UserName}.svg")" width="64" height="64" alt="" />
+                        <div class="stack">
+                            <input type="file" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Upload a new picture" />
+                            @if (me.AvatarPath is not null)
+                            {
+                                <div><input type="checkbox" id="removeAvatar" name="removeAvatar" value="true" /><label for="removeAvatar">Remove picture</label></div>
+                            }
+                            <span>PNG, JPEG, GIF or WebP, up to 2 MB.</span>
+                        </div>
+                    </div>
+                    <label>Banner</label>
+                    <div class="stack">
+                        @if (me.BannerPath is not null)
+                        {
+                            <img class="banner-preview" src="@me.BannerPath" alt="Your current banner" />
+                        }
+                        <input type="file" name="banner" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Upload a banner" />
+                        @if (me.BannerPath is not null)
+                        {
+                            <div><input type="checkbox" id="removeBanner" name="removeBanner" value="true" /><label for="removeBanner">Remove banner</label></div>
+                        }
+                        <span>Shown across the top of your profile. A wide image works best (about 3:1), up to 4 MB.</span>
+                    </div>
+                    <label for="avatarShape">Avatar shape</label>
+                    <select id="avatarShape" name="avatarShape">
+                        @foreach (var shape in AvatarShapes.All)
+                        {
+                            <option value="@shape" selected="@(AvatarShapes.Resolve(me.AvatarShape) == shape)">@shape</option>
+                        }
+                    </select>
+                    <label for="displayName">Display name</label>
+                    <input id="displayName" type="text" name="displayName" value="@me.DisplayName" maxlength="50" required />
+                    <label for="dek">Tagline</label>
+                    <input id="dek" type="text" name="dek" value="@me.Dek" maxlength="100" placeholder="a short line under your name" />
+                    <label for="pronouns">Pronouns</label>
+                    <input id="pronouns" type="text" name="pronouns" value="@me.Pronouns" maxlength="40" />
+                    <label for="bio">Description</label>
+                    <textarea id="bio" name="bio" rows="5" maxlength="5000" placeholder="Markdown and HTML work here too">@me.Bio</textarea>
+                    <label for="location">Location</label>
+                    <input id="location" type="text" name="location" value="@me.Location" maxlength="60" />
+                    <label for="website">Website</label>
+                    <input id="website" type="text" inputmode="url" name="website" value="@me.Website" maxlength="200" placeholder="example.com" />
+                    <span></span>
+                    <div class="row"><button type="submit" class="default">Save profile</button> <a href="/u/@me.UserName">View profile</a></div>
+                </form>
+                break;
+
+            case "account":
+                <fieldset>
+                    <legend>E-mail address</legend>
+                    <form method="post" asp-page-handler="Email" class="form-grid">
+                        <label for="email">E-mail</label>
+                        <input id="email" type="email" name="email" value="@me.Email" required />
+                        <label for="pw1">Current password</label>
+                        <input id="pw1" type="password" name="currentPassword" autocomplete="current-password" required />
+                        <span></span>
+                        <div><button type="submit">Update e-mail</button></div>
+                    </form>
+                </fieldset>
+                <fieldset>
+                    <legend>Change password</legend>
+                    <form method="post" asp-page-handler="Password" class="form-grid">
+                        <label for="pw2">Current password</label>
+                        <input id="pw2" type="password" name="currentPassword" autocomplete="current-password" required />
+                        <label for="pw3">New password</label>
+                        <input id="pw3" type="password" name="newPassword" autocomplete="new-password" minlength="@AccountService.MinPasswordLength" required />
+                        <label for="pw4">Confirm new password</label>
+                        <input id="pw4" type="password" name="confirmPassword" autocomplete="new-password" required />
+                        <span></span>
+                        <div><button type="submit">Change password</button></div>
+                    </form>
+                </fieldset>
+                <fieldset>
+                    <legend>Sessions</legend>
+                    <form method="post" asp-page-handler="SignOutEverywhere" class="row">
+                        <span>Sign out of every other browser where you're logged in.</span>
+                        <button type="submit">Sign out everywhere else</button>
+                    </form>
+                </fieldset>
+                <fieldset>
+                    <legend>Delete account</legend>
+                    <form method="post" asp-page-handler="DeleteAccount" class="form-grid" data-confirm="Really delete your account and everything you've posted? This can't be undone.">
+                        <p class="full">This permanently deletes your profile, posts, likes and messages.</p>
+                        <label for="pw5">Current password</label>
+                        <input id="pw5" type="password" name="currentPassword" autocomplete="current-password" required />
+                        <label for="confirm">Type <b>@me.UserName</b></label>
+                        <input id="confirm" type="text" name="confirm" autocomplete="off" required />
+                        <span></span>
+                        <div><button type="submit">Delete my account</button></div>
+                    </form>
+                </fieldset>
+                break;
+
+            case "privacy":
+                <form method="post" asp-page-handler="Privacy" class="stack">
+                    <fieldset>
+                        <legend>Who can send you direct messages?</legend>
+                        @foreach (var (value, label) in new[] { (MessagePrivacy.Everyone, "Everyone"), (MessagePrivacy.PeopleIFollow, "Only people I follow"), (MessagePrivacy.Nobody, "Nobody") })
+                        {
+                            <div class="field-row">
+                                <input type="radio" id="mp-@value" name="messagePrivacy" value="@value" checked="@(me.MessagePrivacy == value)" />
+                                <label for="mp-@value">@label</label>
+                            </div>
+                        }
+                        @if (!cfg.AllowDirectMessages)
+                        {
+                            <p>Direct messages are currently disabled site-wide.</p>
+                        }
+                    </fieldset>
+                    <fieldset>
+                        <legend>18+ content</legend>
+                        <div class="field-row"><input type="checkbox" id="showAdultContent" name="showAdultContent" value="true" checked="@me.ShowAdultContent" /><label for="showAdultContent">I'm 18 or older and want to see 18+ posts in feeds (they stay collapsed until you open them)</label></div>
+                    </fieldset>
+                    <div><button type="submit" class="default">Save</button></div>
+                </form>
+                break;
+
+            case "blocked":
+                @if (Model.Blocked.Count == 0)
+                {
+                    <p>You haven't blocked anyone.</p>
+                }
+                else
+                {
+                    <table>
+                        <tbody>
+                            @foreach (var u in Model.Blocked)
+                            {
+                                <tr>
+                                    <td><img src="@u.AvatarUrl" alt="" width="32" height="32" /></td>
+                                    <td>@u.DisplayName<br />@@@u.UserName</td>
+                                    <td>
+                                        <form method="post" asp-page="/Act" asp-page-handler="Block" asp-route-id="@u.Id" asp-route-returnUrl="/settings?tab=blocked">
+                                            <button type="submit">Unblock</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                break;
+        }
+    </div>
+</card>
