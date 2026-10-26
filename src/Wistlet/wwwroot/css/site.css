@@ -324,7 +324,23 @@ legend { font-weight: 700; padding: 0 0.4rem; }
 #page-container.is-project-page > .page-contents { gap: 1rem; }
 .is-project-page .project-profile-filters,
 .is-project-page .project-profile-posts { margin-top: 0; }
-.is-project-page .project-profile-tagged-header { margin: 1rem 0 0.5rem; }
+/* Heading for a profile's other views (comments, images, a tag…), with pill links back out. */
+.project-profile-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; }
+.project-profile-heading > .i-title { font-size: 1.5rem; line-height: 2rem; font-weight: 700; }
+.project-profile-heading > .i-title > .i-tag { color: rgb(var(--color-cherry)); }
+.project-profile-heading > .i-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.project-profile-heading .i-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: rgb(var(--color-longan));
+    color: rgb(var(--color-cherry));
+    line-height: 1;
+}
+.project-profile-heading .i-pill:hover { text-decoration: underline; }
+.project-sidebar-alt .co-tag-button[aria-current=page] { background: rgb(var(--color-accent)); color: rgb(var(--color-cherry)); font-weight: 700; }
 /* The filter pills were longan with cherry text on 2022 profiles. */
 .project-profile-filters > .i-filter { background: rgb(var(--color-longan)); }
 .project-profile-filters > .i-filter > .i-state { color: rgb(var(--color-cherry)); }
@@ -336,6 +352,9 @@ legend { font-weight: 700; padding: 0 0.4rem; }
     .project-sidebar-alt > .site-fine-print { display: none; }
 }
 @media (min-width: 1024px) {
+    /* The project box lines up with the header image's left edge, as on cohost. */
+    #page-container.is-project-page { padding-left: 0; padding-right: 0; }
+    .is-project-page > .project-sidebar-alt { margin-right: 0.75rem; }
     .project-sidebar { margin: 0; padding: 1.5rem 1rem 2rem; min-height: calc(100vh - 4rem); }
     .project-sidebar.has-header { padding-top: 0; }
     .project-sidebar-alt { margin-top: 1rem; }

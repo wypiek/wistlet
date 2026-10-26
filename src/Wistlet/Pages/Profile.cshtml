@@ -9,14 +9,15 @@
     var ret = basePath;
     var websiteOk = Uri.TryCreate(p.Website, UriKind.Absolute, out var wu) && (wu.Scheme == "http" || wu.Scheme == "https");
     var signedIn = User.Identity?.IsAuthenticated == true;
+    // Every view but the plain post list gets a short heading (the sidebar already says whose page it is).
     var heading = Model.Tab switch
     {
-        "replies" => $"comments from @{p.UserName}",
-        "media" => $"images from @{p.UserName}",
-        "likes" => $"posts @{p.UserName} liked",
-        "followers" => $"people following @{p.UserName}",
-        "following" => $"people @{p.UserName} follows",
-        "tagged" => $"posts from @{p.UserName} tagged #{Model.Tagged}",
+        "replies" => "comments",
+        "media" => "images",
+        "likes" => "liked posts",
+        "followers" => "followers",
+        "following" => "following",
+        "tagged" => "posts tagged",
         _ => null,
     };
 }
@@ -130,7 +131,7 @@
                 <ul class="i-tag-list">
                     @foreach (var t in Model.PinnedTags)
                     {
-                        <li><a class="co-tag-button" href="@basePath/tagged/@Uri.EscapeDataString(t)">@t</a></li>
+                        <li><a class="co-tag-button" href="@basePath/tagged/@Uri.EscapeDataString(t)" aria-current="@(Model.Tagged == t ? "page" : "false")">@t</a></li>
                     }
                 </ul>
             </div>
@@ -173,15 +174,23 @@ else
     }
     else
     {
-        <div class="project-profile-tagged-header">
-            <h4>@heading</h4>
-            <h6>also:</h6>
-            <div>
+        <div class="project-profile-heading">
+            <h2 class="i-title">
+                @heading
                 @if (Model.Tab == "tagged")
                 {
-                    <a class="i-from-all-pages" href="/tag/@Uri.EscapeDataString(Model.Tagged!)">view posts from everyone tagged #@Model.Tagged</a><br />
+                    <span class="i-tag">#@Model.Tagged</span>
                 }
-                <a class="i-from-all-pages" href="@basePath">view all posts from @@@p.UserName</a>
+            </h2>
+            <div class="i-links">
+                <a class="i-pill" href="@basePath">
+                    <svg viewBox="0 0 24 24" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
+                    all posts
+                </a>
+                @if (Model.Tab == "tagged")
+                {
+                    <a class="i-pill" href="/tag/@Uri.EscapeDataString(Model.Tagged!)">#@Model.Tagged from everyone</a>
+                }
             </div>
         </div>
     }
