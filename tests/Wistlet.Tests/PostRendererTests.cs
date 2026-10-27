@@ -175,4 +175,66 @@ public class PostRendererTests
     {
         Assert.Equal(["css crimes", "art", "the cohost global feed"], PostRenderer.ParseTags("#CSS Crimes, art , , the cohost global feed, art"));
     }
+
+    // ---- indented HTML (CSS crimes written with nesting and blank lines) ----
+
+    private const string IndentedCrime = """
+        <div style="display: grid; gap: 12px; background: linear-gradient(135deg, #ffd8a8, #e56b6f);">
+
+            <div style="font-size: 24px; color: #83254f;">
+                the haunted vending machine
+            </div>
+
+            <details style="background: #fff9f2;">
+                <summary style="cursor: pointer;">insert coin</summary>
+
+                <div style="display: flex; gap: 8px;">
+                    <span style="background: #83254f;">soda</span>
+                </div>
+            </details>
+        </div>
+        """;
+
+    [Fact]
+    public void IndentedHtmlAfterBlankLinesStaysHtml()
+    {
+        var html = R(IndentedCrime);
+        Assert.DoesNotContain("<pre>", html);
+        Assert.DoesNotContain("&lt;div", html);
+        Assert.Contains("<details style=\"background: #fff9f2\">", html);
+        Assert.Contains("<span style=\"background: #83254f\">soda</span>", html);
+    }
+
+    [Fact]
+    public void MarkdownInsideHtmlStillWorksAfterABlankLine()
+    {
+        var html = R("<div style=\"padding: 8px\">\n\n    some **bold** words\n</div>");
+        Assert.Contains("<strong>bold</strong>", html);
+        Assert.DoesNotContain("<pre>", html);
+    }
+
+    [Fact]
+    public void CodeBlocksKeepTheirIndentation()
+    {
+        // Fenced code shows the HTML as text, indentation included.
+        var fenced = R("```\n<div>\n\n    <span>hi</span>\n</div>\n```");
+        Assert.Contains("<pre><code>&lt;div&gt;\n\n    &lt;span&gt;hi&lt;/span&gt;", fenced);
+
+        // Indented code outside HTML is still a code block.
+        Assert.Contains("<pre><code>let x = 1;", R("text\n\n    let x = 1;"));
+
+        // An unclosed <p> (its end tag is optional) doesn't swallow a later code block.
+        Assert.Contains("<pre><code>still code", R("<p>an unclosed paragraph\n\nmore text\n\n    still code"));
+
+        // Neither does a tag written inside inline code.
+        Assert.Contains("<pre><code>still code", R("use `<div>` for boxes\n\n    still code"));
+    }
+
+    [Fact]
+    public void TagsSpanningLinesCount()
+    {
+        var html = R("<div\n  style=\"color: red\">\n\n    <span>inside</span>\n</div>");
+        Assert.Contains("<span>inside</span>", html);
+        Assert.DoesNotContain("<pre>", html);
+    }
 }

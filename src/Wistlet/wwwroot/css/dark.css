@@ -61,6 +61,29 @@ hr.co-hairline { border-color: rgb(var(--line)); }
     --tw-prose-th-borders: var(--tw-prose-invert-th-borders);
     --tw-prose-td-borders: var(--tw-prose-invert-td-borders);
 }
+/* CSS crimes are written for a light page: an element that paints its own background but
+   doesn't pick a text colour expects dark text. Give it (and what's inside) the light theme's
+   text colours; an inline "color" still wins, since inline styles beat this sheet. */
+.prose [style*="background"]:not([style*="background: none"]):not([style*="background: transparent"]):not([style*="background-color: transparent"]) {
+    color: #191919;
+    --tw-prose-body: #374151;
+    --tw-prose-headings: #111827;
+    --tw-prose-lead: #4b5563;
+    --tw-prose-links: #111827;
+    --tw-prose-bold: #111827;
+    --tw-prose-counters: #6b7280;
+    --tw-prose-bullets: #d1d5db;
+    --tw-prose-hr: #e5e7eb;
+    --tw-prose-quotes: #111827;
+    --tw-prose-quote-borders: #e5e7eb;
+    --tw-prose-captions: #6b7280;
+    --tw-prose-kbd: #111827;
+    --tw-prose-kbd-shadows: 17 24 39;
+    --tw-prose-code: #111827;
+    --tw-prose-th-borders: #d1d5db;
+    --tw-prose-td-borders: #e5e7eb;
+}
+
 .co-post-contents .co-prose a.co-mention, .co-comment-item .co-prose a.co-mention { color: rgb(var(--text-accent)); }
 
 /* ---------- forms, menus, tables ---------- */

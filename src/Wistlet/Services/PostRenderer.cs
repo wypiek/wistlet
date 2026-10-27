@@ -22,7 +22,7 @@ namespace Wistlet.Services;
 public static partial class PostRenderer
 {
     /// <summary>Bump when the output changes so stored posts are re-rendered on start-up.</summary>
-    public const int Version = 1;
+    public const int Version = 2;
 
     /// <summary>A line containing only this splits a post into a preview and the rest ("read more").</summary>
     public const string ReadMoreMarker = "<!--more-->";
@@ -132,8 +132,90 @@ public static partial class PostRenderer
     /// <summary>Markdown → sanitized HTML for one body.</summary>
     public static string RenderFragment(string markdown)
     {
-        var html = Markdown.ToHtml(markdown, Pipeline);
+        var html = Markdown.ToHtml(UnindentHtml(markdown), Pipeline);
         return Sanitize(html);
+    }
+
+    /// <summary>Void elements and elements whose end tag is optional: they don't count as "open" below.</summary>
+    private static readonly HashSet<string> NoDepthElements = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr",
+        "p", "li", "dt", "dd", "tr", "td", "th", "thead", "tbody", "tfoot", "option", "optgroup", "rt", "rp", "colgroup", "caption",
+    };
+
+    [GeneratedRegex(@"<(?<close>/)?(?<name>[A-Za-z][A-Za-z0-9-]*)(?:\s[^>]*?)?(?<self>/)?>")]
+    private static partial Regex TagRegex();
+
+    [GeneratedRegex(@"^ {0,3}(?<fence>`{3,}|~{3,})")]
+    private static partial Regex FenceRegex();
+
+    [GeneratedRegex(@"(?<ticks>`+)[^`]*?\k<ticks>|<!--.*?-->", RegexOptions.Singleline)]
+    private static partial Regex CodeSpanOrCommentRegex();
+
+    /// <summary>
+    /// In Markdown, a blank line ends a block of raw HTML, and a line indented by four spaces after
+    /// it starts a code block, so a nicely indented "CSS crime" would show the rest of its HTML as
+    /// text. Inside HTML, indentation is only formatting: lines that start with a tag, and every
+    /// line while an HTML element is open, lose their leading whitespace. Fenced code blocks and
+    /// inline code are left alone, and so is indentation outside HTML (indented code blocks still work).
+    /// </summary>
+    public static string UnindentHtml(string markdown)
+    {
+        if (!markdown.Contains('<')) return markdown;
+        var lines = markdown.Split('\n');
+
+        // Which lines are inside fenced code blocks (including the fences).
+        var fenced = new bool[lines.Length];
+        string? fence = null;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var m = FenceRegex().Match(lines[i]);
+            if (fence is null)
+            {
+                if (m.Success) { fence = m.Groups["fence"].Value; fenced[i] = true; }
+            }
+            else
+            {
+                fenced[i] = true;
+                if (m.Success && m.Groups["fence"].Value[0] == fence[0] && m.Groups["fence"].Value.Length >= fence.Length &&
+                    lines[i].Trim().Length == m.Groups["fence"].Value.Length)
+                    fence = null;
+            }
+        }
+
+        // Tags are counted on a copy with fenced code, inline code and comments blanked out.
+        var masked = new StringBuilder(markdown.Length);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            masked.Append(fenced[i] ? new string(' ', lines[i].Length) : lines[i]);
+            if (i < lines.Length - 1) masked.Append('\n');
+        }
+        var text = CodeSpanOrCommentRegex().Replace(masked.ToString(), m => new string(' ', m.Length));
+
+        // How many elements are open at each position where a tag changes that.
+        var changes = new List<(int Position, int Delta)>();
+        foreach (Match m in TagRegex().Matches(text))
+        {
+            if (m.Groups["self"].Success || NoDepthElements.Contains(m.Groups["name"].Value)) continue;
+            changes.Add((m.Index, m.Groups["close"].Success ? -1 : 1));
+        }
+
+        var depth = 0;
+        var next = 0;
+        var offset = 0;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            while (next < changes.Count && changes[next].Position < offset)
+                depth = Math.Max(0, depth + changes[next++].Delta);
+            var line = lines[i];
+            offset += line.Length + 1;
+            if (fenced[i] || line.Length == 0 || !char.IsWhiteSpace(line[0])) continue;
+
+            var trimmed = line.TrimStart(' ', '\t');
+            var startsWithTag = trimmed.Length > 1 && trimmed[0] == '<' && (char.IsAsciiLetter(trimmed[1]) || trimmed[1] is '/' or '!');
+            if (depth > 0 || startsWithTag) lines[i] = trimmed;
+        }
+        return string.Join('\n', lines);
     }
 
     public static string Sanitize(string html)
