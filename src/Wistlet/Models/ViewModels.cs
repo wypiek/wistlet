@@ -22,13 +22,28 @@ public class PostView
     public string? PreviewHtml { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public string? ContentWarnings { get; init; }
+    /// <summary>The post's own 18+ flag.</summary>
     public bool IsAdult { get; init; }
+
+    /// <summary>The author marked their whole page 18+.</summary>
+    public bool IsAdultPage { get; init; }
+
+    /// <summary>Shown collapsed behind the 18+ notice.</summary>
+    public bool ShowsAsAdult => IsAdult || IsAdultPage;
+
     public bool IsShare { get; init; }
     public int? SharedPostId { get; init; }
     public string? ImagePath { get; init; }
+    public string? AudioPath { get; init; }
+    public string? AudioTitle { get; init; }
+    public string? AudioArtist { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? EditedAt { get; init; }
     public bool IsHidden { get; init; }
+
+    /// <summary>A comment hidden by the author of the post it's on.</summary>
+    public bool HiddenByPostAuthor { get; init; }
+
     public bool IsPinned { get; init; }
     public int? ParentId { get; init; }
     public string? ParentAuthorUserName { get; init; }
@@ -42,7 +57,7 @@ public class PostView
     public PostView? SharedFrom { get; set; }
 
     /// <summary>A share with no added text, headline or image ("transparent share" on cohost).</summary>
-    public bool IsTransparentShare => IsShare && string.IsNullOrWhiteSpace(Content) && string.IsNullOrWhiteSpace(Headline) && ImagePath is null;
+    public bool IsTransparentShare => IsShare && string.IsNullOrWhiteSpace(Content) && string.IsNullOrWhiteSpace(Headline) && ImagePath is null && AudioPath is null;
 
     public IReadOnlyList<string> Warnings => Services.PostRenderer.ParseWarnings(ContentWarnings);
 
@@ -70,7 +85,10 @@ public record PostDraft(
     bool IsAdult = false,
     IFormFile? Image = null,
     int? ParentId = null,
-    int? ShareOfId = null);
+    int? ShareOfId = null,
+    IFormFile? Audio = null,
+    string? AudioTitle = null,
+    string? AudioArtist = null);
 
 public record TrendingTag(string Tag, int Count);
 
@@ -96,6 +114,26 @@ public record UserCardModel(UserSummary User, bool ShowFollow = true, bool IsFol
 
 public record SidebarModel(bool SignedIn, IReadOnlyList<TrendingTag> Trending);
 
+/// <summary>Who-did-what notifications of one kind about one post (or new followers), merged as on cohost.</summary>
+public class NotificationGroup
+{
+    public NotificationType Type { get; init; }
+    public int? PostId { get; init; }
+    public string? PostExcerpt { get; init; }
+    public string? Message { get; init; }
+    public DateTime LatestAt { get; set; }
+    public bool IsUnread { get; set; }
+
+    /// <summary>Distinct actors, most recent first.</summary>
+    public List<UserSummary> Actors { get; } = [];
+
+    /// <summary>For comments, shares and mentions: the post that caused the notification.</summary>
+    public int? ActivityPostId { get; init; }
+    public string? ActivityExcerpt { get; init; }
+}
+
+public record NotificationDay(string Label, IReadOnlyList<NotificationGroup> Groups);
+
 /// <summary>A navigation tab: a link to <see cref="Path"/>, optionally with one query parameter.</summary>
 public record TabItem(string Text, string Path, bool Selected, string? Name = null, string? Value = null);
 
@@ -110,6 +148,6 @@ public record PostHeaderModel(PostView Post, PostView? SharedFrom = null);
 /// <summary>Post contents; <paramref name="Expand"/> opens read-more posts (used on the post's own page).</summary>
 public record PostContentsModel(PostView Post, bool Expand = false);
 
-public record CommentTreeModel(PostView Comment, ILookup<int, PostView> Children, int RootId, int Depth = 0);
+public record CommentTreeModel(PostView Comment, ILookup<int, PostView> Children, PostView Root, int Depth = 0);
 
 public record PostBodyModel(PostView Post, bool Expand, bool SkipHeadline, string Uid);

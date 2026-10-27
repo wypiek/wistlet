@@ -3,6 +3,8 @@
     var c = Model.Comment;
     var meId = Context.User.GetUserId();
     var canDelete = meId == c.Author.Id || Context.User.IsStaff();
+    var root = Model.Root;
+    var ownsPost = meId == root.Author.Id;
     var full = c.CreatedAt.ToString("ddd, MMM d, yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " UTC";
     var children = Model.Children[c.Id].ToList();
 }
@@ -20,6 +22,14 @@
                 <time class="i-timestamp" datetime="@c.CreatedAt.ToString("o")" title="@full"><a href="#post-@c.Id">@Fmt.AgoLong(c.CreatedAt)@(c.EditedAt is not null ? " (edited)" : "")</a></time>
             </div>
             @if (c.IsHidden) { <div class="co-info-box is-warning i-shield-exclam-icon">Hidden by a moderator.</div> }
+            @if (c.HiddenByPostAuthor)
+            {
+                <div class="co-info-box is-tombstone i-info-circle-icon">
+                    @if (ownsPost) { <text>You hid this comment. Only you and @@@c.Author.UserName can see it.</text> }
+                    else if (meId == c.Author.Id) { <text>@@@root.Author.UserName hid this comment on their post. Only you and they can see it.</text> }
+                    else { <text>Hidden by the post's author.</text> }
+                </div>
+            }
             <div class="i-contents prose co-prose isolate co-contain-paint">@Html.Raw(c.Html)</div>
             @if (c.ImagePath is not null)
             {
@@ -32,14 +42,21 @@
                     {
                         <details class="i-reply">
                             <summary>reply</summary>
-                            <partial name="_Composer" model="@(new ComposerModel($"/post/{Model.RootId}", c.Id, $"reply to @{c.Author.UserName}…", "reply") { IsComment = true })" />
+                            <partial name="_Composer" model="@(new ComposerModel($"/post/{root.Id}", c.Id, $"reply to @{c.Author.UserName}…", "reply") { IsComment = true })" />
                         </details>
                     }
                     @if (meId == c.Author.Id) { <a href="/post/@c.Id/edit">edit</a> }
                     @if (meId != c.Author.Id) { <a href="/report?postId=@c.Id">report</a> }
+                    @if (ownsPost && meId != c.Author.Id)
+                    {
+                        <form method="post" asp-page="/Act" asp-page-handler="HideComment" asp-route-id="@c.Id" asp-route-returnUrl="/post/@root.Id#post-@c.Id"
+                              data-confirm="@(c.HiddenByPostAuthor ? null : "Hide this comment and its replies? Only you and its author will still see it.")">
+                            <button type="submit" class="i-link-button">@(c.HiddenByPostAuthor ? "unhide" : "hide")</button>
+                        </form>
+                    }
                     @if (canDelete)
                     {
-                        <form method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@c.Id" asp-route-returnUrl="/post/@Model.RootId#comments" data-confirm="Delete this comment and its replies?">
+                        <form method="post" asp-page="/Act" asp-page-handler="Delete" asp-route-id="@c.Id" asp-route-returnUrl="/post/@root.Id#comments" data-confirm="Delete this comment and its replies?">
                             <button type="submit" class="i-link-button">delete</button>
                         </form>
                     }
@@ -52,7 +69,7 @@
         <div class="i-replies">
             @foreach (var child in children)
             {
-                <partial name="_CommentTree" model="@(new CommentTreeModel(child, Model.Children, Model.RootId, Model.Depth + 1))" />
+                <partial name="_CommentTree" model="@(new CommentTreeModel(child, Model.Children, root, Model.Depth + 1))" />
             }
         </div>
     }

@@ -27,6 +27,7 @@ public class SearchModel(AppDbContext db, PostService posts) : PageModel
         Users = await db.Users.AsNoTracking()
             .Where(u => !(u.IsBanned && (u.BannedUntil == null || u.BannedUntil > now)))
             .Where(u => u.NormalizedUserName.Contains(term) || u.DisplayName.ToLower().Contains(term))
+            .Where(u => me != null || !u.HiddenFromGuests)
             .OrderBy(u => u.NormalizedUserName == term ? 0 : 1).ThenBy(u => u.UserName)
             .Take(8)
             .Select(u => new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Bio, u.AvatarShape))

@@ -89,6 +89,10 @@ builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<MessagingService>();
+builder.Services.AddScoped<TwoFactorService>();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<DataExportService>();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ViewerContext>();
 builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<GuestAccessFilter>();
@@ -115,6 +119,7 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploads.Root),
     RequestPath = UploadService.UrlPrefix,
+    ContentTypeProvider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider(UploadService.ContentTypes),
     OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "public, max-age=604800, immutable",
 });
 

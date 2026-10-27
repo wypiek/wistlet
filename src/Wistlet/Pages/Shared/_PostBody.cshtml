@@ -33,7 +33,7 @@
             </div>
         </div>
     }
-    else if (!string.IsNullOrWhiteSpace(post.Html) || post.ImagePath is not null)
+    else if (!string.IsNullOrWhiteSpace(post.Html) || post.ImagePath is not null || post.AudioPath is not null)
     {
         <div class="@bodyClass">
             <partial name="_PostAttachment" model="post" />

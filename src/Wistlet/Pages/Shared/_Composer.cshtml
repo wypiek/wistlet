@@ -6,6 +6,9 @@
     var counterId = "counter-" + key;
     var content = editing?.Content ?? TempData["Draft"] as string;
     var showOptions = Model.Expanded || !string.IsNullOrEmpty(editing?.ContentWarnings) || editing?.IsAdult == true;
+    // Audio goes on posts (not comments): a file when writing, the track details when editing.
+    var audioNew = !Model.IsComment && editing is null && cfg.AllowAudioUploads;
+    var audioEdit = editing?.AudioPath is not null;
 }
 @if (Context.User.Identity?.IsAuthenticated == true)
 {
@@ -29,6 +32,26 @@
                 <div class="stack">
                     <input type="text" name="contentWarnings" value="@editing?.ContentWarnings" placeholder="CWs, comma separated (the post starts collapsed)" aria-label="Content warnings" />
                     <div class="field-row"><input type="checkbox" id="adult-@key" name="isAdult" value="true" checked="@(editing?.IsAdult == true)" /><label for="adult-@key">this post contains 18+ content</label></div>
+                </div>
+            </details>
+        }
+        @if (audioNew || audioEdit)
+        {
+            <details class="i-options" open="@audioEdit">
+                <summary>audio</summary>
+                <div class="stack">
+                    @if (audioNew)
+                    {
+                        <input type="file" name="audio" accept="audio/mpeg,audio/ogg,audio/flac,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.mp3,.ogg,.oga,.opus,.flac,.wav,.m4a" aria-label="Attach an audio file" />
+                    }
+                    <div class="row">
+                        <input class="i-grow" type="text" name="audioTitle" value="@editing?.AudioTitle" maxlength="140" placeholder="track title" aria-label="Track title" />
+                        <input class="i-grow" type="text" name="audioArtist" value="@editing?.AudioArtist" maxlength="140" placeholder="artist" aria-label="Artist" />
+                    </div>
+                    @if (audioNew)
+                    {
+                        <span class="i-hint">MP3, Ogg, FLAC, WAV or M4A, up to @cfg.MaxAudioUploadMb MB.</span>
+                    }
                 </div>
             </details>
         }

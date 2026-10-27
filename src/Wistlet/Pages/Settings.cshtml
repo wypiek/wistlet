@@ -8,7 +8,9 @@
     [
         new("Profile", "/settings", Model.Tab == "profile"),
         new("Account", "/settings", Model.Tab == "account", "tab", "account"),
+        new("Security", "/settings", Model.Tab == "security", "tab", "security"),
         new("Privacy", "/settings", Model.Tab == "privacy", "tab", "privacy"),
+        new("Your data", "/settings", Model.Tab == "data", "tab", "data"),
         new("Blocked accounts", "/settings", Model.Tab == "blocked", "tab", "blocked"),
     ]);
 }
@@ -114,6 +116,78 @@
                 </fieldset>
                 break;
 
+            case "security":
+                <fieldset>
+                    <legend>Two-factor login</legend>
+                    @if (me.TwoFactorEnabled)
+                    {
+                        <p><b>Two-factor login is on.</b> After your password, you'll be asked for a code from your authenticator app. You have @Fmt.Plural(Model.RecoveryCodesLeft, "unused recovery code").</p>
+                        @if (Model.NewRecoveryCodes is { } codes)
+                        {
+                            <div class="co-info-box is-warning i-shield-exclam-icon">
+                                <div class="i-text">
+                                    <p>Your recovery codes. Each one logs you in once if you lose your phone. Store them somewhere safe — they won't be shown again.</p>
+                                    <ul class="recovery-codes">
+                                        @foreach (var c in codes) { <li><code>@c</code></li> }
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+                        <form method="post" asp-page-handler="RecoveryCodes" class="form-grid">
+                            <label for="pw-rc">Current password</label>
+                            <input id="pw-rc" type="password" name="currentPassword" autocomplete="current-password" required />
+                            <span></span>
+                            <div><button type="submit">Make new recovery codes</button></div>
+                        </form>
+                        <form method="post" asp-page-handler="TwoFactorDisable" class="form-grid" data-confirm="Turn off two-factor login?">
+                            <label for="pw-2fa-off">Current password</label>
+                            <input id="pw-2fa-off" type="password" name="currentPassword" autocomplete="current-password" required />
+                            <span></span>
+                            <div><button type="submit">Turn off two-factor login</button></div>
+                        </form>
+                    }
+                    else if (Model.PendingKey is not null)
+                    {
+                        <ol class="setup-steps">
+                            <li>Scan this code with an authenticator app (such as Aegis, 2FAS, Google Authenticator or 1Password), or type in the key below.
+                                <div class="row"><img class="qr-code" src="@Model.PendingQrCode" width="200" height="200" alt="QR code for your authenticator app" /></div>
+                                <p>Key: <code class="i-key">@Model.PendingKey</code></p>
+                            </li>
+                            <li>Enter the 6-digit code the app shows, and your password.</li>
+                        </ol>
+                        <form method="post" asp-page-handler="TwoFactorEnable" class="form-grid">
+                            <label for="code">Code from the app</label>
+                            <input id="code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required />
+                            <label for="pw-2fa-on">Current password</label>
+                            <input id="pw-2fa-on" type="password" name="currentPassword" autocomplete="current-password" required />
+                            <span></span>
+                            <div class="row">
+                                <button type="submit" class="default">Turn on two-factor login</button>
+                                <button type="submit" form="twofactor-cancel">Cancel</button>
+                            </div>
+                        </form>
+                        <form id="twofactor-cancel" method="post" asp-page-handler="TwoFactorCancel" hidden></form>
+                    }
+                    else
+                    {
+                        <p>Protect your account with a second step when logging in: a code from an authenticator app on your phone. Someone who learns your password still can't get in without it.</p>
+                        <form method="post" asp-page-handler="TwoFactorStart">
+                            <button type="submit" class="default">Set up two-factor login</button>
+                        </form>
+                    }
+                </fieldset>
+                break;
+
+            case "data":
+                <fieldset>
+                    <legend>Download your data</legend>
+                    <p>Get a zip file with everything you've put on @cfg.SiteName: your profile, posts, shares and comments (as Markdown and HTML), likes, saved posts, who you follow, your direct messages, and every picture and audio file you uploaded.</p>
+                    <form method="post" asp-page-handler="Export">
+                        <button type="submit" class="default">Download my data</button>
+                    </form>
+                </fieldset>
+                break;
+
             case "privacy":
                 <form method="post" asp-page-handler="Privacy" class="stack">
                     <fieldset>
@@ -133,6 +207,12 @@
                     <fieldset>
                         <legend>18+ content</legend>
                         <div class="field-row"><input type="checkbox" id="showAdultContent" name="showAdultContent" value="true" checked="@me.ShowAdultContent" /><label for="showAdultContent">I'm 18 or older and want to see 18+ posts in feeds (they stay collapsed until you open them)</label></div>
+                        <div class="field-row"><input type="checkbox" id="isAdultPage" name="isAdultPage" value="true" checked="@me.IsAdultPage" /><label for="isAdultPage">My page is 18+: treat all my posts as 18+, and ask visitors to confirm they're 18 before showing my page</label></div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Logged-out visitors</legend>
+                        <div class="field-row"><input type="checkbox" id="hiddenFromGuests" name="hiddenFromGuests" value="true" checked="@me.HiddenFromGuests" /><label for="hiddenFromGuests">Hide my page and posts from people who aren't logged in</label></div>
+                        <p class="muted">Logged-out visitors see a "log in to view this page" notice on your profile, and your posts don't appear in public feeds, tags or search for them.</p>
                     </fieldset>
                     <div><button type="submit" class="default">Save</button></div>
                 </form>

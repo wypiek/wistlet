@@ -17,6 +17,7 @@
         <span></span>
         <div><button type="submit" class="default">Log in</button></div>
     </form>
+    <p><a href="/account/forgot">Forgot your password?</a></p>
     @if (Settings.Current.RegistrationOpen)
     {
         <p>New here? <a href="/account/register@(Model.ReturnUrl is null ? "" : "?returnUrl=" + Uri.EscapeDataString(Model.ReturnUrl))">Create an account</a></p>

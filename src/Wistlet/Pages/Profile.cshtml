@@ -17,6 +17,37 @@
         new("following", basePath + "/following", Model.Tab == "following"),
     ]);
 }
+@if (Model.NeedsLogin)
+{
+    <card title="@($"@{p.UserName}")" class="profile-gate">
+        <p class="lede">This page is only visible to logged-in users.</p>
+        <p>@@@p.UserName has hidden their page from people who aren't logged in to @Settings.Current.SiteName.</p>
+        <div class="row">
+            <a class="co-button" href="/account/login?returnUrl=@Uri.EscapeDataString(ret)">log in</a>
+            @if (Settings.Current.RegistrationOpen)
+            {
+                <a class="co-button is-outline" href="/account/register?returnUrl=@Uri.EscapeDataString(ret)">sign up</a>
+            }
+        </div>
+    </card>
+    return;
+}
+@if (Model.NeedsAdultConfirmation)
+{
+    <card title="@($"@{p.UserName}")" class="profile-gate">
+        <div class="co-info-box is-18-plus i-info-circle-icon"><div class="i-text">This page contains 18+ content.</div></div>
+        <p>@@@p.UserName has marked their page as 18+. You need to be 18 or older to view it.</p>
+        <div class="row">
+            <a class="co-button" href="@(ret + "?adult=yes")" rel="nofollow">I'm 18 or older, show me</a>
+            <a class="co-button is-outline" href="/">take me back</a>
+        </div>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <p class="muted">To stop seeing this question, turn on 18+ content under <a href="/settings?tab=privacy">Settings → Privacy</a>.</p>
+        }
+    </card>
+    return;
+}
 @section BaseHeader {
     @if (p.BannerPath is not null)
     {
@@ -38,6 +69,7 @@
                 }
                 <div class="i-badges">
                     @if (p.IsVerified) { <text>✔ verified · </text> }
+                    @if (p.IsAdultPage) { <text>18+ · </text> }
                     @if (p.Role == UserRole.Admin) { <text>admin · </text> } else if (p.Role == UserRole.Moderator) { <text>moderator · </text> }
                     @if (Model.FollowsMe) { <text>follows you · </text> }
                     @if (p.IsCurrentlyBanned) { <b>banned · </b> }
@@ -134,6 +166,6 @@ else
         {
             <div class="co-info-box is-warning i-shield-exclam-icon">You blocked @@@p.UserName. Their posts are hidden from you.</div>
         }
-        <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No comments yet.", "media" => "No images yet.", "likes" => "No liked posts yet.", _ => "No posts yet." }, Model.MoreUrl, Preview: false))" />
+        <partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab switch { "replies" => "No comments yet.", "media" => "No images or audio yet.", "likes" => "No liked posts yet.", _ => "No posts yet." }, Model.MoreUrl, Preview: false))" />
     }
 }

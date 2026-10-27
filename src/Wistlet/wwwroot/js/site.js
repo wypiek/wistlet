@@ -51,6 +51,7 @@
         button.addEventListener("click", async () => {
             const data = new FormData(form);
             data.delete("image");
+            data.delete("audio");
             button.disabled = true;
             try {
                 const res = await fetch("/act/Preview", { method: "POST", body: data, credentials: "same-origin" });

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Net.Http.Headers;
 using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
@@ -14,13 +16,23 @@ namespace Wistlet.Pages;
 
 [Authorize]
 [EnableRateLimiting("write")]
-public class SettingsModel(AppDbContext db, AccountService accounts, UploadService uploads) : PageModel
+public class SettingsModel(AppDbContext db, AccountService accounts, UploadService uploads, TwoFactorService twoFactor,
+    DataExportService export, SiteSettingsService settings, AuditService audit, IMemoryCache cache) : PageModel
 {
-    private static readonly string[] Tabs = ["profile", "account", "privacy", "blocked"];
+    private static readonly string[] Tabs = ["profile", "account", "security", "privacy", "data", "blocked"];
 
     public string Tab { get; private set; } = "profile";
     public User Me { get; private set; } = null!;
     public List<UserSummary> Blocked { get; private set; } = [];
+
+    /// <summary>While setting up two-factor login: the key to enter in the app, and the same as a QR code.</summary>
+    public string? PendingKey { get; private set; }
+    public string? PendingQrCode { get; private set; }
+
+    /// <summary>Recovery codes, shown once right after they were made.</summary>
+    public IReadOnlyList<string>? NewRecoveryCodes { get; private set; }
+
+    public int RecoveryCodesLeft => TwoFactorService.RemainingRecoveryCodes(Me);
 
     private async Task<User> LoadAsync()
     {
@@ -45,6 +57,15 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
     {
         Tab = Tabs.Contains(tab) ? tab! : "profile";
         await LoadAsync();
+        if (Tab == "security")
+        {
+            if (!Me.TwoFactorEnabled && twoFactor.Unprotect(Me.TwoFactorSecret) is { } key)
+            {
+                PendingKey = string.Join(' ', key.Chunk(4).Select(c => new string(c)));
+                PendingQrCode = TwoFactorService.QrCodeDataUrl(TwoFactorService.AuthenticatorUri(settings.Current.SiteName, Me.UserName, key));
+            }
+            if (TempData["RecoveryCodes"] is string codes) NewRecoveryCodes = codes.Split(' ');
+        }
         if (Tab == "blocked")
         {
             Blocked = await db.Blocks.Where(b => b.BlockerId == Me.Id)
@@ -113,6 +134,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
             return Fail("account", "Your current password is incorrect.");
         me.Email = email;
         await db.SaveChangesAsync();
+        await accounts.RevokeResetTokensAsync(me.Id);
         return Done("account", "E-mail address updated.");
     }
 
@@ -128,6 +150,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
 
         accounts.SetPassword(me, newPassword!);
         await db.SaveChangesAsync();
+        await accounts.RevokeResetTokensAsync(me.Id);
         // The security stamp changed, which signs out every other session; re-issue this one.
         await AccountService.SignInAsync(HttpContext, me, remember: true);
         return Done("account", "Password changed. You've been signed out everywhere else.");
@@ -142,14 +165,98 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         return Done("account", "All other sessions have been signed out.");
     }
 
-    public async Task<IActionResult> OnPostPrivacyAsync(MessagePrivacy messagePrivacy, bool showAdultContent)
+    public async Task<IActionResult> OnPostPrivacyAsync(MessagePrivacy messagePrivacy, bool showAdultContent, bool isAdultPage, bool hiddenFromGuests)
     {
         var me = await LoadAsync();
         if (!Enum.IsDefined(messagePrivacy)) return Fail("privacy", "Unknown option.");
         me.MessagePrivacy = messagePrivacy;
         me.ShowAdultContent = showAdultContent;
+        me.IsAdultPage = isAdultPage;
+        me.HiddenFromGuests = hiddenFromGuests;
         await db.SaveChangesAsync();
         return Done("privacy", "Privacy settings saved.");
+    }
+
+    /// <summary>First step of two-factor setup: a new key to scan, not yet switched on.</summary>
+    public async Task<IActionResult> OnPostTwoFactorStartAsync()
+    {
+        var me = await LoadAsync();
+        if (me.TwoFactorEnabled) return Fail("security", "Two-factor login is already on.");
+        me.TwoFactorSecret = twoFactor.Protect(TwoFactorService.GenerateKey());
+        await db.SaveChangesAsync();
+        return Redirect("/settings?tab=security");
+    }
+
+    public async Task<IActionResult> OnPostTwoFactorEnableAsync(string? code, string? currentPassword)
+    {
+        var me = await LoadAsync();
+        if (me.TwoFactorEnabled) return Fail("security", "Two-factor login is already on.");
+        if (!accounts.VerifyPassword(me, currentPassword ?? ""))
+            return Fail("security", "Your current password is incorrect.");
+        if (!twoFactor.VerifyAndConsume(me, code))
+            return Fail("security", "That code didn't match. Check that your app shows codes for this account and try the newest one.");
+
+        me.TwoFactorEnabled = true;
+        var codes = TwoFactorService.ResetRecoveryCodes(me);
+        // Other sessions were opened without the second factor.
+        AccountService.RotateSecurityStamp(me);
+        audit.Log("user.2fa-enable", $"@{me.UserName}");
+        await db.SaveChangesAsync();
+        await AccountService.SignInAsync(HttpContext, me, remember: true);
+        TempData["RecoveryCodes"] = string.Join(' ', codes);
+        return Done("security", "Two-factor login is on. Save your recovery codes now — they're only shown once.");
+    }
+
+    public async Task<IActionResult> OnPostTwoFactorCancelAsync()
+    {
+        var me = await LoadAsync();
+        if (!me.TwoFactorEnabled)
+        {
+            TwoFactorService.Disable(me);
+            await db.SaveChangesAsync();
+        }
+        return Redirect("/settings?tab=security");
+    }
+
+    public async Task<IActionResult> OnPostRecoveryCodesAsync(string? currentPassword)
+    {
+        var me = await LoadAsync();
+        if (!me.TwoFactorEnabled) return Fail("security", "Two-factor login is off.");
+        if (!accounts.VerifyPassword(me, currentPassword ?? ""))
+            return Fail("security", "Your current password is incorrect.");
+        var codes = TwoFactorService.ResetRecoveryCodes(me);
+        await db.SaveChangesAsync();
+        TempData["RecoveryCodes"] = string.Join(' ', codes);
+        return Done("security", "New recovery codes made; the old ones no longer work.");
+    }
+
+    public async Task<IActionResult> OnPostTwoFactorDisableAsync(string? currentPassword)
+    {
+        var me = await LoadAsync();
+        if (!me.TwoFactorEnabled) return Fail("security", "Two-factor login is already off.");
+        if (!accounts.VerifyPassword(me, currentPassword ?? ""))
+            return Fail("security", "Your current password is incorrect.");
+        TwoFactorService.Disable(me);
+        audit.Log("user.2fa-disable", $"@{me.UserName}");
+        await db.SaveChangesAsync();
+        return Done("security", "Two-factor login is off.");
+    }
+
+    /// <summary>Streams a zip of the user's data (see <see cref="DataExportService"/>).</summary>
+    public async Task<IActionResult> OnPostExportAsync()
+    {
+        var me = await LoadAsync();
+        // Exports read every file the user uploaded, so allow one a minute.
+        var key = $"export:{me.Id}";
+        if (cache.TryGetValue(key, out _))
+            return Fail("data", "You just downloaded your data. Please wait a minute before trying again.");
+        cache.Set(key, true, TimeSpan.FromMinutes(1));
+
+        var name = $"{settings.Current.SiteName}-{me.UserName}-{DateTime.UtcNow:yyyy-MM-dd}.zip".ToLowerInvariant();
+        Response.ContentType = "application/zip";
+        Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment") { FileNameStar = name }.ToString();
+        await export.WriteZipAsync(me.Id, Response.Body, HttpContext.RequestAborted);
+        return new EmptyResult();
     }
 
     public async Task<IActionResult> OnPostDeleteAccountAsync(string? currentPassword, string? confirm)
@@ -162,7 +269,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         if (me.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Fail("account", "You're the only administrator. Promote someone else before deleting your account.");
 
-        var images = await db.Posts.Where(p => p.AuthorId == me.Id && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
+        var images = await PostService.AttachmentsAsync(db.Posts.Where(p => p.AuthorId == me.Id));
         images.Add(me.AvatarPath);
         images.Add(me.BannerPath);
         db.Users.Remove(me);

@@ -1,0 +1,28 @@
+@page "/account/reset"
+@model Wistlet.Pages.Account.ResetModel
+@{
+    ViewData["Title"] = "Choose a new password";
+    ViewData["NoSidebar"] = true;
+}
+<card title="Choose a new password" class="narrow">
+    @if (!Model.Valid)
+    {
+        <p>This link has expired or was already used. Reset links work once, for @((int)AccountService.ResetTokenLifetime.TotalMinutes) minutes.</p>
+        <p><a href="/account/forgot">Send a new link</a></p>
+    }
+    else
+    {
+        <form method="post" class="form-grid">
+            <div asp-validation-summary="ModelOnly" class="full" role="alert"></div>
+            <p class="full">Choose a new password for <b>@@@Model.UserName</b>. This signs you out everywhere else.</p>
+            <input type="hidden" asp-for="Token" />
+            <input type="text" name="username" value="@Model.UserName" autocomplete="username" hidden />
+            <label asp-for="Password"></label>
+            <div><input asp-for="Password" autocomplete="new-password" minlength="@AccountService.MinPasswordLength" autofocus /> <span asp-validation-for="Password"></span></div>
+            <label asp-for="ConfirmPassword"></label>
+            <div><input asp-for="ConfirmPassword" autocomplete="new-password" /> <span asp-validation-for="ConfirmPassword"></span></div>
+            <span></span>
+            <div><button type="submit" class="default">Change password</button></div>
+        </form>
+    }
+</card>

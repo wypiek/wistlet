@@ -1,0 +1,100 @@
+@* The logged-out home page, laid out like cohost's: a headline with a sign-up button beside a
+   post-shaped illustration, then three short points about the site. *@
+@{
+    var cfg = Settings.Current;
+    var site = cfg.SiteName.ToLowerInvariant();
+    var startUrl = cfg.RegistrationOpen ? "/account/register" : "/account/login";
+}
+<section class="landing-hero co-container">
+    <div class="i-text">
+        <h1 class="i-headline">@cfg.HomeHeadline</h1>
+        @if (!string.IsNullOrWhiteSpace(cfg.HomeIntro))
+        {
+            <p class="i-intro">@cfg.HomeIntro</p>
+        }
+        <div class="i-actions">
+            <a class="co-button is-big co-drop-shadow" href="@startUrl">get started</a>
+            @if (cfg.PublicBrowsing)
+            {
+                <a class="i-browse" href="/explore">or have a look around first</a>
+            }
+        </div>
+    </div>
+    <div class="i-art" aria-hidden="true">
+        <svg viewBox="0 0 660 560" role="presentation">
+            <defs>
+                <filter id="landing-card-shadow" x="-10%" y="-10%" width="120%" height="125%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#191919" flood-opacity="0.18" />
+                </filter>
+            </defs>
+            @* an empty post outline behind the card *@
+            <g fill="none" stroke="rgb(var(--color-mango))" stroke-width="2.5">
+                <rect x="300" y="72" width="320" height="384" rx="8" />
+                <path d="M300 112h320M300 416h320" />
+            </g>
+            @* the swoosh on the left *@
+            <path d="M126 236C30 252 0 330 12 380s70 76 114 66" fill="none" stroke="rgb(var(--color-strawberry))" stroke-width="2.5" stroke-linecap="round" />
+            @* the post card *@
+            <g filter="url(#landing-card-shadow)">
+                <rect x="112" y="152" width="320" height="384" rx="6" fill="#fff" />
+            </g>
+            <text x="126" y="182" font-size="13" fill="rgb(var(--color-notBlack))"><tspan font-weight="700">@site!</tspan><tspan dx="10">@@@site</tspan></text>
+            <rect x="112" y="196" width="320" height="306" fill="rgb(var(--color-longan))" />
+            @* the mascot: a round little bird *@
+            <g stroke="rgb(var(--color-notBlack))" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                <path d="M262 266c-6-18 2-32 14-34M276 268c2-16 14-24 26-20" />
+                <path d="M246 418l-6 22m-8 2h18M294 420l4 22m-8 2h18" />
+                <path d="M380 342l36-16m-34 34 38 2" />
+            </g>
+            <ellipse cx="290" cy="350" rx="98" ry="78" fill="rgb(var(--color-cherry))" />
+            <path d="M300 330c28-26 66-22 76 2-24 18-54 22-76-2Z" fill="rgb(var(--color-foreground-600))" stroke="rgb(var(--color-notBlack))" stroke-width="4" stroke-linejoin="round" />
+            <path d="M196 340l-26 8 26 10Z" fill="rgb(var(--color-mango))" stroke="rgb(var(--color-notBlack))" stroke-width="4" stroke-linejoin="round" />
+            <circle cx="226" cy="326" r="8" fill="rgb(var(--color-notBlack))" />
+            <circle cx="262" cy="322" r="8" fill="rgb(var(--color-notBlack))" />
+            <ellipse cx="218" cy="352" rx="11" ry="6" fill="rgb(var(--color-strawberry))" opacity="0.8" />
+            <ellipse cx="274" cy="348" rx="11" ry="6" fill="rgb(var(--color-strawberry))" opacity="0.8" />
+            <path d="M236 346c4 6 12 6 16 0" fill="none" stroke="rgb(var(--color-notBlack))" stroke-width="3.5" stroke-linecap="round" />
+            @* the two stars *@
+            <path d="M246 20l12 40 34-24-24 34 40 10-40 8 22 36-34-24-10 40-8-40-36 22 24-34-40-10 40-8-22-34 34 24Z" fill="rgb(var(--color-mango))" />
+            <path d="M570 186l14 72 66 6-60 26 46 54-62-32-18 76-12-74-74 14 62-42-50-56 62 18Z" fill="rgb(var(--color-foreground-600))" />
+        </svg>
+    </div>
+</section>
+
+<section class="landing-features co-container">
+    <div class="i-feature is-cherry">
+        <svg class="i-blob" viewBox="0 0 80 64" aria-hidden="true">
+            <path d="M8 34C4 16 22 2 44 4s34 14 32 30-18 28-40 28S11 50 8 34Z" />
+            <g fill="none" stroke="rgb(var(--color-notWhite))" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 33s7-11 18-11 18 11 18 11-7 11-18 11-18-11-18-11Z" />
+                <circle cx="40" cy="33" r="4.5" />
+                <path d="M24 18l32 30" />
+            </g>
+        </svg>
+        <h2>no ads, no tracking.</h2>
+        <p>@site doesn't show ads, doesn't sell your data and doesn't follow you around the web. there are no analytics scripts on this page or any other.</p>
+    </div>
+    <div class="i-feature is-strawberry">
+        <svg class="i-blob" viewBox="0 0 80 64" aria-hidden="true">
+            <path d="M6 30C6 12 24 4 42 4c20 0 34 10 34 28S60 62 38 60 6 48 6 30Z" />
+            <g fill="none" stroke="rgb(var(--color-notWhite))" stroke-width="3.5" stroke-linejoin="round">
+                <rect x="20" y="16" width="40" height="32" rx="4" />
+                <path d="M20 25h40" />
+                <path d="M26 33h28v9H26Z" fill="rgb(var(--color-notWhite))" />
+            </g>
+            <g fill="rgb(var(--color-strawberry))"><circle cx="25" cy="20.5" r="1.6" /><circle cx="30" cy="20.5" r="1.6" /><circle cx="35" cy="20.5" r="1.6" /></g>
+        </svg>
+        <h2>algorithm? what algorithm?</h2>
+        <p>your timeline is the posts of the people you follow, in the order they were posted, going down the page. nothing is boosted, buried or "suggested for you".</p>
+    </div>
+    <div class="i-feature is-mango">
+        <svg class="i-blob" viewBox="0 0 80 64" aria-hidden="true">
+            <path d="M10 36C2 18 18 4 40 6s38 12 34 30-20 26-40 24S16 50 10 36Z" />
+            <g fill="none" stroke="rgb(var(--color-notWhite))" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M30 22l-11 11 11 11M50 22l11 11-11 11M44 18l-8 30" />
+            </g>
+        </svg>
+        <h2>css crimes welcome.</h2>
+        <p>posts are Markdown with HTML and inline styles, so they can look however you like — tables, animations, little games. we only take out what could hurt someone.</p>
+    </div>
+</section>

@@ -25,9 +25,18 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
     public List<UserCardModel> People { get; private set; } = [];
     public string? MoreUrl { get; private set; }
 
+    /// <summary>The page is hidden from logged-out visitors and this is one.</summary>
+    public bool NeedsLogin { get; private set; }
+
+    /// <summary>An 18+ page the viewer hasn't confirmed their age for yet.</summary>
+    public bool NeedsAdultConfirmation { get; private set; }
+
+    /// <summary>Remembers (for the browser session) that the visitor confirmed they're 18 or older.</summary>
+    public const string AdultConfirmedCookie = "wistlet.18plus";
+
     private static readonly string[] Tabs = ["posts", "replies", "media", "likes", "followers", "following"];
 
-    public async Task<IActionResult> OnGetAsync(string userName, string? tab, int? before)
+    public async Task<IActionResult> OnGetAsync(string userName, string? tab, int? before, string? adult)
     {
         var normalized = AccountService.Normalize(userName);
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.NormalizedUserName == normalized);
@@ -41,6 +50,26 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         IsMe = me == user.Id;
 
         if (user.IsCurrentlyBanned && !staff) return NotFound();
+
+        if (user.HiddenFromGuests && me is null)
+        {
+            NeedsLogin = true;
+            return Page();
+        }
+
+        if (user.IsAdultPage && !IsMe && !await posts.ShowsAdultAsync(me))
+        {
+            if (adult == "yes")
+            {
+                Response.Cookies.Append(AdultConfirmedCookie, "1", new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Lax, Secure = Request.IsHttps });
+                return Redirect($"/u/{user.UserName}{(tab is null ? "" : "/" + tab)}");
+            }
+            if (Request.Cookies[AdultConfirmedCookie] != "1")
+            {
+                NeedsAdultConfirmation = true;
+                return Page();
+            }
+        }
 
         PostCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && !p.IsHidden);
         FollowerCount = await db.Follows.CountAsync(f => f.FolloweeId == user.Id);
@@ -78,10 +107,11 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
                 return Page();
         }
 
-        var query = Tab == "replies"
-            ? visible.Where(p => p.AuthorId == user.Id && p.ParentId != null)
+        // The visitor chose to see this 18+ page, so its posts aren't filtered out as 18+ here.
+        var query = Tab == "replies" || user.IsAdultPage
+            ? visible.Where(p => p.AuthorId == user.Id && (Tab == "replies" ? p.ParentId != null : p.ParentId == null))
             : (await posts.FeedAsync(me, staff)).Where(p => p.AuthorId == user.Id);
-        if (Tab == "media") query = query.Where(p => p.ImagePath != null);
+        if (Tab == "media") query = query.Where(p => p.ImagePath != null || p.AudioPath != null);
         var (page, next) = await posts.PageAsync(query, me, before);
         Posts = page;
         MoreUrl = next is int n ? $"{baseUrl}?before={n}" : null;
@@ -97,6 +127,7 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         var viewer = me ?? -1;
         var list = await users
             .Where(u => !(u.IsBanned && (u.BannedUntil == null || u.BannedUntil > now)))
+            .Where(u => me != null || !u.HiddenFromGuests)
             .Take(200)
             .Select(u => new
             {

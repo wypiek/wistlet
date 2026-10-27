@@ -3,3 +3,21 @@
 {
     <a class="i-attachment" href="@Model.ImagePath" target="_blank" rel="noopener"><img src="@Model.ImagePath" alt="Image attached to the post" loading="lazy" /></a>
 }
+@if (Model.AudioPath is not null)
+{
+    @* cohost's audio attachment: track title and artist above the player, with a download link. *@
+    var title = Model.AudioTitle ?? "untitled track";
+    <figure class="co-audio-attachment">
+        <div class="i-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+        </div>
+        <figcaption class="i-meta">
+            <span class="i-title">@title</span>
+            @if (Model.AudioArtist is not null) { <span class="i-artist">@Model.AudioArtist</span> }
+        </figcaption>
+        <a class="i-download" href="@Model.AudioPath" download title="download" aria-label="Download @title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" /></svg>
+        </a>
+        <audio class="i-player" controls preload="metadata" src="@Model.AudioPath"></audio>
+    </figure>
+}

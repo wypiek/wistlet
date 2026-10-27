@@ -38,7 +38,7 @@ public class PostsModel(AppDbContext db) : PageModel
         {
             "hidden" => query.Where(x => x.IsHidden),
             "pinned" => query.Where(x => x.IsPinned),
-            "media" => query.Where(x => x.ImagePath != null),
+            "media" => query.Where(x => x.ImagePath != null || x.AudioPath != null),
             "reported" => query.Where(x => db.Reports.Any(r => r.PostId == x.Id && r.Status == ReportStatus.Open)),
             _ => query,
         };

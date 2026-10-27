@@ -22,9 +22,9 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
     private IActionResult Back(string? returnUrl, string fallback = "/") => LocalRedirect(Fmt.SafeReturnUrl(returnUrl, fallback));
 
     public async Task<IActionResult> OnPostPostAsync(string? content, string? headline, string? tags, string? contentWarnings,
-        bool isAdult, IFormFile? image, int? parentId, int? shareOfId, string? returnUrl)
+        bool isAdult, IFormFile? image, int? parentId, int? shareOfId, IFormFile? audio, string? audioTitle, string? audioArtist, string? returnUrl)
     {
-        var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, image, parentId, shareOfId);
+        var draft = new PostDraft(content, headline, tags, contentWarnings, isAdult, image, parentId, shareOfId, audio, audioTitle, audioArtist);
         var (post, error) = await posts.CreateAsync(Me, draft);
         if (error is not null)
         {
@@ -45,12 +45,13 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         return Back(returnUrl);
     }
 
-    public async Task<IActionResult> OnPostEditAsync(int id, string? content, string? headline, string? tags, string? contentWarnings, bool isAdult)
+    public async Task<IActionResult> OnPostEditAsync(int id, string? content, string? headline, string? tags, string? contentWarnings, bool isAdult,
+        string? audioTitle, string? audioArtist)
     {
         var post = await db.Posts.FirstOrDefaultAsync(p => p.Id == id);
         if (post is null) return NotFound();
         if (post.AuthorId != Me) return Forbid();
-        var error = await posts.UpdateAsync(post, new PostDraft(content, headline, tags, contentWarnings, isAdult));
+        var error = await posts.UpdateAsync(post, new PostDraft(content, headline, tags, contentWarnings, isAdult, AudioTitle: audioTitle, AudioArtist: audioArtist));
         if (error is not null)
         {
             TempData["Error"] = error;
@@ -114,6 +115,20 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         if (back.StartsWith($"/post/{id}", StringComparison.OrdinalIgnoreCase))
             back = post.ParentId is int parent ? $"/post/{parent}" : "/";
         return LocalRedirect(back);
+    }
+
+    /// <summary>Lets a post's author hide (or show again) a comment on their post.</summary>
+    public async Task<IActionResult> OnPostHideCommentAsync(int id, string? returnUrl)
+    {
+        var comment = await db.Posts.FirstOrDefaultAsync(p => p.Id == id && p.RootId != null);
+        if (comment is null) return NotFound();
+        if (!await db.Posts.AnyAsync(p => p.Id == comment.RootId && p.AuthorId == Me)) return Forbid();
+        comment.HiddenByPostAuthor = !comment.HiddenByPostAuthor;
+        await db.SaveChangesAsync();
+        TempData["Flash"] = comment.HiddenByPostAuthor
+            ? "Comment hidden. Only you and its author can still see it."
+            : "Comment shown again.";
+        return Back(returnUrl);
     }
 
     public async Task<IActionResult> OnPostHideAsync(int id, string? returnUrl)

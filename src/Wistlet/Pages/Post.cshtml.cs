@@ -36,9 +36,11 @@ public class PostModel(AppDbContext db, PostService posts) : PageModel
 
         var ids = (await posts.SubtreeIdsAsync(id)).Where(c => c != id).ToList();
         var comments = await posts.ProjectAsync(visible.Where(p => ids.Contains(p.Id)).OrderBy(p => p.Id), me);
-        CommentCount = comments.Count;
         Children = comments.Where(c => c.ParentId != id).ToLookup(c => c.ParentId!.Value);
         TopLevelComments = comments.Where(c => c.ParentId == id).ToList();
+        // Replies under a comment this viewer can't see (e.g. one the post's author hid) aren't shown either.
+        int Count(PostView c) => 1 + Children[c.Id].Sum(Count);
+        CommentCount = TopLevelComments.Sum(Count);
         return Page();
     }
 }

@@ -8,7 +8,9 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
 {
     /// <summary>
     /// Posts a viewer may see: hides moderator-hidden posts (unless staff), posts by
-    /// banned users, and posts across a block in either direction.
+    /// banned users, posts across a block in either direction, pages hidden from
+    /// logged-out visitors (for guests), and comments the post's author hid (except
+    /// from that author and the commenter).
     /// </summary>
     public IQueryable<Post> Visible(int? viewerId, bool isStaff)
     {
@@ -21,13 +23,19 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             q = q.Where(p =>
                 !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == p.AuthorId) ||
                                     (b.BlockerId == p.AuthorId && b.BlockedId == me)));
+            if (!isStaff)
+                q = q.Where(p => !p.HiddenByPostAuthor || p.AuthorId == me || db.Posts.Any(r => r.Id == p.RootId && r.AuthorId == me));
+        }
+        else
+        {
+            q = q.Where(p => !p.Author.HiddenFromGuests && !p.HiddenByPostAuthor);
         }
         return q;
     }
 
     /// <summary>
     /// Feed posts: top-level posts and shares (comments stay on their post, as on cohost),
-    /// without other people's 18+ posts unless the viewer opted in to seeing them.
+    /// without other people's 18+ posts (or posts from 18+ pages) unless the viewer opted in to seeing them.
     /// </summary>
     public async Task<IQueryable<Post>> FeedAsync(int? viewerId, bool isStaff)
     {
@@ -35,7 +43,9 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         if (!await ShowsAdultAsync(viewerId))
         {
             var me = viewerId ?? -1;
-            q = q.Where(p => p.AuthorId == me || (!p.IsAdult && !(p.SharedPost != null && p.SharedPost.IsAdult)));
+            q = q.Where(p => p.AuthorId == me ||
+                             (!p.IsAdult && !p.Author.IsAdultPage &&
+                              !(p.SharedPost != null && (p.SharedPost.IsAdult || p.SharedPost.Author.IsAdultPage))));
         }
         return q;
     }
@@ -57,18 +67,23 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             Tags = p.Tags.OrderBy(x => x.Position).Select(x => x.Tag).ToList(),
             ContentWarnings = p.ContentWarnings,
             IsAdult = p.IsAdult,
+            IsAdultPage = p.Author.IsAdultPage,
             IsShare = p.IsShare,
             SharedPostId = p.SharedPostId,
             ImagePath = p.ImagePath,
+            AudioPath = p.AudioPath,
+            AudioTitle = p.AudioTitle,
+            AudioArtist = p.AudioArtist,
             CreatedAt = p.CreatedAt,
             EditedAt = p.EditedAt,
             IsHidden = p.IsHidden,
+            HiddenByPostAuthor = p.HiddenByPostAuthor,
             IsPinned = p.IsPinned,
             ParentId = p.ParentId,
             ParentAuthorUserName = p.Parent != null ? p.Parent.Author.UserName : null,
             Author = new UserSummary(p.Author.Id, p.Author.UserName, p.Author.DisplayName, p.Author.AvatarPath, p.Author.IsVerified, p.Author.Role, "", p.Author.AvatarShape),
             LikeCount = p.Likes.Count,
-            ReplyCount = db.Posts.Count(c => (c.RootId == p.Id || c.ParentId == p.Id) && !c.IsHidden),
+            ReplyCount = db.Posts.Count(c => (c.RootId == p.Id || c.ParentId == p.Id) && !c.IsHidden && !c.HiddenByPostAuthor),
             LikedByMe = p.Likes.Any(l => l.UserId == me),
             BookmarkedByMe = p.Bookmarks.Any(b => b.UserId == me),
         }).ToListAsync();
@@ -105,9 +120,13 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             Tags = p.Tags.OrderBy(x => x.Position).Select(x => x.Tag).ToList(),
             ContentWarnings = p.ContentWarnings,
             IsAdult = p.IsAdult,
+            IsAdultPage = p.Author.IsAdultPage,
             IsShare = p.IsShare,
             SharedPostId = p.SharedPostId,
             ImagePath = p.ImagePath,
+            AudioPath = p.AudioPath,
+            AudioTitle = p.AudioTitle,
+            AudioArtist = p.AudioArtist,
             CreatedAt = p.CreatedAt,
             EditedAt = p.EditedAt,
             IsHidden = p.IsHidden,
@@ -130,14 +149,17 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
     }
 
     /// <summary>Checks the text parts of a draft against the site limits. Returns an error message or null.</summary>
-    private string? Validate(string content, string? headline, IReadOnlyList<string> tags, IReadOnlyList<string> warnings)
+    private string? Validate(string content, string? headline, IReadOnlyList<string> tags, IReadOnlyList<string> warnings,
+        string? audioTitle = null, string? audioArtist = null)
     {
         var cfg = settings.Current;
         if (content.Length > cfg.MaxPostLength)
             return $"Posts can be at most {cfg.MaxPostLength:N0} characters.";
         if ((headline ?? "").Length > 140)
             return "Headlines can be at most 140 characters.";
-        var text = string.Join('\n', [content, headline ?? "", .. tags, .. warnings]);
+        if ((audioTitle ?? "").Length > 140 || (audioArtist ?? "").Length > 140)
+            return "Track titles and artist names can be at most 140 characters.";
+        var text = string.Join('\n', [content, headline ?? "", .. tags, .. warnings, audioTitle ?? "", audioArtist ?? ""]);
         return cfg.GetBannedWords().Any(w => text.Contains(w, StringComparison.OrdinalIgnoreCase))
             ? "Your post contains a word that isn't allowed on this site."
             : null;
@@ -152,10 +174,14 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         var tags = isComment ? [] : PostRenderer.ParseTags(draft.Tags);
         var warnings = isComment ? [] : PostRenderer.ParseWarnings(draft.ContentWarnings);
         var hasImage = draft.Image is { Length: > 0 };
+        // Audio goes on posts; comments stay text (and images).
+        var hasAudio = !isComment && draft.Audio is { Length: > 0 };
+        var audioTitle = hasAudio ? Clean(draft.AudioTitle) : null;
+        var audioArtist = hasAudio ? Clean(draft.AudioArtist) : null;
 
-        if (content.Length == 0 && headline is null && !hasImage && draft.ShareOfId is null)
+        if (content.Length == 0 && headline is null && !hasImage && !hasAudio && draft.ShareOfId is null)
             return (null, "Write something first.");
-        if (Validate(content, headline, tags, warnings) is { } invalid)
+        if (Validate(content, headline, tags, warnings, audioTitle, audioArtist) is { } invalid)
             return (null, invalid);
 
         Post? parent = null;
@@ -172,19 +198,32 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             if (shared is null) return (null, "That post can't be shared.");
             // Sharing a share that added nothing shares the post it points at.
             if (shared is { IsShare: true, SharedPostId: int inner } && string.IsNullOrWhiteSpace(shared.Content) &&
-                shared.Headline is null && shared.ImagePath is null)
+                shared.Headline is null && shared.ImagePath is null && shared.AudioPath is null)
             {
                 shared = await Visible(authorId, false).FirstOrDefaultAsync(p => p.Id == inner) ?? shared;
             }
         }
 
+        string? audioUrl = null;
+        if (hasAudio)
+        {
+            if (!cfg.AllowAudioUploads) return (null, "Audio attachments are currently disabled.");
+            var (url, error) = await uploads.SaveAudioAsync(draft.Audio, "audio");
+            if (error is not null) return (null, error);
+            audioUrl = url;
+        }
+
         string? imageUrl = null;
         if (hasImage)
         {
-            if (!cfg.AllowImageUploads) return (null, "Image uploads are currently disabled.");
-            var (url, error) = await uploads.SaveImageAsync(draft.Image, "posts");
-            if (error is not null) return (null, error);
-            imageUrl = url;
+            string? error = null;
+            if (!cfg.AllowImageUploads) error = "Image uploads are currently disabled.";
+            else (imageUrl, error) = await uploads.SaveImageAsync(draft.Image, "posts");
+            if (error is not null)
+            {
+                uploads.Delete(audioUrl);
+                return (null, error);
+            }
         }
 
         var rendered = PostRenderer.Render(content);
@@ -199,6 +238,9 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             ContentWarnings = warnings.Count > 0 ? string.Join(", ", warnings) : null,
             IsAdult = !isComment && draft.IsAdult,
             ImagePath = imageUrl,
+            AudioPath = audioUrl,
+            AudioTitle = audioTitle,
+            AudioArtist = audioArtist,
             ParentId = draft.ParentId,
             RootId = parent is null ? null : parent.RootId ?? parent.Id,
             IsShare = shared is not null,
@@ -225,7 +267,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         return (post, null);
     }
 
-    /// <summary>Updates the text of an existing post (the attached image stays as it is).</summary>
+    /// <summary>Updates the text of an existing post (attached files stay as they are; the track title and artist can change).</summary>
     public async Task<string?> UpdateAsync(Post post, PostDraft draft)
     {
         var content = (draft.Content ?? "").Trim().Replace("\r\n", "\n");
@@ -233,10 +275,12 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         var isComment = post.ParentId is not null;
         var tags = isComment ? [] : PostRenderer.ParseTags(draft.Tags);
         var warnings = isComment ? [] : PostRenderer.ParseWarnings(draft.ContentWarnings);
+        var audioTitle = post.AudioPath is null ? null : Clean(draft.AudioTitle);
+        var audioArtist = post.AudioPath is null ? null : Clean(draft.AudioArtist);
 
-        if (content.Length == 0 && headline is null && post.ImagePath is null && !post.IsShare)
+        if (content.Length == 0 && headline is null && post.ImagePath is null && post.AudioPath is null && !post.IsShare)
             return "A post can't be empty.";
-        if (Validate(content, headline, tags, warnings) is { } invalid)
+        if (Validate(content, headline, tags, warnings, audioTitle, audioArtist) is { } invalid)
             return invalid;
 
         var rendered = PostRenderer.Render(content);
@@ -247,6 +291,8 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         post.RenderVersion = PostRenderer.Version;
         post.ContentWarnings = warnings.Count > 0 ? string.Join(", ", warnings) : null;
         post.IsAdult = !isComment && draft.IsAdult;
+        post.AudioTitle = audioTitle;
+        post.AudioArtist = audioArtist;
         post.EditedAt = DateTime.UtcNow;
 
         db.PostTags.RemoveRange(db.PostTags.Where(t => t.PostId == post.Id));
@@ -255,15 +301,25 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         return null;
     }
 
-    /// <summary>Deletes a post with all its comments and their uploaded images.</summary>
+    /// <summary>Deletes a post with all its comments and their uploaded files.</summary>
     public async Task DeleteAsync(Post post)
     {
         var ids = await SubtreeIdsAsync(post.Id);
-        var images = await db.Posts.Where(p => ids.Contains(p.Id) && p.ImagePath != null).Select(p => p.ImagePath).ToListAsync();
+        var files = await AttachmentsAsync(db.Posts.Where(p => ids.Contains(p.Id)));
         db.Posts.Remove(post);
         await db.SaveChangesAsync();
-        foreach (var img in images) uploads.Delete(img);
+        foreach (var file in files) uploads.Delete(file);
     }
+
+    /// <summary>Every uploaded image and audio file attached to the given posts.</summary>
+    public static async Task<List<string?>> AttachmentsAsync(IQueryable<Post> query)
+    {
+        var rows = await query.Where(p => p.ImagePath != null || p.AudioPath != null)
+            .Select(p => new { p.ImagePath, p.AudioPath }).ToListAsync();
+        return rows.SelectMany(r => new[] { r.ImagePath, r.AudioPath }).Where(f => f is not null).ToList();
+    }
+
+    private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     /// <summary>The post and every comment below it, at any depth.</summary>
     public async Task<List<int>> SubtreeIdsAsync(int rootId)
@@ -298,11 +354,12 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         }
     }
 
-    public async Task<List<TrendingTag>> TrendingAsync(int count = 8)
+    public async Task<List<TrendingTag>> TrendingAsync(int count = 8, bool forGuest = false)
     {
         var since = DateTime.UtcNow.AddDays(-7);
         var rows = await db.PostTags.AsNoTracking()
-            .Where(t => t.Post.CreatedAt >= since && !t.Post.IsHidden && !t.Post.IsAdult)
+            .Where(t => t.Post.CreatedAt >= since && !t.Post.IsHidden && !t.Post.IsAdult && !t.Post.Author.IsAdultPage)
+            .Where(t => !forGuest || !t.Post.Author.HiddenFromGuests)
             .GroupBy(t => t.Tag)
             .Select(g => new { Tag = g.Key, Count = g.Count() })
             .OrderByDescending(t => t.Count).ThenBy(t => t.Tag)
