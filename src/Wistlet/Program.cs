@@ -86,6 +86,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => 
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 55 * 1024 * 1024);
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ServerConfig>();
 builder.Services.AddSingleton<SiteSettingsService>();
 builder.Services.AddSingleton<UploadService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -115,6 +116,8 @@ using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<DbInitializer>().InitializeAsync();
 }
 await app.Services.GetRequiredService<SiteSettingsService>().LoadAsync();
+// What was found in the environment (.env), one line per setting, so ignored values show up in `docker compose logs`.
+app.Services.GetRequiredService<ServerConfig>().Log(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Wistlet.Configuration"));
 
 app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())

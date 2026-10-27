@@ -100,6 +100,22 @@
             </fieldset>
         </div>
 
+        <fieldset id="server-configuration">
+            <legend>Server configuration</legend>
+            <p class="hint">These come from the environment (the <code>.env</code> file next to <code>docker-compose.yml</code>) and are read when the site starts. After changing <code>.env</code>, run <code>docker compose up -d</code> to apply them.</p>
+            <ul class="admin-config">
+                @foreach (var c in Model.Configuration)
+                {
+                    <li class="is-@c.Level.ToString().ToLowerInvariant()">
+                        <span class="i-dot" aria-hidden="true"></span>
+                        <span class="i-name"><code>@c.Variable</code></span>
+                        <span class="i-state">@(c.Level switch { ServerConfig.Level.Ok => "ok", ServerConfig.Level.NotSet => "not set", _ => "problem" })</span>
+                        <span class="i-text">@if (c.Value.Length > 0 && c.Level == ServerConfig.Level.Ok) { <b>@c.Value</b><br /> }@c.Message</span>
+                    </li>
+                }
+            </ul>
+        </fieldset>
+
         <fieldset>
             <legend>System</legend>
             <dl class="admin-sysinfo">

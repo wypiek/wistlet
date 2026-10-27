@@ -11,7 +11,7 @@ using Wistlet.Services.Federation;
 namespace Wistlet.Pages.Admin;
 
 public class IndexModel(AppDbContext db, UploadService uploads, IConfiguration config, IWebHostEnvironment env,
-    SiteSettingsService settings, FederationContext federation, EmailService email) : PageModel
+    SiteSettingsService settings, FederationContext federation, EmailService email, ServerConfig server) : PageModel
 {
     /// <summary>A number on the dashboard; <see cref="Note"/> is the smaller line under it.</summary>
     public record Stat(string Label, int Value, string? Note = null, string? Link = null, bool Alert = false);
@@ -27,6 +27,7 @@ public class IndexModel(AppDbContext db, UploadService uploads, IConfiguration c
     public List<User> RecentUsers { get; private set; } = [];
     public List<AuditLog> RecentActions { get; private set; } = [];
     public List<(string Label, string Value)> SystemInfo { get; private set; } = [];
+    public IReadOnlyList<ServerConfig.Check> Configuration => server.Checks;
 
     public async Task OnGetAsync()
     {
@@ -55,9 +56,13 @@ public class IndexModel(AppDbContext db, UploadService uploads, IConfiguration c
             Attentions.Add(new($"{Fmt.Plural(failedDeliveries, "federation delivery", "federation deliveries")} failed.", "/admin/federation", "Look", true));
         if (cfg.MaintenanceMode)
             Attentions.Add(new("Maintenance mode is on: only staff can use the site.", "/admin/settings#access", "Change", true));
-        if (!federation.IsConfigured)
+        foreach (var problem in server.Problems)
+            Attentions.Add(new($"{problem.Variable}: {problem.Message}", "#server-configuration", "Details", true));
+        if (cfg.FederationEnabled && !federation.IsConfigured)
+            Attentions.Add(new("Federation is turned on in Site settings, but it can't work until WISTLET_PUBLIC_URL is set correctly.", "#server-configuration", "Details", true));
+        if (!federation.IsConfigured && server.Problems.All(p => p.Variable != "WISTLET_PUBLIC_URL"))
             Attentions.Add(new("WISTLET_PUBLIC_URL isn't set: e-mail links use whatever address a request came in on, and federation is unavailable.", null, "", false));
-        if (!email.HasServer)
+        if (!email.HasServer && server.Problems.All(p => p.Variable != "WISTLET_SMTP_HOST"))
             Attentions.Add(new("No SMTP server is configured, so password resets by e-mail are off.", null, "", false));
         if (!cfg.RegistrationOpen)
             Attentions.Add(new("Registration is closed.", "/admin/settings#access", "Change", false));

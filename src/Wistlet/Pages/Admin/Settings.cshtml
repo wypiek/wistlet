@@ -1,6 +1,7 @@
 @page
 @model Wistlet.Pages.Admin.SettingsModel
 @inject FederationContext Federation
+@inject ServerConfig ServerConfigInfo
 @{
     ViewData["Title"] = "Site settings";
     ViewData["AdminTab"] = "settings";
@@ -145,7 +146,7 @@
                         }
                         else
                         {
-                            <b>Needs WISTLET_PUBLIC_URL to be set first.</b>
+                            <b>It can't work yet: @ServerConfigInfo.Checks.First(c => c.Variable == "WISTLET_PUBLIC_URL").Message</b>
                         }
                         Instances and the delivery queue are under <a href="/admin/federation">Federation</a>.
                     </p>
