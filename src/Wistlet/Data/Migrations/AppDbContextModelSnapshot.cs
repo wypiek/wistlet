@@ -199,11 +199,56 @@ namespace Wistlet.Data.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("Wistlet.Models.Post", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("AudioArtist")
+                        .HasMaxLength(140)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AudioPath")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AudioTitle")
+                        .HasMaxLength(140)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AuthorId")
                         .HasColumnType("INTEGER");
@@ -226,6 +271,9 @@ namespace Wistlet.Data.Migrations
                     b.Property<string>("Headline")
                         .HasMaxLength(140)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("HiddenByPostAuthor")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ImagePath")
                         .HasMaxLength(200)
@@ -416,6 +464,12 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("HiddenFromGuests")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAdultPage")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsBanned")
                         .HasColumnType("INTEGER");
 
@@ -447,6 +501,10 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RecoveryCodes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
 
@@ -457,6 +515,16 @@ namespace Wistlet.Data.Migrations
 
                     b.Property<bool>("ShowAdultContent")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("TwoFactorLastStep")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TwoFactorSecret")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -604,6 +672,17 @@ namespace Wistlet.Data.Migrations
                     b.Navigation("Actor");
 
                     b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.PasswordResetToken", b =>
+                {
+                    b.HasOne("Wistlet.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

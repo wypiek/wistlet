@@ -9,6 +9,8 @@
     string Current(string prefix) =>
         (prefix == "/" ? path == "/" : path == prefix || path.StartsWith(prefix + "/")) ? "page" : "false";
     var wide = ViewData["NoSidebar"] is true;
+    // The logged-out home page: a full-width marketing page without the navigation column.
+    var landing = ViewData["Landing"] is true;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -27,9 +29,12 @@
 <header id="page-header">
     <div class="co-container i-header">
         <a href="/" class="i-logo">@cfg.SiteName.ToLowerInvariant()!</a>
-        <form class="i-search" action="/search" method="get" role="search">
-            <input type="search" name="q" placeholder="search @cfg.SiteName.ToLowerInvariant()" aria-label="Search" value="@(path == "/search" ? Context.Request.Query["q"].ToString() : "")" />
-        </form>
+        @if (!landing)
+        {
+            <form class="i-search" action="/search" method="get" role="search">
+                <input type="search" name="q" placeholder="search @cfg.SiteName.ToLowerInvariant()" aria-label="Search" value="@(path == "/search" ? Context.Request.Query["q"].ToString() : "")" />
+            </form>
+        }
         <div class="i-user">
             @if (me is not null)
             {
@@ -46,16 +51,43 @@
             }
             else
             {
-                <a class="i-link" href="/account/login">log in</a>
+                <a class="co-button is-light is-header" href="/account/login">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 4.5h4a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5h-4M10 8l4 4-4 4M14 12H4" /></svg>
+                    log in
+                </a>
                 @if (cfg.RegistrationOpen)
                 {
-                    <a class="co-button is-light" href="/account/register">sign up</a>
+                    <a class="co-button is-light is-header" href="/account/register">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM3.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6" /></svg>
+                        sign up
+                    </a>
                 }
             }
         </div>
     </div>
 </header>
 @await RenderSectionAsync("BaseHeader", required: false)
+@if (landing)
+{
+    <main class="landing">
+        @if (TempData["Flash"] is string landingFlash)
+        {
+            <div class="co-container landing-flash"><div class="co-info-box is-draft i-info-circle-icon" role="status"><div class="i-text">@landingFlash</div></div></div>
+        }
+        @if (TempData["Error"] is string landingError)
+        {
+            <div class="co-container landing-flash"><div class="co-info-box is-warning i-exclam-circle-icon" role="alert"><div class="i-text">@landingError</div></div></div>
+        }
+        @RenderBody()
+    </main>
+    <footer class="landing-footer co-container">
+        <span>@cfg.FooterText</span>
+        <a href="/about">about</a>
+        @if (cfg.PublicBrowsing) { <a href="/explore">explore</a> }
+    </footer>
+}
+else
+{
 <div id="page-container" class="co-container @(wide ? "is-wide" : "")">
     <nav class="site-nav" aria-label="Main">
         <ul>
@@ -80,6 +112,7 @@
             }
             <li><a href="/about" aria-current="@Current("/about")">about</a></li>
         </ul>
+        <footer class="site-footer">@cfg.FooterText</footer>
     </nav>
 
     <div class="page-contents">
@@ -118,10 +151,12 @@
             {
                 @await Component.InvokeAsync("Sidebar")
             }
-            <p class="site-fine-print">@cfg.FooterText</p>
         </aside>
     }
+    @* On narrow screens the navigation sits above the page, so the footer goes at the end instead. *@
+    <footer class="site-footer is-bottom">@cfg.FooterText</footer>
 </div>
+}
 <script src="~/js/site.js" asp-append-version="true"></script>
 </body>
 </html>

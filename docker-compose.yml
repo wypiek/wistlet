@@ -18,6 +18,15 @@ services:
       Wistlet__AdminPassword: ${WISTLET_ADMIN_PASSWORD:-}
       Wistlet__AdminEmail: ${WISTLET_ADMIN_EMAIL:-}
       Wistlet__SeedDemoContent: ${WISTLET_SEED_DEMO:-false}
+      # The site's public address, used for links in e-mails (password resets).
+      Wistlet__PublicUrl: ${WISTLET_PUBLIC_URL:-}
+      # SMTP server for password reset e-mails. Without one, resets by e-mail are turned off.
+      Wistlet__Smtp__Host: ${WISTLET_SMTP_HOST:-}
+      Wistlet__Smtp__Port: ${WISTLET_SMTP_PORT:-587}
+      Wistlet__Smtp__Security: ${WISTLET_SMTP_SECURITY:-Auto}
+      Wistlet__Smtp__User: ${WISTLET_SMTP_USER:-}
+      Wistlet__Smtp__Password: ${WISTLET_SMTP_PASSWORD:-}
+      Wistlet__Smtp__From: ${WISTLET_SMTP_FROM:-}
     volumes:
       - wistlet-data:/data
 

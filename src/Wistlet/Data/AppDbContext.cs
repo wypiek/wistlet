@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -100,6 +101,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(r => r.Post).WithMany().HasForeignKey(r => r.PostId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(r => r.TargetUser).WithMany().HasForeignKey(r => r.TargetUserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(r => r.ResolvedBy).WithMany().HasForeignKey(r => r.ResolvedById).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        b.Entity<PasswordResetToken>(e =>
+        {
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<AuditLog>(e =>

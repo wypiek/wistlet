@@ -66,6 +66,25 @@ public class User
     /// <summary>Whether 18+ posts appear in this user's feeds.</summary>
     public bool ShowAdultContent { get; set; }
 
+    /// <summary>Marks the whole page 18+: all its posts count as 18+ and the profile asks viewers to confirm their age first.</summary>
+    public bool IsAdultPage { get; set; }
+
+    /// <summary>Only logged-in people can see the page and its posts.</summary>
+    public bool HiddenFromGuests { get; set; }
+
+    /// <summary>TOTP key for two-factor login, encrypted with ASP.NET Core data protection.</summary>
+    [MaxLength(500)]
+    public string? TwoFactorSecret { get; set; }
+
+    public bool TwoFactorEnabled { get; set; }
+
+    /// <summary>Last accepted TOTP time step, so a code can't be used twice.</summary>
+    public long TwoFactorLastStep { get; set; }
+
+    /// <summary>Space-separated SHA-256 hashes of the unused recovery codes.</summary>
+    [MaxLength(1000)]
+    public string? RecoveryCodes { get; set; }
+
     /// <summary>Wide header image shown at the top of the profile.</summary>
     [MaxLength(200)]
     public string? BannerPath { get; set; }
@@ -128,6 +147,16 @@ public class Post
     [MaxLength(200)]
     public string? ImagePath { get; set; }
 
+    /// <summary>Attached audio file, played with the post's audio player.</summary>
+    [MaxLength(200)]
+    public string? AudioPath { get; set; }
+
+    [MaxLength(140)]
+    public string? AudioTitle { get; set; }
+
+    [MaxLength(140)]
+    public string? AudioArtist { get; set; }
+
     public int? ParentId { get; set; }
     public Post? Parent { get; set; }
 
@@ -140,6 +169,9 @@ public class Post
 
     /// <summary>Hidden by a moderator; only staff can see it.</summary>
     public bool IsHidden { get; set; }
+
+    /// <summary>For comments: hidden by the author of the post it's on. Only they, the commenter and staff still see it.</summary>
+    public bool HiddenByPostAuthor { get; set; }
 
     /// <summary>Pinned by staff to the top of Explore.</summary>
     public bool IsPinned { get; set; }
@@ -292,6 +324,21 @@ public class AuditLog
     public string? IpAddress { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class PasswordResetToken
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User User { get; set; } = null!;
+
+    /// <summary>SHA-256 of the token sent by e-mail (the token itself is never stored).</summary>
+    [MaxLength(64)]
+    public string TokenHash { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? UsedAt { get; set; }
 }
 
 public class SiteSetting

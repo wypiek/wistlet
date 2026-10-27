@@ -21,6 +21,10 @@
                     <textarea asp-for="Config.AboutText" rows="4"></textarea>
                     <label asp-for="Config.FooterText"></label>
                     <input asp-for="Config.FooterText" />
+                    <label asp-for="Config.HomeHeadline"></label>
+                    <input asp-for="Config.HomeHeadline" />
+                    <label asp-for="Config.HomeIntro"></label>
+                    <textarea asp-for="Config.HomeIntro" rows="3"></textarea>
                 </div>
             </fieldset>
 
@@ -59,6 +63,10 @@
                     <div ><input asp-for="Config.AllowImageUploads" /><label asp-for="Config.AllowImageUploads"></label></div>
                     <label asp-for="Config.MaxUploadMb"></label>
                     <input asp-for="Config.MaxUploadMb" min="1" max="50" />
+                    <span></span>
+                    <div ><input asp-for="Config.AllowAudioUploads" /><label asp-for="Config.AllowAudioUploads"></label></div>
+                    <label asp-for="Config.MaxAudioUploadMb"></label>
+                    <input asp-for="Config.MaxAudioUploadMb" min="1" max="50" />
                     <label asp-for="Config.BannedWords"></label>
                     <textarea asp-for="Config.BannedWords" rows="2" placeholder="spam, scam, …"></textarea>
                 </div>

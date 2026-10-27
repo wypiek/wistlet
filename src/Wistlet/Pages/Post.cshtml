@@ -12,7 +12,7 @@
     @foreach (var c in Model.TopLevelComments)
     {
         <div class="i-thread">
-            <partial name="_CommentTree" model="@(new CommentTreeModel(c, Model.Children, Model.Post.Id))" />
+            <partial name="_CommentTree" model="@(new CommentTreeModel(c, Model.Children, Model.Post))" />
         </div>
     }
     @if (User.Identity?.IsAuthenticated == true)

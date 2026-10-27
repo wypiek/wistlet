@@ -1,0 +1,30 @@
+@page "/account/forgot"
+@model Wistlet.Pages.Account.ForgotModel
+@{
+    ViewData["Title"] = "Reset your password";
+    ViewData["NoSidebar"] = true;
+}
+<card title="Reset your password" class="narrow">
+    @if (!Model.Available)
+    {
+        <p>Password resets by e-mail aren't set up on this site. Please contact a moderator or administrator to get back into your account.</p>
+        <p><a href="/account/login">Back to log in</a></p>
+    }
+    else if (Model.Sent)
+    {
+        <p>If there's an account with that user name or e-mail address, we've sent it a link to choose a new password. The link works for @((int)AccountService.ResetTokenLifetime.TotalMinutes) minutes.</p>
+        <p>Didn't get anything? Check your spam folder, or <a href="/account/forgot">try again</a>.</p>
+    }
+    else
+    {
+        <form method="post" class="form-grid">
+            <div asp-validation-summary="ModelOnly" class="full" role="alert"></div>
+            <p class="full">Enter your user name or e-mail address and we'll send you a link to choose a new password.</p>
+            <label asp-for="Login"></label>
+            <div><input asp-for="Login" autocomplete="username" autofocus /> <span asp-validation-for="Login"></span></div>
+            <span></span>
+            <div><button type="submit" class="default">Send reset link</button></div>
+        </form>
+        <p><a href="/account/login">Back to log in</a></p>
+    }
+</card>

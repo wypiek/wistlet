@@ -23,6 +23,14 @@ public class SiteConfig
     public string AboutText { get; set; } =
         "Wistlet is a small social network. Post, follow, like and chat.";
 
+    [Display(Name = "Home page headline (shown to logged-out visitors)"), Required, StringLength(80)]
+    public string HomeHeadline { get; set; } = "posting, but better.";
+
+    [Display(Name = "Home page introduction"), StringLength(600)]
+    public string HomeIntro { get; set; } =
+        "A small social network for people who like sharing things on the internet. " +
+        "Write in Markdown or HTML, follow people you like, and read everything in the order it was posted.";
+
     [Display(Name = "Show announcement banner")]
     public bool AnnouncementEnabled { get; set; }
 
@@ -47,6 +55,12 @@ public class SiteConfig
 
     [Display(Name = "Maximum upload size (MB)"), Range(1, 50)]
     public int MaxUploadMb { get; set; } = 5;
+
+    [Display(Name = "Allow audio attachments in posts")]
+    public bool AllowAudioUploads { get; set; } = true;
+
+    [Display(Name = "Maximum audio file size (MB)"), Range(1, 50)]
+    public int MaxAudioUploadMb { get; set; } = 20;
 
     [Display(Name = "Allow direct messages")]
     public bool AllowDirectMessages { get; set; } = true;

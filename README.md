@@ -14,7 +14,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 
 **Posts, the cohost way**
 - Markdown with raw HTML and inline CSS ("CSS crimes"), up to 200 000 characters, an optional
-  headline and an optional image
+  headline, an optional image and an optional audio file (MP3, Ogg, FLAC, WAV or M4A) with track
+  title and artist, played in the post's audio player
 - A preview button in the composer that renders the draft through the same sanitizer posts use
 - A `<!--more-->` line splits off the part shown in feeds ("read more"); very tall posts (over
   twice the window height) are collapsed automatically
@@ -24,6 +25,8 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Shares (with or without your own post on top), share chains, and a "deleted by its original
   author" tombstone when the shared post is gone
 - Comments as nested threads on the post page (not in feeds), editing your own posts and comments
+- Hiding comments on your own posts: a hidden comment (and the replies under it) stays visible only
+  to you, its author and staff
 - `@mentions`, likes and saved posts
 
 **Social**
@@ -31,15 +34,27 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
   tagline, pronouns, a Markdown description, location and website; posts / comments / media / likes /
   followers / following tabs
-- Notifications for likes, comments, shares, mentions, new followers and moderator messages
+- Notifications for likes, comments, shares, mentions, new followers and moderator messages, grouped
+  by day the way cohost did it ("annie, pete and 3 others liked your post …")
 - Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
 - Blocking, reporting posts and accounts, search across people, tags and posts
+- Page settings: mark your whole page 18+ (all its posts count as 18+ and visitors confirm their age
+  before seeing it), or hide your page and posts from logged-out visitors
+- A cohost-style front page for logged-out visitors (headline and introduction are site settings)
+
+**Accounts**
+- Two-factor login with an authenticator app (TOTP, with a QR code) and ten single-use recovery codes;
+  staff can turn it off for someone who lost both
+- Password resets by e-mail: single-use links that expire after an hour (needs SMTP, see below)
+- Data export: a zip with your profile, posts and comments (Markdown and HTML), likes, saved posts,
+  follows, blocks, direct messages and every file you uploaded
 
 **Admin panel** (`/admin`, for moderators and admins)
 - Dashboard: counts, sign-ups and posts per day, newest members, system information
 - Site settings (admins only): site name, tagline, about text, footer, announcement banner,
-  open/closed registration, guest browsing, maintenance mode, maximum post length, posts per page,
-  image uploads and size limit, banned words, direct messages on/off
+  front page headline and introduction, open/closed registration, guest browsing, maintenance mode,
+  maximum post length, posts per page, image and audio uploads and their size limits, banned words,
+  direct messages on/off
 - User management: search and filter, edit name/e-mail/role/verified badge, temporary or permanent
   bans with a reason, password reset, sign out all sessions, remove picture, clear profile,
   remove banner, moderator messages, delete all posts, delete account
@@ -112,6 +127,16 @@ docker run --rm -v wistlet_wistlet-data:/data -v "$PWD":/backup busybox tar czf 
 | `WISTLET_ADMIN_PASSWORD` | Password for that account (only used when it's created)        | —       |
 | `WISTLET_ADMIN_EMAIL`    | E-mail for that account                                        | —       |
 | `WISTLET_SEED_DEMO`      | Add a few demo users and posts to an empty site                | `false` |
+| `WISTLET_PUBLIC_URL`     | The site's public address, for links in e-mails (recommended) | request host |
+| `WISTLET_SMTP_HOST`      | SMTP server for password reset e-mails                         | —       |
+| `WISTLET_SMTP_PORT`      | SMTP port                                                      | `587`   |
+| `WISTLET_SMTP_SECURITY`  | `Auto`, `StartTls`, `SslOnConnect` (port 465) or `None`        | `Auto`  |
+| `WISTLET_SMTP_USER`      | SMTP user name (leave empty for no authentication)             | —       |
+| `WISTLET_SMTP_PASSWORD`  | SMTP password                                                  | —       |
+| `WISTLET_SMTP_FROM`      | Sender address, e.g. `wistlet@example.com`                     | —       |
+
+Without an SMTP server, "forgot your password?" tells people to contact staff instead, and admins
+can still reset passwords from the admin panel. In development, e-mails are written to the log.
 
 Everything else is changed from the admin panel at runtime.
 
@@ -138,7 +163,7 @@ dotnet ef migrations add <Name> --project src/Wistlet -o Data/Migrations
 
 Migrations are applied automatically when the app starts.
 
-The sanitizer has unit tests:
+The post renderer, two-factor codes, audio detection and notification grouping have unit tests:
 
 ```sh
 dotnet test
@@ -150,11 +175,12 @@ dotnet test
 src/Wistlet/
   Data/            EF Core context, migrations, start-up initialisation
   Models/          Entities and view models
-  Services/        Accounts, posts and the post renderer, notifications, messaging, uploads, site settings, audit log
+  Services/        Accounts, posts and the post renderer, notifications, messaging, uploads, site settings,
+                   two-factor login, e-mail, data export, audit log
   Infrastructure/  Auth cookie validation, middleware, tag helpers, formatting helpers
   Pages/           Razor Pages (Admin/, Account/, Messages/ and the social pages)
   wwwroot/         site.css, site.js, vendored cohost styles, Atkinson Hyperlegible and League Mono
-tests/Wistlet.Tests/  Unit tests for the post renderer
+tests/Wistlet.Tests/  Unit tests
 Dockerfile, docker-compose.yml, Caddyfile
 ```
 

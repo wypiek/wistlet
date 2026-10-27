@@ -47,6 +47,14 @@ public class LoginModel(AccountService accounts, AppDbContext db) : PageModel
 
         // Expired temporary bans clear themselves on the next successful login.
         if (user.IsBanned) { user.IsBanned = false; user.BannedUntil = null; user.BanReason = null; }
+
+        if (user.TwoFactorEnabled)
+        {
+            await db.SaveChangesAsync();
+            accounts.BeginTwoFactorLogin(HttpContext, user, Remember);
+            return LocalRedirect("/account/login/2fa" + (ReturnUrl is null ? "" : "?returnUrl=" + Uri.EscapeDataString(ReturnUrl)));
+        }
+
         user.LastSeenAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 

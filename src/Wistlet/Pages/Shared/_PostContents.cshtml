@@ -3,7 +3,7 @@
 @{
     var p = Model.Post;
     var warnings = p.Warnings;
-    var collapsed = warnings.Count > 0 || p.IsAdult;
+    var collapsed = warnings.Count > 0 || p.ShowsAsAdult;
     // The same post can appear twice on a page (e.g. inside a share), so element ids get a unique suffix.
     var uid = $"{p.Id}-{Guid.NewGuid().ToString("N")[..6]}";
 }
@@ -12,7 +12,7 @@
     <div class="co-post-collapser has-css-state">
         <input class="i-expanded-state" type="checkbox" id="post-collapser-@uid" />
         <div class="i-collapsed">
-            @if (p.IsAdult)
+            @if (p.ShowsAsAdult)
             {
                 <div class="co-info-box is-18-plus i-info-circle-icon">This post contains 18+ content.</div>
             }
@@ -33,7 +33,7 @@
                 <div class="i-collapse-header">
                     <div class="co-info-box is-warning i-shield-exclam-icon">
                         <div class="i-contents">
-                            @if (p.IsAdult) { <div class="i-adult">This post contains 18+ content.</div> }
+                            @if (p.ShowsAsAdult) { <div class="i-adult">This post contains 18+ content.</div> }
                             <div class="i-cws">CWs: <span class="i-cws">@string.Join(", ", warnings).</span></div>
                         </div>
                     </div>

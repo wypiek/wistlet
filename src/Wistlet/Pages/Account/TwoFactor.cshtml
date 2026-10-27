@@ -1,0 +1,18 @@
+@page "/account/login/2fa"
+@model Wistlet.Pages.Account.TwoFactorModel
+@{
+    ViewData["Title"] = "Two-factor authentication";
+    ViewData["NoSidebar"] = true;
+}
+<card title="Two-factor authentication" class="narrow">
+    <form method="post" class="form-grid">
+        <div asp-validation-summary="ModelOnly" class="full" role="alert"></div>
+        <p class="full">Enter the 6-digit code from your authenticator app. If you don't have your phone, enter one of your recovery codes instead.</p>
+        <label asp-for="Code"></label>
+        <div><input asp-for="Code" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="20" autofocus /> <span asp-validation-for="Code"></span></div>
+        <input type="hidden" asp-for="ReturnUrl" />
+        <span></span>
+        <div><button type="submit" class="default">Log in</button></div>
+    </form>
+    <p><a href="/account/login">Start over</a></p>
+</card>

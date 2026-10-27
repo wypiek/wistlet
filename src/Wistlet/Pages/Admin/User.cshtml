@@ -45,6 +45,8 @@
                             <tr><td>Posts</td><td>@Model.PostCount</td></tr>
                             <tr><td>Followers</td><td>@Model.FollowerCount (following @Model.FollowingCount)</td></tr>
                             <tr><td>Messages from</td><td>@u.MessagePrivacy</td></tr>
+                            <tr><td>Two-factor login</td><td>@(u.TwoFactorEnabled ? "On" : "Off")</td></tr>
+                            <tr><td>Page</td><td>@(u.IsAdultPage ? "18+" : "general")@(u.HiddenFromGuests ? ", hidden from logged-out visitors" : "")</td></tr>
                             @if (!string.IsNullOrEmpty(u.Bio)) { <tr><td>Bio</td><td>@u.Bio</td></tr> }
                         </tbody>
                     </table>
@@ -124,6 +126,10 @@
                 <div class="row">
                     <form method="post" asp-page-handler="ResetPassword" asp-route-id="@u.Id" data-confirm="Reset this user's password?"><button type="submit">Reset password</button></form>
                     <form method="post" asp-page-handler="SignOut" asp-route-id="@u.Id"><button type="submit">Sign out all sessions</button></form>
+                    @if (u.TwoFactorEnabled)
+                    {
+                        <form method="post" asp-page-handler="DisableTwoFactor" asp-route-id="@u.Id" data-confirm="Turn off two-factor login for this account? Only do this once you're sure it's really them."><button type="submit">Turn off two-factor login</button></form>
+                    }
                     @if (u.AvatarPath is not null)
                     {
                         <form method="post" asp-page-handler="RemoveAvatar" asp-route-id="@u.Id"><button type="submit">Remove picture</button></form>

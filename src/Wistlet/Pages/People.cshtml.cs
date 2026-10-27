@@ -18,7 +18,8 @@ public class PeopleModel(AppDbContext db) : PageModel
         var now = DateTime.UtcNow;
         var users = db.Users.AsNoTracking()
             .Where(u => !(u.IsBanned && (u.BannedUntil == null || u.BannedUntil > now)))
-            .Where(u => !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == u.Id) || (b.BlockerId == u.Id && b.BlockedId == me)));
+            .Where(u => !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == u.Id) || (b.BlockerId == u.Id && b.BlockedId == me)))
+            .Where(u => me > 0 || !u.HiddenFromGuests);
         users = Sort switch
         {
             "new" => users.OrderByDescending(u => u.CreatedAt),
