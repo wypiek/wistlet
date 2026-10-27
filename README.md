@@ -95,7 +95,7 @@ older posts are re-rendered on start-up.
 ## Deploying with Docker Compose and Caddy
 
 Docker runs only the app. Caddy runs **on the host** (installed from your distribution's packages or
-the official binary), so Docker never pulls a Caddy image. The app is published on `127.0.0.1:8080`,
+the official binary), so Docker never pulls a Caddy image. The app is published on `127.0.0.1:6969`,
 which means it can only be reached through Caddy.
 
 1. Install Caddy on the server: <https://caddyserver.com/docs/install>.
@@ -122,7 +122,7 @@ docker run --rm -v wistlet_wistlet-data:/data -v "$PWD":/backup busybox tar czf 
 
 | Variable (`.env`)        | Meaning                                                        | Default |
 |--------------------------|----------------------------------------------------------------|---------|
-| `WISTLET_PORT`           | Host port on 127.0.0.1 that Caddy proxies to                   | `8080`  |
+| `WISTLET_PORT`           | Host port on 127.0.0.1 that Caddy proxies to                   | `6969`  |
 | `WISTLET_ADMIN_USER`     | Create (or promote) this admin account on start-up            | —       |
 | `WISTLET_ADMIN_PASSWORD` | Password for that account (only used when it's created)        | —       |
 | `WISTLET_ADMIN_EMAIL`    | E-mail for that account                                        | —       |
