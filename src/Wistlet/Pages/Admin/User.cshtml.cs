@@ -5,10 +5,12 @@ using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
 using Wistlet.Services;
+using Wistlet.Services.Federation;
 
 namespace Wistlet.Pages.Admin;
 
-public class UserModel(AppDbContext db, AuditService audit, UploadService uploads, NotificationService notifications, PostService posts) : PageModel
+public class UserModel(AppDbContext db, AuditService audit, UploadService uploads, NotificationService notifications, PostService posts,
+    FederationService federation) : PageModel
 {
     public User Target { get; private set; } = null!;
     public bool CanManage { get; private set; }
@@ -228,6 +230,7 @@ public class UserModel(AppDbContext db, AuditService audit, UploadService upload
         if (Target.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Denied("You can't delete the only administrator.");
 
+        await federation.AccountDeletingAsync(Target);
         var images = await PostService.AttachmentsAsync(db.Posts.Where(p => p.AuthorId == id));
         images.Add(Target.AvatarPath);
         images.Add(Target.BannerPath);

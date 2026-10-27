@@ -1,0 +1,142 @@
+/* Wistlet's dark theme. The layout loads this file after site.css: always for people who
+   picked "dark", and with media="(prefers-color-scheme: dark)" for "match my device".
+   The cherry header, the profile box and the tag pills keep their colours; page and box
+   surfaces turn dark, and cherry used as a text colour becomes a light pink. */
+
+:root {
+    color-scheme: dark;
+    --color-background: 25 25 25;
+    --color-bg-text: var(--color-notWhite);
+    --text-accent: 238 173 199;
+    --line: 74 70 67;
+    --gray1: 160 156 152;
+    --gray2: 184 179 175;
+    --gray3: 212 207 202;
+    --surface: 36 34 33;
+    --surface-raised: 46 43 41;
+    --co-shadow: 0 4px 6px rgba(0, 0, 0, .45), 0 1px 10px rgba(0, 0, 0, .35);
+}
+
+/* ---------- boxes and posts ---------- */
+
+.co-post-box, .co-titled-box, .co-comments > .i-thread { background: rgb(var(--surface)); color: rgb(var(--color-notWhite)); }
+.co-var-post-body-bg { --post-body-bg: var(--surface); }
+.co-read-more-read-less { background: rgb(var(--surface)); color: rgb(var(--text-accent)); }
+.co-thread-header, .co-thread-footer, .co-thread-item > .i-header, .co-titled-box > .i-footer { background: rgb(var(--surface-raised)); }
+.co-project-handle { color: rgb(var(--gray1)); }
+.co-project-display-name, .co-titled-box, .co-themed-titled-box, .co-comments > .i-header { color: rgb(var(--color-notWhite)); }
+.co-titled-box > .i-header { background: rgb(var(--color-foreground-700)); color: rgb(var(--color-notWhite)); }
+.co-themed-titled-box { background: rgb(var(--surface)); }
+.co-themed-titled-box > .i-header { background: rgb(var(--color-foreground-700)); color: rgb(var(--color-notWhite)); }
+.co-comments > .i-header > .i-post-ref { color: rgb(var(--color-secondary-300)); }
+.co-thread-footer .i-liked .i-heart { color: rgb(var(--text-accent)); }
+hr.co-hairline { border-color: rgb(var(--line)); }
+
+/* Info boxes: CW, 18+, tombstones, notices. */
+.co-info-box.is-warning, .co-info-box.is-18-plus { background: rgb(var(--surface-raised)); color: rgb(var(--text-accent)); border-color: rgb(var(--color-foreground-400)); }
+.co-info-box.is-tombstone { background: rgb(var(--surface-raised)); color: rgb(var(--gray3)); }
+.co-info-box.is-draft { background: rgb(var(--surface)); color: rgb(var(--color-notWhite)); border-color: rgb(var(--line)); }
+.co-info-box.is-draft::before { color: rgb(var(--text-accent)); }
+
+/* Post text: the prose styles' own dark ("invert") colours. */
+.prose:not(.prose-invert) {
+    /* cohost's prose sets its text colour directly rather than through --tw-prose-body. */
+    color: rgb(var(--color-notWhite));
+    --tw-prose-body: var(--tw-prose-invert-body);
+    --tw-prose-headings: var(--tw-prose-invert-headings);
+    --tw-prose-lead: var(--tw-prose-invert-lead);
+    --tw-prose-links: var(--tw-prose-invert-links);
+    --tw-prose-bold: var(--tw-prose-invert-bold);
+    --tw-prose-counters: var(--tw-prose-invert-counters);
+    --tw-prose-bullets: var(--tw-prose-invert-bullets);
+    --tw-prose-hr: var(--tw-prose-invert-hr);
+    --tw-prose-quotes: var(--tw-prose-invert-quotes);
+    --tw-prose-quote-borders: var(--tw-prose-invert-quote-borders);
+    --tw-prose-captions: var(--tw-prose-invert-captions);
+    --tw-prose-kbd: var(--tw-prose-invert-kbd);
+    --tw-prose-kbd-shadows: var(--tw-prose-invert-kbd-shadows);
+    --tw-prose-code: var(--tw-prose-invert-code);
+    --tw-prose-pre-code: var(--tw-prose-invert-pre-code);
+    --tw-prose-pre-bg: var(--tw-prose-invert-pre-bg);
+    --tw-prose-th-borders: var(--tw-prose-invert-th-borders);
+    --tw-prose-td-borders: var(--tw-prose-invert-td-borders);
+}
+/* CSS crimes are written for a light page: an element that paints its own background but
+   doesn't pick a text colour expects dark text. Give it (and what's inside) the light theme's
+   text colours; an inline "color" still wins, since inline styles beat this sheet. */
+.prose [style*="background"]:not([style*="background: none"]):not([style*="background: transparent"]):not([style*="background-color: transparent"]) {
+    color: #191919;
+    --tw-prose-body: #374151;
+    --tw-prose-headings: #111827;
+    --tw-prose-lead: #4b5563;
+    --tw-prose-links: #111827;
+    --tw-prose-bold: #111827;
+    --tw-prose-counters: #6b7280;
+    --tw-prose-bullets: #d1d5db;
+    --tw-prose-hr: #e5e7eb;
+    --tw-prose-quotes: #111827;
+    --tw-prose-quote-borders: #e5e7eb;
+    --tw-prose-captions: #6b7280;
+    --tw-prose-kbd: #111827;
+    --tw-prose-kbd-shadows: 17 24 39;
+    --tw-prose-code: #111827;
+    --tw-prose-th-borders: #d1d5db;
+    --tw-prose-td-borders: #e5e7eb;
+}
+
+.co-post-contents .co-prose a.co-mention, .co-comment-item .co-prose a.co-mention { color: rgb(var(--text-accent)); }
+
+/* ---------- forms, menus, tables ---------- */
+
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number],
+input[type=search], select, textarea, [type=text], [type=email], [type=password], [type=search] {
+    background: rgb(var(--color-notBlack));
+    color: rgb(var(--color-notWhite));
+    border-color: rgb(var(--line));
+}
+input::placeholder, textarea::placeholder { color: rgb(var(--gray1)); }
+#page-header .i-search input { background: rgb(var(--color-foreground-700)); }
+input:focus, select:focus, textarea:focus { outline-color: rgb(var(--text-accent)); }
+
+.co-button.is-outline, button:not([class]), a[role=button] { border-color: rgb(var(--text-accent)); }
+.co-button.is-outline:hover, button:not([class]):hover, a[role=button]:hover { background: rgb(var(--color-foreground-700)); }
+input[type=file]::file-selector-button { border-color: rgb(var(--text-accent)); color: rgb(var(--text-accent)); }
+
+.co-menu { background: rgb(var(--surface-raised)); color: rgb(var(--color-notWhite)); }
+.co-menu > li > a:hover, .co-menu > li > button:hover { background: rgb(var(--color-foreground-700)); color: rgb(var(--color-notWhite)); }
+.co-menu > li.is-divided { border-color: rgb(var(--line)); }
+
+.co-tabs { background: rgb(var(--color-foreground-700)); }
+.co-tabs > a { color: rgb(var(--color-foreground-100)); }
+
+th { background: rgb(var(--surface-raised)); }
+fieldset { border-color: rgb(var(--line)); }
+
+/* ---------- Wistlet's own pieces ---------- */
+
+.site-nav a { color: rgb(var(--color-notWhite)); }
+.site-nav a:hover, .site-nav a[aria-current=page] { color: rgb(var(--text-accent)); }
+.page-title, .section-title { color: rgb(var(--color-notWhite)); }
+.lede { color: rgb(var(--text-accent)); }
+
+.chat .bubble { background: rgb(var(--surface-raised)); border-color: rgb(var(--line)); }
+.chat .bubble.is-mine { background: rgb(var(--color-foreground-700)); border-color: rgb(var(--color-foreground-600)); }
+.bar { background: rgb(var(--surface-raised)); }
+
+.co-composer > .i-preview-pane { background: rgb(var(--surface-raised)); }
+.co-audio-attachment { background: rgb(var(--surface-raised)); }
+.co-audio-attachment > .i-download:hover { background: rgb(var(--color-foreground-700)); }
+.co-notification.is-unread { background: rgb(var(--color-foreground-700) / 0.35); }
+.co-notification .i-unread-dot { background: rgb(var(--text-accent)); }
+.co-comment-item .i-comment-actions a:hover, .co-comment-item .i-comment-actions summary:hover, .i-link-button:hover { color: rgb(var(--text-accent)); }
+.co-verified .i-seal { fill: rgb(var(--text-accent)); }
+.co-verified .i-check { stroke: rgb(var(--color-notBlack)); }
+.qr-code { border-color: rgb(var(--line)); }
+.timeline-reason { color: rgb(var(--gray1)); }
+
+/* The front page. */
+.landing::before { background: rgb(var(--color-foreground-700) / 0.35); }
+.landing-hero .i-headline, .landing-hero .i-intro { color: rgb(var(--color-notWhite)); }
+.landing-hero .i-browse { color: rgb(var(--text-accent)); }
+.landing-features p { color: rgb(var(--gray3)); }
+.landing-features .is-cherry .i-blob > path, .landing-features .is-cherry h2 { fill: rgb(var(--color-foreground-300)); color: rgb(var(--color-foreground-300)); }

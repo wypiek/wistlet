@@ -11,6 +11,8 @@
     var wide = ViewData["NoSidebar"] is true;
     // The logged-out home page: a full-width marketing page without the navigation column.
     var landing = ViewData["Landing"] is true;
+    // Logged-out visitors follow their device's light or dark setting.
+    var theme = Themes.Resolve(me?.Theme);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -18,12 +20,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#83254f" />
+    <meta name="color-scheme" content="@(theme switch { Themes.Light => "light", Themes.Dark => "dark", _ => "light dark" })" />
     <title>@(string.IsNullOrEmpty(title) ? cfg.SiteName : $"{cfg.SiteName.ToLowerInvariant()}! - {title}")</title>
     <meta name="description" content="@cfg.Tagline" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="~/lib/cohost/cohost.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/cohost/tailwind-prose.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @if (theme == Themes.Dark)
+    {
+        <link rel="stylesheet" href="~/css/dark.css" asp-append-version="true" />
+    }
+    else if (theme == Themes.Auto)
+    {
+        <link rel="stylesheet" href="~/css/dark.css" media="(prefers-color-scheme: dark)" asp-append-version="true" />
+    }
 </head>
 <body>
 <header id="page-header">

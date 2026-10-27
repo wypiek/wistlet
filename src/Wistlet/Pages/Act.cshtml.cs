@@ -7,13 +7,15 @@ using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
 using Wistlet.Services;
+using Wistlet.Services.Federation;
 
 namespace Wistlet.Pages;
 
 /// <summary>Form-post endpoints for social actions. Every handler redirects back to <c>returnUrl</c>.</summary>
 [Authorize]
 [EnableRateLimiting("write")]
-public class ActModel(AppDbContext db, PostService posts, NotificationService notifications, AuditService audit, SiteSettingsService settings) : PageModel
+public class ActModel(AppDbContext db, PostService posts, NotificationService notifications, AuditService audit, SiteSettingsService settings,
+    FederationService federation) : PageModel
 {
     private int Me => User.RequireUserId();
 
@@ -86,6 +88,7 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
             db.Likes.Remove(existing);
         }
         await db.SaveChangesAsync();
+        await federation.LikeChangedAsync(post, Me, liked: existing is null);
         return Back(returnUrl);
     }
 
@@ -163,12 +166,26 @@ public class ActModel(AppDbContext db, PostService posts, NotificationService no
         if (existing is not null)
         {
             db.Follows.Remove(existing);
+            if (target.IsRemote) await federation.UnfollowAsync(await db.Users.FirstAsync(u => u.Id == Me), target);
         }
         else
         {
             if (await db.Blocks.AnyAsync(b => (b.BlockerId == Me && b.BlockedId == id) || (b.BlockerId == id && b.BlockedId == Me)))
             {
                 TempData["Error"] = "You can't follow this account.";
+                return Back(returnUrl);
+            }
+            if (target.IsRemote)
+            {
+                // Following someone on another instance needs that instance to say yes.
+                if (await federation.FollowAsync(await db.Users.FirstAsync(u => u.Id == Me), target) is { } error)
+                {
+                    TempData["Error"] = error;
+                    return Back(returnUrl);
+                }
+                db.Follows.Add(new Follow { FollowerId = Me, FolloweeId = id });
+                await db.SaveChangesAsync();
+                await federation.BackfillAsync(target);
                 return Back(returnUrl);
             }
             db.Follows.Add(new Follow { FollowerId = Me, FolloweeId = id });

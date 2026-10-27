@@ -13,8 +13,17 @@
 }
 <h1 class="page-title">your timeline</h1>
 <partial name="_ComposerBox" model="@(new ComposerModel("/"))" />
+<partial name="_Tabs" model="@(new TabsModel("Timeline views",
+[
+    new("latest", "/", Model.Tab == TimelineModes.Latest, "tab", TimelineModes.Latest),
+    new("for you", "/", Model.Tab == TimelineModes.ForYou, "tab", TimelineModes.ForYou),
+]))" />
+@if (Model.Tab == TimelineModes.ForYou)
+{
+    <p class="muted">Recent posts ranked by what you and the people you follow like. Posts from people you don't follow say why they're here. <a href="/settings?tab=display">Choose your default view</a></p>
+}
 @if (!Model.FollowsAnyone)
 {
     <div class="co-info-box is-draft i-info-circle-icon"><div class="i-text">Your timeline shows posts from people you follow. <a href="/explore">Explore</a> or <a href="/people">find people</a> to fill it up.</div></div>
 }
-<partial name="_PostList" model="@(new PostListModel(Model.Posts, "No posts yet. Say hello to the world above!", Model.MoreUrl))" />
+<partial name="_PostList" model="@(new PostListModel(Model.Posts, Model.Tab == TimelineModes.ForYou ? "Nothing to rank yet. Follow some people and like a few posts, and this fills up." : "No posts yet. Say hello to the world above!", Model.MoreUrl))" />

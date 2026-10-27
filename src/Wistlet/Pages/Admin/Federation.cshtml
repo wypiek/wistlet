@@ -1,0 +1,90 @@
+@page
+@model Wistlet.Pages.Admin.FederationModel
+@{
+    ViewData["Title"] = "Federation";
+    ViewData["AdminTab"] = "federation";
+    var fed = Model.Context;
+}
+<card title="Admin — Federation">
+    <partial name="_AdminNav" />
+    <div class="tab-panel">
+        <fieldset>
+            <legend>This instance</legend>
+            <table>
+                <tbody>
+                    <tr><td>Status</td><td>@(fed.IsEnabled ? "Federating" : fed.IsConfigured ? "Off (turn it on in Site settings)" : "Not configured: set Wistlet:PublicUrl (WISTLET_PUBLIC_URL)")</td></tr>
+                    <tr><td>Domain</td><td>@(fed.Domain ?? "—")</td></tr>
+                    <tr><td>Key fingerprint</td><td><code>@fed.KeyFingerprint</code></td></tr>
+                    <tr><td>Deliveries waiting</td><td>@Model.Pending</td></tr>
+                    @if (fed.AllowHttp || fed.AllowPrivateAddresses)
+                    {
+                        <tr><td>Testing options</td><td><b>@(fed.AllowHttp ? "plain HTTP allowed" : "") @(fed.AllowPrivateAddresses ? "private addresses allowed" : "")</b> — never use these on a public server.</td></tr>
+                    }
+                </tbody>
+            </table>
+            <p class="muted">Only other Wistlet sites can federate with this one. People follow accounts elsewhere by searching for <code>@@name@@other.site</code>.</p>
+        </fieldset>
+
+        <h2 class="section-title">Known instances</h2>
+        @if (Model.Instances.Count == 0)
+        {
+            <p class="muted">None yet.</p>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Instance</th><th>Accounts here</th><th>Waiting</th><th>Last seen</th><th>Key</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var row in Model.Instances)
+                        {
+                            var i = row.Instance;
+                            <tr>
+                                <td><b>@i.Domain</b>@if (i.Name is not null) { <br /><span class="muted">@i.Name</span> }@if (i.IsBlocked) { <br /><b>blocked</b> }</td>
+                                <td>@row.Accounts</td>
+                                <td>@row.Pending</td>
+                                <td>@(i.LastSeenAt is DateTime seen ? Fmt.Time(seen) : "never")</td>
+                                <td>@(i.PublicKey is null ? "not fetched" : "pinned")</td>
+                                <td class="row">
+                                    <form method="post" asp-page-handler="Block" asp-route-domain="@i.Domain" data-confirm="@(i.IsBlocked ? null : $"Block {i.Domain}? Its posts will be hidden and nothing will be exchanged with it.")">
+                                        <button type="submit">@(i.IsBlocked ? "Unblock" : "Block")</button>
+                                    </form>
+                                    @if (i.PublicKey is not null)
+                                    {
+                                        <form method="post" asp-page-handler="ForgetKey" asp-route-domain="@i.Domain" data-confirm="Forget the pinned key of @i.Domain? Only do this if its admins told you the key changed.">
+                                            <button type="submit">Forget key</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <h2 class="section-title">Failed deliveries</h2>
+        @if (Model.Failed.Count == 0)
+        {
+            <p class="muted">None.</p>
+        }
+        else
+        {
+            <div class="row">
+                <form method="post" asp-page-handler="Retry"><button type="submit">Retry all</button></form>
+                <form method="post" asp-page-handler="Clear" data-confirm="Remove all failed deliveries?"><button type="submit">Remove all</button></form>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>To</th><th>Created</th><th>Attempts</th><th>Last error</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in Model.Failed)
+                        {
+                            <tr><td>@d.Domain</td><td>@Fmt.Time(d.CreatedAt)</td><td>@d.Attempts</td><td>@d.LastError</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</card>

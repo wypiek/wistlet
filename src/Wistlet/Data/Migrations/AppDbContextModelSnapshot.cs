@@ -92,6 +92,44 @@ namespace Wistlet.Data.Migrations
                     b.ToTable("Bookmarks");
                 });
 
+            modelBuilder.Entity("Wistlet.Models.FederationDelivery", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FailedAt", "NextAttemptAt");
+
+                    b.ToTable("FederationDeliveries");
+                });
+
             modelBuilder.Entity("Wistlet.Models.Follow", b =>
                 {
                     b.Property<int>("FollowerId")
@@ -294,6 +332,10 @@ namespace Wistlet.Data.Migrations
                     b.Property<int?>("ParentId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("RemoteId")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("RenderVersion")
                         .HasColumnType("INTEGER");
 
@@ -315,6 +357,9 @@ namespace Wistlet.Data.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("RemoteId")
+                        .IsUnique();
 
                     b.HasIndex("RootId");
 
@@ -342,6 +387,34 @@ namespace Wistlet.Data.Migrations
                     b.HasIndex("Tag");
 
                     b.ToTable("PostTags");
+                });
+
+            modelBuilder.Entity("Wistlet.Models.RemoteInstance", b =>
+                {
+                    b.Property<string>("Domain")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PublicKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Domain");
+
+                    b.ToTable("RemoteInstances");
                 });
 
             modelBuilder.Entity("Wistlet.Models.Report", b =>
@@ -459,6 +532,10 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Domain")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -489,7 +566,7 @@ namespace Wistlet.Data.Migrations
 
                     b.Property<string>("NormalizedUserName")
                         .IsRequired()
-                        .HasMaxLength(32)
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
@@ -505,6 +582,9 @@ namespace Wistlet.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("RemoteFetchedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
 
@@ -515,6 +595,16 @@ namespace Wistlet.Data.Migrations
 
                     b.Property<bool>("ShowAdultContent")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimelineMode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
@@ -528,7 +618,7 @@ namespace Wistlet.Data.Migrations
 
                     b.Property<string>("UserName")
                         .IsRequired()
-                        .HasMaxLength(32)
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Website")
@@ -537,6 +627,8 @@ namespace Wistlet.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Domain");
 
                     b.HasIndex("Email");
 

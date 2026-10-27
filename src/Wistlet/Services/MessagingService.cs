@@ -11,6 +11,7 @@ public class MessagingService(AppDbContext db, SiteSettingsService settings)
     {
         if (!settings.Current.AllowDirectMessages) return "Direct messages are turned off on this site.";
         if (recipient.Id == senderId) return "You can't message yourself.";
+        if (recipient.IsRemote) return "Direct messages don't reach other Wistlet sites.";
         if (recipient.IsCurrentlyBanned) return "This account is suspended.";
         if (await db.Blocks.AnyAsync(b => (b.BlockerId == senderId && b.BlockedId == recipient.Id) || (b.BlockerId == recipient.Id && b.BlockedId == senderId)))
             return "You can't message this account.";

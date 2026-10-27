@@ -6,7 +6,7 @@
 <h1 class="page-title">@(Model.Query.Length > 0 ? $"Results for “{Model.Query}”" : "Search")</h1>
 <card>
     <form method="get" role="search" class="row">
-        <input type="search" name="q" value="@Model.Query" placeholder="search posts, people and #tags" aria-label="Search" autofocus style="flex:1" />
+        <input type="search" name="q" value="@Model.Query" placeholder="search posts, people, #tags or @@name@@other.site" aria-label="Search" autofocus style="flex:1" />
         <button type="submit" class="default">search</button>
     </form>
 </card>

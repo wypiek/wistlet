@@ -9,6 +9,7 @@ using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
 using Wistlet.Services;
+using Wistlet.Services.Federation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,7 @@ builder.Services.AddRazorPages(o =>
     o.Conventions.AuthorizeFolder("/Admin", Policies.Staff);
     o.Conventions.AuthorizePage("/Admin/Settings", Policies.Admin);
     o.Conventions.AuthorizePage("/Admin/Audit", Policies.Admin);
+    o.Conventions.AuthorizePage("/Admin/Federation", Policies.Admin);
 }).AddMvcOptions(o => o.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
 
 builder.Services.AddRateLimiter(o =>
@@ -59,6 +61,9 @@ builder.Services.AddRateLimiter(o =>
         ? RateLimitPartition.GetNoLimiter("get")
         : RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    // Other instances: generous, but bounded per address.
+    o.AddPolicy("federation", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 300, Window = TimeSpan.FromMinutes(1) }));
     o.AddPolicy("write", ctx => HttpMethods.IsGet(ctx.Request.Method)
         ? RateLimitPartition.GetNoLimiter("get")
         : RateLimitPartition.GetFixedWindowLimiter(ctx.User.GetUserId()?.ToString() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
@@ -92,6 +97,11 @@ builder.Services.AddScoped<MessagingService>();
 builder.Services.AddScoped<TwoFactorService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<DataExportService>();
+builder.Services.AddScoped<TimelineService>();
+builder.Services.AddSingleton<FederationContext>();
+builder.Services.AddScoped<FederationService>();
+builder.Services.AddScoped<FederationInbox>();
+builder.Services.AddHostedService<FederationDeliveryWorker>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ViewerContext>();
 builder.Services.AddScoped<DbInitializer>();
@@ -136,6 +146,7 @@ app.MapGet("/avatar/{name}.svg", (string name, HttpContext ctx) =>
     return Results.Content(DefaultAvatar.Render(name), "image/svg+xml");
 });
 
+app.MapFederation();
 app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
 

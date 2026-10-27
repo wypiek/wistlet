@@ -69,6 +69,7 @@ public class DbInitializer(AppDbContext db, AccountService accounts, PostService
             (1, null, "Just finished a great book. Recommendations welcome!", "books"),
             (2, null, "Tip: tags go in the tags box under your post, and they can have spaces in them.", "tips, how to use wistlet"),
             (3, "a tiny css crime", CssCrimeDemo, "css crimes, the cohost global feed"),
+            (2, "the haunted vending machine", VendingMachineDemo, "css crimes"),
             (0, null, "Hey @pete, did you know you can save posts for later?", "tips"),
         };
         var t = DateTime.UtcNow.AddHours(-demoPosts.Length);
@@ -88,6 +89,33 @@ public class DbInitializer(AppDbContext db, AccountService accounts, PostService
             db.Follows.Add(new Follow { FollowerId = users[i].Id, FolloweeId = users[0].Id });
         await db.SaveChangesAsync();
     }
+
+    /// <summary>
+    /// A CSS crime written the way people write HTML: nested, indented, with blank lines between
+    /// elements. (Plain Markdown would show everything after the first blank line as code.)
+    /// </summary>
+    private const string VendingMachineDemo = """
+        <div style="display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: linear-gradient(135deg, rgb(255 216 168), rgb(229 107 111));">
+
+            <div style="font-size: 24px; font-weight: bold; color: rgb(131 37 79);">
+                the haunted vending machine
+            </div>
+
+            <details style="background: rgb(255 249 242); color: rgb(25 25 25); border-radius: 12px; padding: 8px 12px;">
+                <summary style="cursor: pointer; font-weight: bold;">insert coin</summary>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                    <span style="padding: 4px 10px; border-radius: 999px; background: rgb(131 37 79); color: rgb(255 249 242);">soda</span>
+                    <span style="padding: 4px 10px; border-radius: 999px; background: rgb(255 171 92);">chips</span>
+                    <span style="padding: 4px 10px; border-radius: 999px; background: rgb(25 25 25); color: rgb(255 249 242); animation: bounce 1s infinite;">???</span>
+                </div>
+
+                <p style="margin: 8px 0 0;">the machine hums. something moves inside.</p>
+            </details>
+
+            <div style="text-align: right; font-size: 12px; color: rgb(81 17 46);">out of order since 2022</div>
+        </div>
+        """;
 
     /// <summary>A small post in cohost's "CSS crimes" tradition: inline styles, details/summary and the built-in spin keyframes.</summary>
     private const string CssCrimeDemo = """

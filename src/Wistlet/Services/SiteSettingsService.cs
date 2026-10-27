@@ -62,6 +62,9 @@ public class SiteConfig
     [Display(Name = "Maximum audio file size (MB)"), Range(1, 50)]
     public int MaxAudioUploadMb { get; set; } = 20;
 
+    [Display(Name = "Federate with other Wistlet instances (needs Wistlet:PublicUrl)")]
+    public bool FederationEnabled { get; set; }
+
     [Display(Name = "Allow direct messages")]
     public bool AllowDirectMessages { get; set; } = true;
 

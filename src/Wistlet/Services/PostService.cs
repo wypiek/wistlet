@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Wistlet.Data;
 using Wistlet.Models;
+using Wistlet.Services.Federation;
 
 namespace Wistlet.Services;
 
-public class PostService(AppDbContext db, SiteSettingsService settings, UploadService uploads, NotificationService notifications)
+public class PostService(AppDbContext db, SiteSettingsService settings, UploadService uploads, NotificationService notifications, FederationService federation)
 {
     /// <summary>
     /// Posts a viewer may see: hides moderator-hidden posts (unless staff), posts by
@@ -18,6 +19,8 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         var q = db.Posts.AsNoTracking()
             .Where(p => !(p.Author.IsBanned && (p.Author.BannedUntil == null || p.Author.BannedUntil > now)));
         if (!isStaff) q = q.Where(p => !p.IsHidden);
+        // Content from instances an admin blocked.
+        q = q.Where(p => p.Author.Domain == null || !db.RemoteInstances.Any(i => i.Domain == p.Author.Domain && i.IsBlocked));
         if (viewerId is int me)
         {
             q = q.Where(p =>
@@ -79,6 +82,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             IsHidden = p.IsHidden,
             HiddenByPostAuthor = p.HiddenByPostAuthor,
             IsPinned = p.IsPinned,
+            RemoteId = p.RemoteId,
             ParentId = p.ParentId,
             ParentAuthorUserName = p.Parent != null ? p.Parent.Author.UserName : null,
             Author = new UserSummary(p.Author.Id, p.Author.UserName, p.Author.DisplayName, p.Author.AvatarPath, p.Author.IsVerified, p.Author.Role, "", p.Author.AvatarShape),
@@ -130,6 +134,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             CreatedAt = p.CreatedAt,
             EditedAt = p.EditedAt,
             IsHidden = p.IsHidden,
+            RemoteId = p.RemoteId,
             Author = new UserSummary(p.Author.Id, p.Author.UserName, p.Author.DisplayName, p.Author.AvatarPath, p.Author.IsVerified, p.Author.Role, "", p.Author.AvatarShape),
         }).ToListAsync();
 
@@ -264,6 +269,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         }
 
         await db.SaveChangesAsync();
+        await federation.PostChangedAsync(post);
         return (post, null);
     }
 
@@ -298,14 +304,16 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         db.PostTags.RemoveRange(db.PostTags.Where(t => t.PostId == post.Id));
         for (var i = 0; i < tags.Count; i++) db.PostTags.Add(new PostTag { PostId = post.Id, Tag = tags[i], Position = i });
         await db.SaveChangesAsync();
+        await federation.PostChangedAsync(post);
         return null;
     }
 
     /// <summary>Deletes a post with all its comments and their uploaded files.</summary>
     public async Task DeleteAsync(Post post)
     {
+        await federation.PostDeletingAsync(post);
         var ids = await SubtreeIdsAsync(post.Id);
-        var files = await AttachmentsAsync(db.Posts.Where(p => ids.Contains(p.Id)));
+        var files = await AttachmentsAsync(db.Posts.Where(p => ids.Contains(p.Id) && p.RemoteId == null));
         db.Posts.Remove(post);
         await db.SaveChangesAsync();
         foreach (var file in files) uploads.Delete(file);
@@ -344,9 +352,16 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
             if (batch.Count == 0) return count;
             foreach (var post in batch)
             {
-                var r = PostRenderer.Render(post.Content);
-                post.RenderedHtml = r.Html;
-                post.RenderedPreviewHtml = r.PreviewHtml;
+                if (post.RemoteId is null)
+                {
+                    var r = PostRenderer.Render(post.Content);
+                    post.RenderedHtml = r.Html;
+                    post.RenderedPreviewHtml = r.PreviewHtml;
+                }
+                else
+                {
+                    (post.RenderedHtml, post.RenderedPreviewHtml) = FederationService.RenderRemote(post.Content, post.RemoteId);
+                }
                 post.RenderVersion = PostRenderer.Version;
             }
             await db.SaveChangesAsync();
@@ -360,6 +375,7 @@ public class PostService(AppDbContext db, SiteSettingsService settings, UploadSe
         var rows = await db.PostTags.AsNoTracking()
             .Where(t => t.Post.CreatedAt >= since && !t.Post.IsHidden && !t.Post.IsAdult && !t.Post.Author.IsAdultPage)
             .Where(t => !forGuest || !t.Post.Author.HiddenFromGuests)
+            .Where(t => t.Post.Author.Domain == null)
             .GroupBy(t => t.Tag)
             .Select(g => new { Tag = g.Key, Count = g.Count() })
             .OrderByDescending(t => t.Count).ThenBy(t => t.Tag)

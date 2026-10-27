@@ -12,6 +12,10 @@
     var tree = Model.ShareTree;
 }
 <article class="co-post-box" id="post-@Model.Id">
+    @if (Model.Reason is not null)
+    {
+        <div class="timeline-reason">@Model.Reason</div>
+    }
     <div class="co-thread-header">
         <partial name="_PostHeader" model="@(new PostHeaderModel(Model, Model.IsShare ? Model.SharedFrom : null))" />
         @if (meId is not null)
@@ -21,6 +25,10 @@
                     <summary class="co-action" aria-label="post options"><partial name="_Icon" model="@(new IconModel("more"))" /></summary>
                     <ul class="co-menu" role="menu">
                         <li role="menuitem"><a href="/post/@Model.Id">open post</a></li>
+                        @if (Model.RemoteId is not null)
+                        {
+                            <li role="menuitem"><a href="@Model.RemoteId" rel="noopener" target="_blank">open on @(new Uri(Model.RemoteId).Authority)</a></li>
+                        }
                         @if (Model.ParentId is null)
                         {
                             <li role="menuitem"><a href="/compose?share=@Model.Id">share with a comment…</a></li>

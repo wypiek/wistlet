@@ -7,6 +7,7 @@
     tabs.Add(new("Users", "/admin/users", current == "users"));
     tabs.Add(new("Posts", "/admin/posts", current == "posts"));
     tabs.Add(new(open > 0 ? $"Reports ({open})" : "Reports", "/admin/reports", current == "reports"));
+    if (User.IsAdmin()) tabs.Add(new("Federation", "/admin/federation", current == "federation"));
     if (User.IsAdmin()) tabs.Add(new("Audit log", "/admin/audit", current == "audit"));
 }
 <partial name="_Tabs" model="@(new TabsModel("Admin sections", tabs))" />

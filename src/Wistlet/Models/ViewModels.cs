@@ -53,6 +53,12 @@ public class PostView
     public bool LikedByMe { get; init; }
     public bool BookmarkedByMe { get; init; }
 
+    /// <summary>For posts from another Wistlet instance: the post's address there.</summary>
+    public string? RemoteId { get; init; }
+
+    /// <summary>In the "for you" timeline: why this post is there ("liked by @pete").</summary>
+    public string? Reason { get; set; }
+
     /// <summary>For shares: the shared post (itself possibly a share), when it is still visible.</summary>
     public PostView? SharedFrom { get; set; }
 
