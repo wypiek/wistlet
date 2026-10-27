@@ -26,7 +26,8 @@ public class EmailService(IConfiguration config, IHostEnvironment env, SiteSetti
 {
     private readonly SmtpOptions _options = config.GetSection("Wistlet:Smtp").Get<SmtpOptions>() ?? new SmtpOptions();
 
-    private bool HasServer => !string.IsNullOrWhiteSpace(_options.Host) && !string.IsNullOrWhiteSpace(_options.From);
+    /// <summary>An SMTP server is configured.</summary>
+    public bool HasServer => !string.IsNullOrWhiteSpace(_options.Host) && !string.IsNullOrWhiteSpace(_options.From);
 
     public bool IsAvailable => HasServer || env.IsDevelopment();
 

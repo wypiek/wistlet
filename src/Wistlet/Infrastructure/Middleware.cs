@@ -30,7 +30,7 @@ public static class MiddlewareExtensions
         }
 
         var path = ctx.Request.Path;
-        string[] allowed = ["/account/login", "/account/logout", "/maintenance", "/lib", "/css", "/js", "/img", "/avatar", "/favicon.ico", "/healthz"];
+        string[] allowed = ["/account/login", "/account/logout", "/maintenance", "/lib", "/css", "/js", "/img", "/uploads/site", "/avatar", "/favicon.ico", "/healthz"];
         if (allowed.Any(a => path.StartsWithSegments(a, StringComparison.OrdinalIgnoreCase)))
         {
             await next();

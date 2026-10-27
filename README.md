@@ -64,8 +64,11 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
   follows, blocks, direct messages and every file you uploaded
 
 **Admin panel** (`/admin`, for moderators and admins)
-- Dashboard: counts, sign-ups and posts per day, newest members, system information
-- Site settings (admins only): site name, tagline, about text, footer, announcement banner,
+- Dashboard: member, post and report counts; a "needs attention" list (open reports, failed federation
+  deliveries, maintenance mode, missing public URL or SMTP); sign-ups and posts over the last two weeks;
+  newest members, recent moderation and system information
+- Site settings (admins only), in sections with a short explanation for each: site icon and favicon
+  (uploaded images; the built-in Wistlet icon by default), site name, tagline, about text, footer, announcement banner,
   front page headline and introduction, open/closed registration, guest browsing, maintenance mode,
   maximum post length, posts per page, image and audio uploads and their size limits, banned words,
   direct messages on/off
