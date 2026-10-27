@@ -31,9 +31,15 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 
 **Social**
 - Follow / unfollow, home timeline, explore (latest, top this week, media), people directory
+- An optional "for you" timeline next to the chronological one: recent posts ranked by who you
+  follow, what you and the people you follow like, and the tags you like, with a line saying why
+  each post from someone you don't follow is there. Chronological stays the default; each person
+  picks their own (Settings → Display)
+- Light and dark themes, or following the device's setting (the default)
 - Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
   tagline, pronouns, a Markdown description, location and website; posts / comments / media / likes /
-  followers / following tabs
+  followers / following tabs. Like cohost, follower and following counts aren't shown
+- A verified badge (Wistlet's own seal) for accounts staff mark as verified
 - Notifications for likes, comments, shares, mentions, new followers and moderator messages, grouped
   by day the way cohost did it ("annie, pete and 3 others liked your post …")
 - Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
@@ -41,6 +47,14 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Page settings: mark your whole page 18+ (all its posts count as 18+ and visitors confirm their age
   before seeing it), or hide your page and posts from logged-out visitors
 - A cohost-style front page for logged-out visitors (headline and introduction are site settings)
+
+**Federation between Wistlet instances**
+- Follow, like and comment on accounts on other Wistlet sites (search for `@name@other.site`); their
+  posts arrive in your timeline, and edits, deletions and profile changes follow them
+- Wistlet's own signed protocol, only between Wistlet instances (not ActivityPub); see
+  [docs/federation.md](docs/federation.md)
+- Off by default. Admins turn it on in Site settings, see known instances and failed deliveries,
+  and can block an instance
 
 **Accounts**
 - Two-factor login with an authenticator app (TOTP, with a QR code) and ten single-use recovery codes;
@@ -127,7 +141,7 @@ docker run --rm -v wistlet_wistlet-data:/data -v "$PWD":/backup busybox tar czf 
 | `WISTLET_ADMIN_PASSWORD` | Password for that account (only used when it's created)        | —       |
 | `WISTLET_ADMIN_EMAIL`    | E-mail for that account                                        | —       |
 | `WISTLET_SEED_DEMO`      | Add a few demo users and posts to an empty site                | `false` |
-| `WISTLET_PUBLIC_URL`     | The site's public address, for links in e-mails (recommended) | request host |
+| `WISTLET_PUBLIC_URL`     | The site's public address, for links in e-mails and federation (its domain is this instance's name) | request host |
 | `WISTLET_SMTP_HOST`      | SMTP server for password reset e-mails                         | —       |
 | `WISTLET_SMTP_PORT`      | SMTP port                                                      | `587`   |
 | `WISTLET_SMTP_SECURITY`  | `Auto`, `StartTls`, `SslOnConnect` (port 465) or `None`        | `Auto`  |
@@ -163,7 +177,8 @@ dotnet ef migrations add <Name> --project src/Wistlet -o Data/Migrations
 
 Migrations are applied automatically when the app starts.
 
-The post renderer, two-factor codes, audio detection and notification grouping have unit tests:
+The post renderer, two-factor codes, audio detection, notification grouping, the timeline ranking and
+the federation protocol have unit tests:
 
 ```sh
 dotnet test
@@ -176,7 +191,8 @@ src/Wistlet/
   Data/            EF Core context, migrations, start-up initialisation
   Models/          Entities and view models
   Services/        Accounts, posts and the post renderer, notifications, messaging, uploads, site settings,
-                   two-factor login, e-mail, data export, audit log
+                   two-factor login, e-mail, data export, the "for you" timeline, audit log
+  Services/Federation/  The federation protocol, inbox, outgoing queue and delivery worker
   Infrastructure/  Auth cookie validation, middleware, tag helpers, formatting helpers
   Pages/           Razor Pages (Admin/, Account/, Messages/ and the social pages)
   wwwroot/         site.css, site.js, vendored cohost styles, Atkinson Hyperlegible and League Mono

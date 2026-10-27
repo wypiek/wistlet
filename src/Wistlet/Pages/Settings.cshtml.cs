@@ -11,15 +11,16 @@ using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
 using Wistlet.Services;
+using Wistlet.Services.Federation;
 
 namespace Wistlet.Pages;
 
 [Authorize]
 [EnableRateLimiting("write")]
 public class SettingsModel(AppDbContext db, AccountService accounts, UploadService uploads, TwoFactorService twoFactor,
-    DataExportService export, SiteSettingsService settings, AuditService audit, IMemoryCache cache) : PageModel
+    DataExportService export, SiteSettingsService settings, AuditService audit, IMemoryCache cache, FederationService federation) : PageModel
 {
-    private static readonly string[] Tabs = ["profile", "account", "security", "privacy", "data", "blocked"];
+    private static readonly string[] Tabs = ["profile", "account", "display", "security", "privacy", "data", "blocked"];
 
     public string Tab { get; private set; } = "profile";
     public User Me { get; private set; } = null!;
@@ -121,6 +122,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         me.Dek = (dek ?? "").Trim();
         me.AvatarShape = AvatarShapes.Resolve(avatarShape);
         await db.SaveChangesAsync();
+        await federation.ProfileChangedAsync(me);
         return Done("profile", "Profile saved.");
     }
 
@@ -174,7 +176,17 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         me.IsAdultPage = isAdultPage;
         me.HiddenFromGuests = hiddenFromGuests;
         await db.SaveChangesAsync();
+        await federation.ProfileChangedAsync(me);
         return Done("privacy", "Privacy settings saved.");
+    }
+
+    public async Task<IActionResult> OnPostDisplayAsync(string? theme, string? timelineMode)
+    {
+        var me = await LoadAsync();
+        me.Theme = Themes.Resolve(theme);
+        me.TimelineMode = TimelineModes.Resolve(timelineMode);
+        await db.SaveChangesAsync();
+        return Done("display", "Display settings saved.");
     }
 
     /// <summary>First step of two-factor setup: a new key to scan, not yet switched on.</summary>
@@ -269,6 +281,7 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         if (me.Role == UserRole.Admin && await db.Users.CountAsync(u => u.Role == UserRole.Admin) == 1)
             return Fail("account", "You're the only administrator. Promote someone else before deleting your account.");
 
+        await federation.AccountDeletingAsync(me);
         var images = await PostService.AttachmentsAsync(db.Posts.Where(p => p.AuthorId == me.Id));
         images.Add(me.AvatarPath);
         images.Add(me.BannerPath);

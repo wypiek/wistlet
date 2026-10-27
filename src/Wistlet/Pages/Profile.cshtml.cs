@@ -5,16 +5,15 @@ using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
 using Wistlet.Services;
+using Wistlet.Services.Federation;
 
 namespace Wistlet.Pages;
 
-public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsService settings) : PageModel
+public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsService settings, FederationContext federationContext) : PageModel
 {
     public User Profile { get; private set; } = null!;
     public string Tab { get; private set; } = "posts";
     public int PostCount { get; private set; }
-    public int FollowerCount { get; private set; }
-    public int FollowingCount { get; private set; }
     public bool IsMe { get; private set; }
     public bool IFollow { get; private set; }
     public bool FollowsMe { get; private set; }
@@ -24,6 +23,9 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
     public List<PostView> Posts { get; private set; } = [];
     public List<UserCardModel> People { get; private set; } = [];
     public string? MoreUrl { get; private set; }
+
+    /// <summary>For accounts on another instance: that instance's address.</summary>
+    public string? RemoteOrigin { get; private set; }
 
     /// <summary>The page is hidden from logged-out visitors and this is one.</summary>
     public bool NeedsLogin { get; private set; }
@@ -44,6 +46,7 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         if (user.UserName != userName) return RedirectPermanent($"/u/{user.UserName}{(tab is null ? "" : "/" + tab)}");
 
         Profile = user;
+        if (user.Domain is not null) RemoteOrigin = federationContext.OriginOf(user.Domain);
         Tab = Tabs.Contains(tab) ? tab! : "posts";
         var me = User.GetUserId();
         var staff = User.IsStaff();
@@ -72,8 +75,6 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
         }
 
         PostCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && !p.IsHidden);
-        FollowerCount = await db.Follows.CountAsync(f => f.FolloweeId == user.Id);
-        FollowingCount = await db.Follows.CountAsync(f => f.FollowerId == user.Id);
 
         if (me is int id && !IsMe)
         {
@@ -81,7 +82,7 @@ public class ProfileModel(AppDbContext db, PostService posts, SiteSettingsServic
             FollowsMe = await db.Follows.AnyAsync(f => f.FollowerId == user.Id && f.FolloweeId == id);
             IBlocked = await db.Blocks.AnyAsync(b => b.BlockerId == id && b.BlockedId == user.Id);
             BlockedMe = await db.Blocks.AnyAsync(b => b.BlockerId == user.Id && b.BlockedId == id);
-            CanMessage = settings.Current.AllowDirectMessages && !IBlocked && !BlockedMe && user.MessagePrivacy switch
+            CanMessage = settings.Current.AllowDirectMessages && !user.IsRemote && !IBlocked && !BlockedMe && user.MessagePrivacy switch
             {
                 MessagePrivacy.Everyone => true,
                 MessagePrivacy.PeopleIFollow => FollowsMe,

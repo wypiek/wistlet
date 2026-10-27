@@ -61,19 +61,18 @@
                 <img class="i-avatar co-avatar" data-shape="@AvatarShapes.Resolve(p.AvatarShape)" src="@summary.AvatarUrl" alt="@p.UserName" />
             </div>
             <div class="i-details">
-                <h1 class="i-display-name"><a href="@basePath">@p.DisplayName</a></h1>
+                <h1 class="i-display-name"><a href="@basePath">@p.DisplayName</a>@if (p.IsVerified) { <partial name="_VerifiedBadge" /> }</h1>
                 <div class="i-handle"><a href="@basePath">@@@p.UserName</a></div>
                 @if (!string.IsNullOrWhiteSpace(p.Dek))
                 {
                     <div class="i-dek">@p.Dek</div>
                 }
                 <div class="i-badges">
-                    @if (p.IsVerified) { <text>✔ verified · </text> }
                     @if (p.IsAdultPage) { <text>18+ · </text> }
                     @if (p.Role == UserRole.Admin) { <text>admin · </text> } else if (p.Role == UserRole.Moderator) { <text>moderator · </text> }
                     @if (Model.FollowsMe) { <text>follows you · </text> }
                     @if (p.IsCurrentlyBanned) { <b>banned · </b> }
-                    joined @Fmt.Date(p.CreatedAt)
+                    @if (p.IsRemote) { <text>on @p.Domain</text> } else { <text>joined @Fmt.Date(p.CreatedAt)</text> }
                 </div>
             </div>
         </div>
@@ -100,14 +99,17 @@
                 </li>
             }
         </ul>
+        @if (p.IsRemote)
+        {
+            <p class="i-remote-note">This page lives on <a href="@($"{(Model.RemoteOrigin)}/u/{FederationService.LocalPart(p)}")" rel="noopener" target="_blank">@p.Domain</a>. Posts from there show up here once someone on @Settings.Current.SiteName follows it.</p>
+        }
         @if (!string.IsNullOrWhiteSpace(p.Bio))
         {
             <div class="i-description prose prose-invert prose-stone isolate co-contain-paint">@Html.Raw(PostRenderer.RenderFragment(p.Bio))</div>
         }
         <div class="i-stats">
-            <span><b>@Model.PostCount</b> posts</span>
-            <a href="@basePath/following"><b>@Model.FollowingCount</b> following</a>
-            <a href="@basePath/followers"><b>@Model.FollowerCount</b> followers</a>
+            @* Like cohost, follower and following counts aren't shown. *@
+            <span><b>@Model.PostCount</b> @(Model.PostCount == 1 ? "post" : "posts")</span>
         </div>
         <div class="i-actions">
             @if (Model.IsMe)

@@ -73,6 +73,12 @@
             </fieldset>
 
             <fieldset>
+                <legend>Federation</legend>
+                <div><input asp-for="Config.FederationEnabled" /><label asp-for="Config.FederationEnabled"></label></div>
+                <p class="muted">Lets people here follow, like and comment on accounts on other Wistlet sites, and the other way round. Instances and the delivery queue are under <a href="/admin/federation">Federation</a>.</p>
+            </fieldset>
+
+            <fieldset>
                 <legend>Messaging</legend>
                 <div ><input asp-for="Config.AllowDirectMessages" /><label asp-for="Config.AllowDirectMessages"></label></div>
             </fieldset>

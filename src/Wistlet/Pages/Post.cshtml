@@ -8,6 +8,10 @@
 <partial name="_PostList" model="@(new PostListModel([Model.Post]))" view-data="ViewData" />
 
 <div class="co-comments" id="comments">
+    @if (Model.Post.RemoteId is not null)
+    {
+        <div class="co-info-box is-draft i-info-circle-icon"><div class="i-text">This post is from <a href="@Model.Post.RemoteId" rel="noopener" target="_blank">@(new Uri(Model.Post.RemoteId).Authority)</a>. Comments you write here are sent there too; comments from other sites are on the original.</div></div>
+    }
     <h4 class="i-header">@Fmt.Plural(Model.CommentCount, "comment") on <a class="i-post-ref" href="#post-@Model.Post.Id">@@@Model.Post.Author.UserName's post</a></h4>
     @foreach (var c in Model.TopLevelComments)
     {

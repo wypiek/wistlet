@@ -4,10 +4,11 @@ using Wistlet.Data;
 using Wistlet.Infrastructure;
 using Wistlet.Models;
 using Wistlet.Services;
+using Wistlet.Services.Federation;
 
 namespace Wistlet.Pages;
 
-public class SearchModel(AppDbContext db, PostService posts) : PageModel
+public class SearchModel(AppDbContext db, PostService posts, FederationService federation) : PageModel
 {
     public string Query { get; private set; } = "";
     public List<UserSummary> Users { get; private set; } = [];
@@ -24,14 +25,22 @@ public class SearchModel(AppDbContext db, PostService posts) : PageModel
         var term = Query.TrimStart('@', '#').ToLowerInvariant();
         var now = DateTime.UtcNow;
 
-        Users = await db.Users.AsNoTracking()
+        // "@name@other.example" looks the account up on that Wistlet instance.
+        if (Query.Count(c => c == '@') >= 1 && Query.TrimStart('@').Contains('@') && User.Identity?.IsAuthenticated == true &&
+            await federation.ResolveHandleAsync(Query) is { } found && !found.IsCurrentlyBanned)
+        {
+            Users.Add(new UserSummary(found.Id, found.UserName, found.DisplayName, found.AvatarPath, found.IsVerified, found.Role, found.Bio, found.AvatarShape));
+        }
+
+        Users.AddRange(await db.Users.AsNoTracking()
             .Where(u => !(u.IsBanned && (u.BannedUntil == null || u.BannedUntil > now)))
             .Where(u => u.NormalizedUserName.Contains(term) || u.DisplayName.ToLower().Contains(term))
             .Where(u => me != null || !u.HiddenFromGuests)
             .OrderBy(u => u.NormalizedUserName == term ? 0 : 1).ThenBy(u => u.UserName)
             .Take(8)
             .Select(u => new UserSummary(u.Id, u.UserName, u.DisplayName, u.AvatarPath, u.IsVerified, u.Role, u.Bio, u.AvatarShape))
-            .ToListAsync();
+            .ToListAsync());
+        Users = Users.DistinctBy(u => u.Id).ToList();
 
         Tags = (await db.PostTags.AsNoTracking()
             .Where(t => t.Tag.StartsWith(term))

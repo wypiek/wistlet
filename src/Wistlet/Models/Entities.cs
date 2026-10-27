@@ -20,12 +20,20 @@ public class User
 {
     public int Id { get; set; }
 
-    [MaxLength(32)]
+    /// <summary>The handle: "annie" for local accounts, "annie@other.example" for accounts on other Wistlet instances.</summary>
+    [MaxLength(300)]
     public string UserName { get; set; } = "";
 
     /// <summary>Lower-cased user name, used for unique lookups.</summary>
-    [MaxLength(32)]
+    [MaxLength(300)]
     public string NormalizedUserName { get; set; } = "";
+
+    /// <summary>For accounts on another Wistlet instance: that instance's domain (null for local accounts).</summary>
+    [MaxLength(255)]
+    public string? Domain { get; set; }
+
+    /// <summary>When a remote account's profile was last fetched from its instance.</summary>
+    public DateTime? RemoteFetchedAt { get; set; }
 
     [MaxLength(50)]
     public string DisplayName { get; set; } = "";
@@ -85,6 +93,14 @@ public class User
     [MaxLength(1000)]
     public string? RecoveryCodes { get; set; }
 
+    /// <summary>Colour theme: "auto" (follow the device), "light" or "dark".</summary>
+    [MaxLength(10)]
+    public string Theme { get; set; } = Themes.Auto;
+
+    /// <summary>What the home page shows by default: "latest" (chronological) or "foryou" (ranked).</summary>
+    [MaxLength(10)]
+    public string TimelineMode { get; set; } = TimelineModes.Latest;
+
     /// <summary>Wide header image shown at the top of the profile.</summary>
     [MaxLength(200)]
     public string? BannerPath { get; set; }
@@ -105,6 +121,8 @@ public class User
 
     public bool IsStaff => Role >= UserRole.Moderator;
 
+    public bool IsRemote => Domain is not null;
+
     /// <summary>True if the ban is currently in effect (temporary bans expire on their own).</summary>
     public bool IsCurrentlyBanned => IsBanned && (BannedUntil is null || BannedUntil > DateTime.UtcNow);
 }
@@ -114,6 +132,10 @@ public class Post
     public int Id { get; set; }
     public int AuthorId { get; set; }
     public User Author { get; set; } = null!;
+
+    /// <summary>For posts and comments from another Wistlet instance: their address there (null for local posts).</summary>
+    [MaxLength(300)]
+    public string? RemoteId { get; set; }
 
     /// <summary>Optional title shown above the body.</summary>
     [MaxLength(140)]
@@ -326,6 +348,49 @@ public class AuditLog
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>Another Wistlet instance this one has talked to.</summary>
+public class RemoteInstance
+{
+    [Key]
+    [MaxLength(255)]
+    public string Domain { get; set; } = "";
+
+    [MaxLength(100)]
+    public string? Name { get; set; }
+
+    /// <summary>The instance's signing key (SubjectPublicKeyInfo, base64), pinned on first contact.</summary>
+    [MaxLength(500)]
+    public string? PublicKey { get; set; }
+
+    /// <summary>Blocked by an admin: nothing is accepted from or sent to it, and its content is hidden.</summary>
+    public bool IsBlocked { get; set; }
+
+    public DateTime FirstSeenAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastSeenAt { get; set; }
+}
+
+/// <summary>An activity waiting to be delivered to another instance's inbox.</summary>
+public class FederationDelivery
+{
+    public int Id { get; set; }
+
+    [MaxLength(255)]
+    public string Domain { get; set; } = "";
+
+    /// <summary>The activity as JSON.</summary>
+    public string Body { get; set; } = "";
+
+    public int Attempts { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime NextAttemptAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Set when delivery was given up (after too many attempts or a refusal).</summary>
+    public DateTime? FailedAt { get; set; }
+
+    [MaxLength(500)]
+    public string? LastError { get; set; }
+}
+
 public class PasswordResetToken
 {
     public int Id { get; set; }
@@ -355,4 +420,21 @@ public static class AvatarShapes
     public static readonly IReadOnlyList<string> All = ["squircle", "circle", "roundrect", "egg", "capsule-big", "capsule-small"];
 
     public static string Resolve(string? shape) => shape is not null && All.Contains(shape) ? shape : "squircle";
+}
+
+public static class Themes
+{
+    public const string Auto = "auto";
+    public const string Light = "light";
+    public const string Dark = "dark";
+
+    public static string Resolve(string? theme) => theme is Light or Dark ? theme : Auto;
+}
+
+public static class TimelineModes
+{
+    public const string Latest = "latest";
+    public const string ForYou = "foryou";
+
+    public static string Resolve(string? mode) => mode == ForYou ? ForYou : Latest;
 }

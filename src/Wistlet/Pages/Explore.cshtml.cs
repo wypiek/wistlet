@@ -15,7 +15,8 @@ public class ExploreModel(PostService posts) : PageModel
     public async Task OnGetAsync(string? tab, int? before)
     {
         var me = User.GetUserId();
-        var visible = await posts.FeedAsync(me, User.IsStaff());
+        // Explore is this site's own community; posts from other instances show up in timelines, tags and search.
+        var visible = (await posts.FeedAsync(me, User.IsStaff())).Where(p => p.Author.Domain == null);
         Tab = tab is "top" or "media" ? tab : "latest";
 
         if (before is null && Tab == "latest")

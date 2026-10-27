@@ -18,6 +18,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<RemoteInstance> RemoteInstances => Set<RemoteInstance>();
+    public DbSet<FederationDelivery> FederationDeliveries => Set<FederationDelivery>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -27,6 +29,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(u => u.Email);
             e.Ignore(u => u.IsStaff);
             e.Ignore(u => u.IsCurrentlyBanned);
+            e.Ignore(u => u.IsRemote);
+            e.HasIndex(u => u.Domain);
         });
 
         b.Entity<Post>(e =>
@@ -39,6 +43,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(p => new { p.AuthorId, p.CreatedAt });
             e.HasIndex(p => p.ParentId);
             e.HasIndex(p => p.RootId);
+            e.HasIndex(p => p.RemoteId).IsUnique();
         });
 
         b.Entity<PostTag>(e =>
@@ -102,6 +107,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(r => r.TargetUser).WithMany().HasForeignKey(r => r.TargetUserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(r => r.ResolvedBy).WithMany().HasForeignKey(r => r.ResolvedById).OnDelete(DeleteBehavior.SetNull);
         });
+
+        b.Entity<FederationDelivery>(e => e.HasIndex(d => new { d.FailedAt, d.NextAttemptAt }));
 
         b.Entity<PasswordResetToken>(e =>
         {

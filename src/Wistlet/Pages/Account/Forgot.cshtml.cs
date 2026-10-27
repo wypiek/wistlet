@@ -31,7 +31,7 @@ public class ForgotModel(AccountService accounts, EmailService email, SiteSettin
         if (login.Contains('@'))
         {
             var lower = login.ToLowerInvariant();
-            users = await db.Users.Where(u => u.Email.ToLower() == lower).Take(5).ToListAsync();
+            users = await db.Users.Where(u => u.Email.ToLower() == lower && u.Domain == null).Take(5).ToListAsync();
         }
         else
         {

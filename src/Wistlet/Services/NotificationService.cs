@@ -12,6 +12,8 @@ public partial class NotificationService(AppDbContext db)
     public async Task NotifyAsync(int recipientId, int? actorId, NotificationType type, int? postId = null, string? message = null)
     {
         if (actorId == recipientId) return;
+        // Accounts on other instances get their notifications there.
+        if (await db.Users.AnyAsync(u => u.Id == recipientId && u.Domain != null)) return;
         if (actorId is int a && await db.Blocks.AnyAsync(b => b.BlockerId == recipientId && b.BlockedId == a)) return;
 
         // Collapse repeated like/follow notifications (e.g. like → unlike → like).

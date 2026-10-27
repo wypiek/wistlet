@@ -74,7 +74,7 @@ public partial class AccountService(AppDbContext db, IPasswordHasher<User> hashe
     public Task<User?> FindByUserNameAsync(string userName)
     {
         var normalized = Normalize(userName);
-        return db.Users.FirstOrDefaultAsync(u => u.NormalizedUserName == normalized);
+        return db.Users.FirstOrDefaultAsync(u => u.NormalizedUserName == normalized && u.Domain == null);
     }
 
     /// <summary>Accepts either a user name or an e-mail address.</summary>
@@ -84,13 +84,15 @@ public partial class AccountService(AppDbContext db, IPasswordHasher<User> hashe
         if (login.Contains('@'))
         {
             var lower = login.ToLowerInvariant();
-            return await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == lower);
+            return await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == lower && u.Domain == null);
         }
         return await FindByUserNameAsync(login);
     }
 
     public bool VerifyPassword(User user, string password)
     {
+        // Accounts from other instances have no password here and can't log in.
+        if (user.IsRemote || string.IsNullOrEmpty(user.PasswordHash)) return false;
         var result = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
             user.PasswordHash = hasher.HashPassword(user, password);

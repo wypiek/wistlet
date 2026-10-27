@@ -8,6 +8,7 @@
     [
         new("Profile", "/settings", Model.Tab == "profile"),
         new("Account", "/settings", Model.Tab == "account", "tab", "account"),
+        new("Display", "/settings", Model.Tab == "display", "tab", "display"),
         new("Security", "/settings", Model.Tab == "security", "tab", "security"),
         new("Privacy", "/settings", Model.Tab == "privacy", "tab", "privacy"),
         new("Your data", "/settings", Model.Tab == "data", "tab", "data"),
@@ -114,6 +115,34 @@
                         <div><button type="submit">Delete my account</button></div>
                     </form>
                 </fieldset>
+                break;
+
+            case "display":
+                <form method="post" asp-page-handler="Display" class="stack">
+                    <fieldset>
+                        <legend>Theme</legend>
+                        @foreach (var (value, label) in new[] { (Themes.Auto, "Match my device"), (Themes.Light, "Light"), (Themes.Dark, "Dark") })
+                        {
+                            <div class="field-row">
+                                <input type="radio" id="theme-@value" name="theme" value="@value" checked="@(Themes.Resolve(me.Theme) == value)" />
+                                <label for="theme-@value">@label</label>
+                            </div>
+                        }
+                    </fieldset>
+                    <fieldset>
+                        <legend>Home timeline</legend>
+                        <div class="field-row">
+                            <input type="radio" id="tl-latest" name="timelineMode" value="@TimelineModes.Latest" checked="@(TimelineModes.Resolve(me.TimelineMode) == TimelineModes.Latest)" />
+                            <label for="tl-latest">Latest first: posts from people you follow, newest at the top</label>
+                        </div>
+                        <div class="field-row">
+                            <input type="radio" id="tl-foryou" name="timelineMode" value="@TimelineModes.ForYou" checked="@(TimelineModes.Resolve(me.TimelineMode) == TimelineModes.ForYou)" />
+                            <label for="tl-foryou">For you: recent posts ranked by what you and the people you follow like</label>
+                        </div>
+                        <p class="muted">This is only the default. Both views are a tab away on the home page.</p>
+                    </fieldset>
+                    <div><button type="submit" class="default">Save</button></div>
+                </form>
                 break;
 
             case "security":
