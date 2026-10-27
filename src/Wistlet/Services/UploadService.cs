@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Wistlet.Services;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace Wistlet.Services;
 /// identified by their magic bytes (never by the client-supplied name or type)
 /// and saved under random names.
 /// </summary>
-public class UploadService(IConfiguration config, SiteSettingsService settings, ILogger<UploadService> logger)
+public partial class UploadService(IConfiguration config, SiteSettingsService settings, ILogger<UploadService> logger)
 {
     public string Root { get; } = Path.GetFullPath(Path.Combine(config["Wistlet:DataPath"] ?? "data", "uploads"));
 
@@ -33,12 +35,23 @@ public class UploadService(IConfiguration config, SiteSettingsService settings, 
         [".m4a"] = "audio/mp4",
     };
 
-    public async Task<(string? Url, string? Error)> SaveImageAsync(IFormFile? file, string folder, int? maxMbOverride = null)
+    /// <param name="keepStill">
+    /// For animated GIFs and WebPs, also store the first frame, so they can be shown paused. The
+    /// animation is saved as "{id}.anim.gif" and the still as "{id}.still.gif" (see <see cref="StillFor"/>).
+    /// </param>
+    public async Task<(string? Url, string? Error)> SaveImageAsync(IFormFile? file, string folder, int? maxMbOverride = null, bool keepStill = false)
     {
         var maxMb = maxMbOverride ?? settings.Current.MaxUploadMb;
         return await SaveAsync(file, folder, maxMb, DetectImageExtension,
-            $"Images must be smaller than {maxMb} MB.", "Only PNG, JPEG, GIF and WebP images are supported.");
+            $"Images must be smaller than {maxMb} MB.", "Only PNG, JPEG, GIF and WebP images are supported.", keepStill);
     }
+
+    [GeneratedRegex(@"^/uploads/[a-z]+/[0-9a-f]{32}\.anim\.(gif|webp)$")]
+    private static partial Regex AnimatedUploadRegex();
+
+    /// <summary>The still first frame stored next to an animated upload, or null for anything else.</summary>
+    public static string? StillFor(string? url) =>
+        url is not null && AnimatedUploadRegex().IsMatch(url) ? url.Replace(".anim.", ".still.") : null;
 
     public async Task<(string? Url, string? Error)> SaveAudioAsync(IFormFile? file, string folder)
     {
@@ -48,7 +61,7 @@ public class UploadService(IConfiguration config, SiteSettingsService settings, 
     }
 
     private async Task<(string? Url, string? Error)> SaveAsync(IFormFile? file, string folder, int maxMb,
-        Func<byte[], string?> detect, string tooLarge, string wrongType)
+        Func<byte[], string?> detect, string tooLarge, string wrongType, bool keepStill = false)
     {
         if (file is null || file.Length == 0) return (null, null);
         if (file.Length > (long)maxMb * 1024 * 1024) return (null, tooLarge);
@@ -65,7 +78,27 @@ public class UploadService(IConfiguration config, SiteSettingsService settings, 
 
         var dir = Path.Combine(Root, folder);
         Directory.CreateDirectory(dir);
-        var name = $"{Guid.NewGuid():N}{ext}";
+        var id = Guid.NewGuid().ToString("N");
+
+        if (keepStill && ext is ".gif" or ".webp")
+        {
+            byte[] data;
+            await using (var source = file.OpenReadStream())
+            using (var buffer = new MemoryStream((int)file.Length))
+            {
+                await source.CopyToAsync(buffer);
+                data = buffer.ToArray();
+            }
+            if (AnimatedImage.FirstFrame(data) is { } still)
+            {
+                var animated = $"{id}.anim{ext}";
+                await File.WriteAllBytesAsync(Path.Combine(dir, animated), data);
+                await File.WriteAllBytesAsync(Path.Combine(dir, $"{id}.still{ext}"), still);
+                return ($"{UrlPrefix}/{folder}/{animated}", null);
+            }
+        }
+
+        var name = $"{id}{ext}";
         var path = Path.Combine(dir, name);
         await using (var target = File.Create(path))
         await using (var source = file.OpenReadStream())
@@ -117,6 +150,7 @@ public class UploadService(IConfiguration config, SiteSettingsService settings, 
 
     public void Delete(string? url)
     {
+        if (StillFor(url) is { } still) Delete(still);
         if (PathFor(url) is not { } full) return;
         try
         {

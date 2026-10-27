@@ -39,6 +39,25 @@
         document.querySelectorAll("details.co-dropdown[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
     });
 
+    // Animated profile pictures and banners: paused (showing their first frame) when the device
+    // asks for reduced motion or the person chose to pause them, playing while pointed at.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        document.querySelectorAll("img[data-still]").forEach((img) => {
+            img.dataset.animated = img.getAttribute("src");
+            img.src = img.dataset.still;
+        });
+    }
+    document.querySelectorAll("img[data-animated]").forEach((img) => {
+        const still = img.getAttribute("src");
+        const target = img.closest("a, .project-sidebar, .co-post-preview") || img;
+        const play = () => { img.src = img.dataset.animated; };
+        const pause = () => { img.src = still; };
+        target.addEventListener("mouseenter", play);
+        target.addEventListener("mouseleave", pause);
+        target.addEventListener("focusin", play);
+        target.addEventListener("focusout", pause);
+    });
+
     // Keep conversations scrolled to the newest message.
     const chat = document.querySelector(".chat");
     if (chat) chat.scrollTop = chat.scrollHeight;

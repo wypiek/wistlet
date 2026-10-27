@@ -97,6 +97,9 @@ public class User
     [MaxLength(10)]
     public string Theme { get; set; } = Themes.Auto;
 
+    /// <summary>Show animated profile pictures and banners paused (they play on hover).</summary>
+    public bool PauseAnimatedImages { get; set; }
+
     /// <summary>What the home page shows by default: "latest" (chronological) or "foryou" (ranked).</summary>
     [MaxLength(10)]
     public string TimelineMode { get; set; } = TimelineModes.Latest;

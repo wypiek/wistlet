@@ -64,6 +64,12 @@ public class SiteConfig
     [Display(Name = "Maximum upload size (MB)"), Range(1, 50)]
     public int MaxUploadMb { get; set; } = 5;
 
+    [Display(Name = "Maximum profile picture size (MB)"), Range(1, 50)]
+    public int MaxAvatarMb { get; set; } = 8;
+
+    [Display(Name = "Maximum banner size (MB)"), Range(1, 50)]
+    public int MaxBannerMb { get; set; } = 15;
+
     [Display(Name = "Allow audio attachments in posts")]
     public bool AllowAudioUploads { get; set; } = true;
 
