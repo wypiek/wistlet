@@ -146,7 +146,7 @@ docker run --rm -v wistlet_wistlet-data:/data -v "$PWD":/backup busybox tar czf 
 |--------------------------|----------------------------------------------------------------|---------|
 | `WISTLET_PORT`           | Host port on 127.0.0.1 that Caddy proxies to                   | `6969`  |
 | `WISTLET_ADMIN_USER`     | Create (or promote) this admin account on start-up            | —       |
-| `WISTLET_ADMIN_PASSWORD` | Password for that account (only used when it's created)        | —       |
+| `WISTLET_ADMIN_PASSWORD` | Password for that account. Only used when the account is created; an existing account's password is never changed, so it's safe to keep set | —       |
 | `WISTLET_ADMIN_EMAIL`    | E-mail for that account                                        | —       |
 | `WISTLET_SEED_DEMO`      | Add a few demo users and posts to an empty site                | `false` |
 | `WISTLET_PUBLIC_URL`     | The site's public address, for links in e-mails and federation (its domain is this instance's name) | request host |
@@ -161,6 +161,12 @@ Without an SMTP server, "forgot your password?" tells people to contact staff in
 can still reset passwords from the admin panel. In development, e-mails are written to the log.
 
 Everything else is changed from the admin panel at runtime.
+
+The settings are checked when the site starts. Each one gets a line in the log
+(`docker compose logs wistlet | grep WISTLET_`) and on the admin dashboard under
+**Server configuration**, saying whether it is set, what was understood, and what to change if a
+value can't be used (for example `WISTLET_PUBLIC_URL=http://…` instead of `https://…`). After editing
+`.env`, run `docker compose up -d` for the container to pick up the new values.
 
 If you change the port, change it in the `Caddyfile` as well.
 

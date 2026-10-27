@@ -1,5 +1,6 @@
 @page
 @model Wistlet.Pages.Admin.FederationModel
+@inject ServerConfig Server
 @{
     ViewData["Title"] = "Federation";
     ViewData["AdminTab"] = "federation";
@@ -12,7 +13,11 @@
             <legend>This instance</legend>
             <table>
                 <tbody>
-                    <tr><td>Status</td><td>@(fed.IsEnabled ? "Federating" : fed.IsConfigured ? "Off (turn it on in Site settings)" : "Not configured: set Wistlet:PublicUrl (WISTLET_PUBLIC_URL)")</td></tr>
+                    <tr><td>Status</td><td>@(fed.IsEnabled ? "Federating" : fed.IsConfigured ? "Off (turn it on in Site settings)" : "Unavailable: WISTLET_PUBLIC_URL isn't usable")</td></tr>
+                    @if (!fed.IsConfigured)
+                    {
+                        <tr><td>WISTLET_PUBLIC_URL</td><td>@Server.Checks.First(c => c.Variable == "WISTLET_PUBLIC_URL").Message</td></tr>
+                    }
                     <tr><td>Domain</td><td>@(fed.Domain ?? "—")</td></tr>
                     <tr><td>Key fingerprint</td><td><code>@fed.KeyFingerprint</code></td></tr>
                     <tr><td>Deliveries waiting</td><td>@Model.Pending</td></tr>

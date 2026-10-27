@@ -751,3 +751,28 @@ a.admin-stat:hover { border-color: rgb(var(--text-accent)); }
 
 .chat-status { min-height: 1.25rem; font-size: 0.8125rem; color: rgb(var(--gray2)); text-align: right; }
 .chat-status.is-error { color: rgb(var(--text-accent)); font-weight: 700; text-align: left; }
+
+/* ---------- server configuration (admin dashboard) ---------- */
+
+.admin-config { display: flex; flex-direction: column; margin-top: 0.5rem; }
+.admin-config > li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 14rem) 5rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgb(var(--line));
+    font-size: 0.9375rem;
+}
+.admin-config > li:first-child { border-top: 0; }
+.admin-config .i-dot { width: 0.6rem; height: 0.6rem; border-radius: 9999px; background: rgb(var(--gray1)); align-self: center; }
+.admin-config .is-ok .i-dot { background: rgb(64 160 96); }
+.admin-config .is-problem .i-dot { background: rgb(var(--color-strawberry)); }
+.admin-config .i-name { overflow-wrap: anywhere; }
+.admin-config .i-state { font-size: 0.8125rem; color: rgb(var(--gray2)); }
+.admin-config .is-problem .i-state { color: rgb(var(--text-accent)); font-weight: 700; }
+.admin-config .i-text { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+    .admin-config > li { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .admin-config .i-text { grid-column: 2 / -1; }
+}

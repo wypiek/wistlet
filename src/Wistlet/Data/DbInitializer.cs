@@ -4,7 +4,7 @@ using Wistlet.Services;
 
 namespace Wistlet.Data;
 
-public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, IConfiguration config, ILogger<DbInitializer> logger)
+public class DbInitializer(AppDbContext db, AccountService accounts, PostService posts, IConfiguration config, ServerConfig server, ILogger<DbInitializer> logger)
 {
     public async Task InitializeAsync()
     {
@@ -16,30 +16,51 @@ public class DbInitializer(AppDbContext db, AccountService accounts, PostService
             await SeedDemoAsync();
     }
 
-    /// <summary>Creates (or promotes) the admin account named in configuration, if any.</summary>
+    /// <summary>
+    /// Creates the admin account named in configuration if it doesn't exist yet, or makes an
+    /// existing account of that name an admin. An existing account's password, e-mail and
+    /// everything else are never changed, so leaving these settings in place is safe.
+    /// </summary>
     private async Task EnsureAdminAsync()
     {
-        var userName = config["Wistlet:AdminUser"];
+        var userName = config["Wistlet:AdminUser"]?.Trim();
         var password = config["Wistlet:AdminPassword"];
-        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password)) return;
+        if (string.IsNullOrEmpty(userName)) return;
+
+        void Report(ServerConfig.Level level, string message) =>
+            server.AdminCheck = new("WISTLET_ADMIN_USER", level, userName, message);
 
         var existing = await accounts.FindByUserNameAsync(userName);
         if (existing is null)
         {
+            if (string.IsNullOrEmpty(password))
+            {
+                Report(ServerConfig.Level.Problem, $"There's no account called {userName}, and WISTLET_ADMIN_PASSWORD is empty, so none was created.");
+                return;
+            }
             if (AccountService.ValidatePassword(password) is { } pwError)
             {
-                logger.LogWarning("Not creating admin {User}: {Error}", userName, pwError);
+                Report(ServerConfig.Level.Problem, $"The account wasn't created: {pwError} (WISTLET_ADMIN_PASSWORD)");
+                return;
+            }
+            if (await accounts.ValidateNewUserNameAsync(userName, allowReserved: true) is { } nameError)
+            {
+                Report(ServerConfig.Level.Problem, $"The account wasn't created: {nameError}");
                 return;
             }
             await accounts.CreateUserAsync(userName, config["Wistlet:AdminEmail"] ?? "", password, role: UserRole.Admin);
-            logger.LogInformation("Created admin account {User}", userName);
+            Report(ServerConfig.Level.Ok, "Created this admin account with the password from WISTLET_ADMIN_PASSWORD. From now on it's only used if the account is deleted.");
         }
         else if (existing.Role != UserRole.Admin)
         {
             existing.Role = UserRole.Admin;
             AccountService.RotateSecurityStamp(existing);
             await db.SaveChangesAsync();
-            logger.LogInformation("Promoted {User} to admin", userName);
+            Report(ServerConfig.Level.Ok, "This existing account was made an admin. Its password wasn't changed.");
+        }
+        else
+        {
+            Report(ServerConfig.Level.Ok, "This account exists and is an admin. Its password is never changed from .env, so keeping these settings is safe.");
         }
     }
 

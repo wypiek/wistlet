@@ -15,18 +15,15 @@ public sealed class FederationContext : IDisposable
     private readonly ECDsa _key;
     private readonly HttpClient _http;
 
-    public FederationContext(IConfiguration config, SiteSettingsService settings, ILogger<FederationContext> logger)
+    public FederationContext(IConfiguration config, ServerConfig server, SiteSettingsService settings, ILogger<FederationContext> logger)
     {
         _settings = settings;
-        AllowHttp = config.GetValue("Wistlet:Federation:AllowHttp", false);
+        AllowHttp = server.AllowHttp;
         AllowPrivateAddresses = config.GetValue("Wistlet:Federation:AllowPrivateAddresses", false);
 
-        if (Uri.TryCreate(config["Wistlet:PublicUrl"], UriKind.Absolute, out var publicUrl) &&
-            (publicUrl.Scheme == Uri.UriSchemeHttps || (AllowHttp && publicUrl.Scheme == Uri.UriSchemeHttp)))
-        {
-            Origin = publicUrl.GetLeftPart(UriPartial.Authority);
-            Domain = publicUrl.Authority.ToLowerInvariant();
-        }
+        // Checked and explained by ServerConfig (WISTLET_PUBLIC_URL).
+        Origin = server.PublicOrigin;
+        Domain = server.PublicDomain;
 
         var keyPath = Path.Combine(config["Wistlet:DataPath"] ?? "data", "federation-key.pem");
         _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
