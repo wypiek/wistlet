@@ -140,3 +140,8 @@ fieldset { border-color: rgb(var(--line)); }
 .landing-hero .i-browse { color: rgb(var(--text-accent)); }
 .landing-features p { color: rgb(var(--gray3)); }
 .landing-features .is-cherry .i-blob > path, .landing-features .is-cherry h2 { fill: rgb(var(--color-foreground-300)); color: rgb(var(--color-foreground-300)); }
+
+/* Admin pieces. */
+.admin-stat, .admin-savebar { background: rgb(var(--surface-raised)); }
+.admin-stat.is-alert { background: rgb(var(--color-secondary-700) / 0.45); }
+.admin-brand-preview > .i-tab { background: rgb(var(--color-background)); color: rgb(var(--color-notWhite)); }

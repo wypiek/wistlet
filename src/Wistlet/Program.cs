@@ -140,6 +140,9 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/healthz", () => Results.Text("ok"));
+// Browsers ask for /favicon.ico on their own; send them to the configured icon.
+app.MapGet("/favicon.ico", (SiteSettingsService settings) =>
+    Results.Redirect(settings.Current.GetCustomFavicon() ?? SiteConfig.DefaultFavicon));
 app.MapGet("/avatar/{name}.svg", (string name, HttpContext ctx) =>
 {
     ctx.Response.Headers.CacheControl = "public, max-age=86400";

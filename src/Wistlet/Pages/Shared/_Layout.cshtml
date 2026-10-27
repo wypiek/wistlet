@@ -23,7 +23,18 @@
     <meta name="color-scheme" content="@(theme switch { Themes.Light => "light", Themes.Dark => "dark", _ => "light dark" })" />
     <title>@(string.IsNullOrEmpty(title) ? cfg.SiteName : $"{cfg.SiteName.ToLowerInvariant()}! - {title}")</title>
     <meta name="description" content="@cfg.Tagline" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    @if (cfg.GetCustomFavicon() is { } favicon)
+    {
+        <link rel="icon" href="@favicon" />
+        <link rel="apple-touch-icon" href="@favicon" />
+    }
+    else
+    {
+        <link rel="icon" href="/img/favicon-32.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="/img/favicon-16.png" sizes="16x16" type="image/png" />
+        <link rel="icon" href="/img/favicon-192.png" sizes="192x192" type="image/png" />
+        <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    }
     <link rel="stylesheet" href="~/lib/cohost/cohost.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/cohost/tailwind-prose.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -39,7 +50,7 @@
 <body>
 <header id="page-header">
     <div class="co-container i-header">
-        <a href="/" class="i-logo">@cfg.SiteName.ToLowerInvariant()!</a>
+        <a href="/" class="i-logo"><img class="i-logo-icon" src="@cfg.GetSiteIcon()" alt="" width="36" height="36" /><span>@cfg.SiteName.ToLowerInvariant()!</span></a>
         @if (!landing)
         {
             <form class="i-search" action="/search" method="get" role="search">

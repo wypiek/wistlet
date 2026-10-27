@@ -1,17 +1,24 @@
 @model List<Wistlet.Pages.Admin.IndexModel.Day>
 @{
     var max = Math.Max(1, Model.Max(d => d.Count));
+    var total = Model.Sum(d => d.Count);
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
 }
-@* One bar per day, scaled to the busiest day. *@
-<table>
-    <tbody>
+@* A small column chart: one column per day, scaled to the busiest day. *@
+<div class="admin-chart" role="img" aria-label="@total in the last @Model.Count days">
+    <div class="i-columns">
         @foreach (var d in Model)
         {
-            <tr>
-                <td>@d.Date.ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture)</td>
-                <td style="width:55%"><div class="bar" role="img" aria-label="@d.Count"><span style="width:@(Math.Round(d.Count * 100.0 / max, 1).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div></td>
-                <td>@d.Count</td>
-            </tr>
+            var height = d.Count == 0 ? 0 : Math.Max(4, Math.Round(d.Count * 100.0 / max, 1));
+            <div class="i-column" title="@d.Date.ToString("MMM d", inv): @d.Count">
+                @if (d.Count > 0) { <span class="i-count">@d.Count</span> }
+                <span class="i-bar" style="height: @height.ToString(inv)%"></span>
+            </div>
         }
-    </tbody>
-</table>
+    </div>
+    <div class="i-axis">
+        <span>@Model[0].Date.ToString("MMM d", inv)</span>
+        <span>@total total</span>
+        <span>today</span>
+    </div>
+</div>

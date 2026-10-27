@@ -1,93 +1,163 @@
 @page
 @model Wistlet.Pages.Admin.SettingsModel
+@inject FederationContext Federation
 @{
     ViewData["Title"] = "Site settings";
     ViewData["AdminTab"] = "settings";
+    var current = Settings.Current;
+    var sections = new[]
+    {
+        ("branding", "Branding"), ("general", "General"), ("front-page", "Front page"), ("announcement", "Announcement"),
+        ("access", "Access"), ("posting", "Posting"), ("federation", "Federation"), ("messaging", "Messaging"),
+    };
+    const string imageTypes = "image/png,image/jpeg,image/gif,image/webp";
 }
 <card title="Admin — Site settings">
     <partial name="_AdminNav" />
-    <div class="tab-panel">
-        <form method="post" class="stack">
-            <div asp-validation-summary="All" role="alert"></div>
+    <form method="post" enctype="multipart/form-data" class="admin-settings">
+        <div asp-validation-summary="All" class="co-info-box is-warning i-exclam-circle-icon" role="alert"></div>
+        <div class="admin-settings-layout">
+            <nav class="admin-section-index" aria-label="Settings sections">
+                <ul>
+                    @foreach (var (id, label) in sections)
+                    {
+                        <li><a href="#@id">@label</a></li>
+                    }
+                </ul>
+            </nav>
 
-            <fieldset>
-                <legend>General</legend>
-                <div class="form-grid">
-                    <label asp-for="Config.SiteName"></label>
-                    <input asp-for="Config.SiteName" />
-                    <label asp-for="Config.Tagline"></label>
-                    <input asp-for="Config.Tagline" />
-                    <label asp-for="Config.AboutText"></label>
-                    <textarea asp-for="Config.AboutText" rows="4"></textarea>
-                    <label asp-for="Config.FooterText"></label>
-                    <input asp-for="Config.FooterText" />
-                    <label asp-for="Config.HomeHeadline"></label>
-                    <input asp-for="Config.HomeHeadline" />
-                    <label asp-for="Config.HomeIntro"></label>
-                    <textarea asp-for="Config.HomeIntro" rows="3"></textarea>
-                </div>
-            </fieldset>
+            <div class="stack">
+                <fieldset id="branding">
+                    <legend>Branding</legend>
+                    <div class="admin-brand-preview" aria-hidden="true">
+                        <img src="@current.GetSiteIcon()" alt="" width="36" height="36" />
+                        <span>@current.SiteName.ToLowerInvariant()!</span>
+                        <span class="i-tab"><img src="@(current.GetCustomFavicon() ?? SiteConfig.DefaultFavicon)" alt="" width="16" height="16" /> @current.SiteName</span>
+                    </div>
+                    <div class="form-grid">
+                        <label for="siteIcon">Site icon</label>
+                        <div class="stack">
+                            <div class="row">
+                                <img class="admin-icon-preview" src="@current.GetSiteIcon()" alt="Current site icon" width="64" height="64" />
+                                <input id="siteIcon" type="file" name="siteIcon" accept="@imageTypes" />
+                            </div>
+                            @if (!string.IsNullOrEmpty(current.SiteIconPath))
+                            {
+                                <div class="field-row"><input type="checkbox" id="resetSiteIcon" name="resetSiteIcon" value="true" /><label for="resetSiteIcon">Go back to the built-in Wistlet icon</label></div>
+                            }
+                            <span class="hint">Shown next to the site name in the top bar, and used as the favicon unless you set one below. A square PNG with a transparent background works best (at least 128 × 128, up to 2 MB).</span>
+                        </div>
+                        <label for="favicon">Favicon</label>
+                        <div class="stack">
+                            <div class="row">
+                                <img class="admin-icon-preview is-small" src="@(current.GetCustomFavicon() ?? SiteConfig.DefaultFavicon)" alt="Current favicon" width="32" height="32" />
+                                <input id="favicon" type="file" name="favicon" accept="@imageTypes" />
+                            </div>
+                            @if (!string.IsNullOrEmpty(current.FaviconPath))
+                            {
+                                <div class="field-row"><input type="checkbox" id="resetFavicon" name="resetFavicon" value="true" /><label for="resetFavicon">Use the site icon as the favicon</label></div>
+                            }
+                            <span class="hint">The little picture in browser tabs and bookmarks. Leave it unset to use the site icon. Small and square is best (32 × 32 to 512 × 512, up to 1 MB).</span>
+                        </div>
+                    </div>
+                </fieldset>
 
-            <fieldset>
-                <legend>Announcement banner</legend>
-                <div class="form-grid">
-                    <span></span>
-                    <div ><input asp-for="Config.AnnouncementEnabled" /><label asp-for="Config.AnnouncementEnabled"></label></div>
-                    <label asp-for="Config.AnnouncementText"></label>
-                    <textarea asp-for="Config.AnnouncementText" rows="2" placeholder="Shown at the top of every page. Links, #tags and @@mentions work."></textarea>
-                </div>
-            </fieldset>
+                <fieldset id="general">
+                    <legend>General</legend>
+                    <div class="form-grid">
+                        <label asp-for="Config.SiteName"></label>
+                        <div class="stack"><input asp-for="Config.SiteName" /><span class="hint">Shown in the top bar, page titles and e-mails, and to other Wistlet sites.</span></div>
+                        <label asp-for="Config.Tagline"></label>
+                        <div class="stack"><input asp-for="Config.Tagline" /><span class="hint">One line, used in search results and on the welcome box for visitors.</span></div>
+                        <label asp-for="Config.AboutText"></label>
+                        <div class="stack"><textarea asp-for="Config.AboutText" rows="4"></textarea><span class="hint">The About page. Links, #tags and @@mentions work.</span></div>
+                        <label asp-for="Config.FooterText"></label>
+                        <div class="stack"><input asp-for="Config.FooterText" /><span class="hint">Under the navigation links.</span></div>
+                    </div>
+                </fieldset>
 
-            <fieldset>
-                <legend>Access</legend>
-                <div class="form-grid">
-                    <span></span>
-                    <div ><input asp-for="Config.RegistrationOpen" /><label asp-for="Config.RegistrationOpen"></label></div>
-                    <span></span>
-                    <div ><input asp-for="Config.PublicBrowsing" /><label asp-for="Config.PublicBrowsing"></label></div>
-                    <span></span>
-                    <div ><input asp-for="Config.MaintenanceMode" /><label asp-for="Config.MaintenanceMode"></label></div>
-                    <label asp-for="Config.MaintenanceMessage"></label>
-                    <textarea asp-for="Config.MaintenanceMessage" rows="2"></textarea>
-                </div>
-            </fieldset>
+                <fieldset id="front-page">
+                    <legend>Front page</legend>
+                    <div class="form-grid">
+                        <label asp-for="Config.HomeHeadline">Headline</label>
+                        <div class="stack"><input asp-for="Config.HomeHeadline" /><span class="hint">The big line on the front page logged-out visitors see.</span></div>
+                        <label asp-for="Config.HomeIntro">Introduction</label>
+                        <textarea asp-for="Config.HomeIntro" rows="3"></textarea>
+                    </div>
+                </fieldset>
 
-            <fieldset>
-                <legend>Posting</legend>
-                <div class="form-grid">
-                    <label asp-for="Config.MaxPostLength"></label>
-                    <input asp-for="Config.MaxPostLength" min="20" max="200000" />
-                    <label asp-for="Config.PostsPerPage"></label>
-                    <input asp-for="Config.PostsPerPage" min="5" max="100" />
-                    <span></span>
-                    <div ><input asp-for="Config.AllowImageUploads" /><label asp-for="Config.AllowImageUploads"></label></div>
-                    <label asp-for="Config.MaxUploadMb"></label>
-                    <input asp-for="Config.MaxUploadMb" min="1" max="50" />
-                    <span></span>
-                    <div ><input asp-for="Config.AllowAudioUploads" /><label asp-for="Config.AllowAudioUploads"></label></div>
-                    <label asp-for="Config.MaxAudioUploadMb"></label>
-                    <input asp-for="Config.MaxAudioUploadMb" min="1" max="50" />
-                    <label asp-for="Config.BannedWords"></label>
-                    <textarea asp-for="Config.BannedWords" rows="2" placeholder="spam, scam, …"></textarea>
-                </div>
-            </fieldset>
+                <fieldset id="announcement">
+                    <legend>Announcement banner</legend>
+                    <div class="form-grid">
+                        <span></span>
+                        <div class="field-row"><input asp-for="Config.AnnouncementEnabled" /><label asp-for="Config.AnnouncementEnabled"></label></div>
+                        <label asp-for="Config.AnnouncementText"></label>
+                        <div class="stack"><textarea asp-for="Config.AnnouncementText" rows="2" placeholder="Shown at the top of every page."></textarea><span class="hint">Everyone sees it until they dismiss it; changing the text shows it again.</span></div>
+                    </div>
+                </fieldset>
 
-            <fieldset>
-                <legend>Federation</legend>
-                <div><input asp-for="Config.FederationEnabled" /><label asp-for="Config.FederationEnabled"></label></div>
-                <p class="muted">Lets people here follow, like and comment on accounts on other Wistlet sites, and the other way round. Instances and the delivery queue are under <a href="/admin/federation">Federation</a>.</p>
-            </fieldset>
+                <fieldset id="access">
+                    <legend>Access</legend>
+                    <div class="form-grid">
+                        <span></span>
+                        <div class="stack">
+                            <div class="field-row"><input asp-for="Config.RegistrationOpen" /><label asp-for="Config.RegistrationOpen"></label></div>
+                            <div class="field-row"><input asp-for="Config.PublicBrowsing" /><label asp-for="Config.PublicBrowsing"></label></div>
+                            <div class="field-row"><input asp-for="Config.MaintenanceMode" /><label asp-for="Config.MaintenanceMode"></label></div>
+                        </div>
+                        <label asp-for="Config.MaintenanceMessage"></label>
+                        <textarea asp-for="Config.MaintenanceMessage" rows="2"></textarea>
+                    </div>
+                </fieldset>
 
-            <fieldset>
-                <legend>Messaging</legend>
-                <div ><input asp-for="Config.AllowDirectMessages" /><label asp-for="Config.AllowDirectMessages"></label></div>
-            </fieldset>
+                <fieldset id="posting">
+                    <legend>Posting</legend>
+                    <div class="form-grid">
+                        <label asp-for="Config.MaxPostLength">Maximum post length</label>
+                        <div class="stack"><input asp-for="Config.MaxPostLength" min="20" max="200000" /><span class="hint">In characters. cohost allowed about 200,000, which is what CSS crimes need.</span></div>
+                        <label asp-for="Config.PostsPerPage"></label>
+                        <input asp-for="Config.PostsPerPage" min="5" max="100" />
+                        <span></span>
+                        <div class="field-row"><input asp-for="Config.AllowImageUploads" /><label asp-for="Config.AllowImageUploads"></label></div>
+                        <label asp-for="Config.MaxUploadMb"></label>
+                        <input asp-for="Config.MaxUploadMb" min="1" max="50" />
+                        <span></span>
+                        <div class="field-row"><input asp-for="Config.AllowAudioUploads" /><label asp-for="Config.AllowAudioUploads"></label></div>
+                        <label asp-for="Config.MaxAudioUploadMb"></label>
+                        <input asp-for="Config.MaxAudioUploadMb" min="1" max="50" />
+                        <label asp-for="Config.BannedWords">Banned words</label>
+                        <div class="stack"><textarea asp-for="Config.BannedWords" rows="2" placeholder="spam, scam, …"></textarea><span class="hint">Comma separated. Posts, tags and headlines containing any of them are refused, here and from other Wistlet sites.</span></div>
+                    </div>
+                </fieldset>
 
+                <fieldset id="federation">
+                    <legend>Federation</legend>
+                    <div class="field-row"><input asp-for="Config.FederationEnabled" /><label asp-for="Config.FederationEnabled">Federate with other Wistlet instances</label></div>
+                    <p class="hint">
+                        Lets people here follow, like and comment on accounts on other Wistlet sites, and the other way round.
+                        @if (Federation.IsConfigured)
+                        {
+                            <text>This site's address is <b>@Federation.Domain</b>.</text>
+                        }
+                        else
+                        {
+                            <b>Needs WISTLET_PUBLIC_URL to be set first.</b>
+                        }
+                        Instances and the delivery queue are under <a href="/admin/federation">Federation</a>.
+                    </p>
+                </fieldset>
 
-            <div class="row end">
-                <a role="button" href="/admin/settings">Cancel</a>
-                <button type="submit" class="default">Apply</button>
+                <fieldset id="messaging">
+                    <legend>Messaging</legend>
+                    <div class="field-row"><input asp-for="Config.AllowDirectMessages" /><label asp-for="Config.AllowDirectMessages"></label></div>
+                </fieldset>
             </div>
-        </form>
-    </div>
+        </div>
+
+        <div class="admin-savebar">
+            <span class="hint">Changes apply to everyone as soon as you save.</span>
+            <a role="button" href="/admin/settings">Cancel</a>
+            <button type="submit" class="default">Save settings</button>
+        </div>
+    </form>
 </card>

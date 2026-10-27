@@ -3,68 +3,111 @@
 @{
     ViewData["Title"] = "Admin";
     ViewData["AdminTab"] = "dashboard";
+
+    void StatContents(Wistlet.Pages.Admin.IndexModel.Stat s)
+    {
+        <span class="i-value">@s.Value.ToString("N0")</span>
+        <span class="i-label">@s.Label</span>
+        @if (s.Note is not null) { <span class="i-note">@s.Note</span> }
+    }
 }
 <card title="Admin — Dashboard">
     <partial name="_AdminNav" />
     <div class="tab-panel">
-        <div class="admin-cols">
-            <fieldset>
-                <legend>At a glance</legend>
-                <table>
-                    <tbody>
-                        @foreach (var s in Model.Stats)
-                        {
-                            <tr>
-                                <td>@if (s.Link is not null) { <a href="@s.Link">@s.Label</a> } else { @s.Label }</td>
-                                <td><b>@s.Value</b></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </fieldset>
-            <fieldset>
-                <legend>System information</legend>
-                <table>
-                    <tbody>
-                        @foreach (var (label, value) in Model.SystemInfo)
-                        {
-                            <tr><td>@label</td><td>@value</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </fieldset>
+        <div class="admin-stats">
+            @foreach (var s in Model.Stats)
+            {
+                @if (s.Link is not null)
+                {
+                    <a class="admin-stat @(s.Alert ? "is-alert" : "")" href="@s.Link">@{ StatContents(s); }</a>
+                }
+                else
+                {
+                    <div class="admin-stat">@{ StatContents(s); }</div>
+                }
+            }
         </div>
+
+        <fieldset class="admin-attention">
+            <legend>Needs attention</legend>
+            @if (Model.Attentions.Count == 0)
+            {
+                <p class="muted">All good: nothing waiting.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var a in Model.Attentions)
+                    {
+                        <li class="@(a.Warning ? "is-warning" : "")">
+                            <span class="i-dot" aria-hidden="true"></span>
+                            <span class="i-text">@a.Text</span>
+                            @if (a.Link is not null) { <a role="button" href="@a.Link">@a.LinkText</a> }
+                        </li>
+                    }
+                </ul>
+            }
+        </fieldset>
 
         <div class="admin-cols">
             <fieldset>
-                <legend>New members (last 14 days)</legend>
+                <legend>New members, last 14 days</legend>
                 <partial name="_Bars" model="Model.Signups" />
             </fieldset>
             <fieldset>
-                <legend>Posts (last 14 days)</legend>
+                <legend>Posts and comments, last 14 days</legend>
                 <partial name="_Bars" model="Model.PostsPerDay" />
             </fieldset>
         </div>
 
-        <fieldset>
-            <legend>Newest members</legend>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th></th><th>User</th><th>E-mail</th><th>Joined</th><th></th></tr></thead>
-                    <tbody>
-                        @foreach (var u in Model.RecentUsers)
+        <div class="admin-cols">
+            <fieldset>
+                <legend>Newest members</legend>
+                <ul class="admin-list">
+                    @foreach (var u in Model.RecentUsers)
+                    {
+                        <li>
+                            <img class="co-avatar" data-shape="@AvatarShapes.Resolve(u.AvatarShape)" src="@(u.AvatarPath ?? $"/avatar/{u.UserName}.svg")" alt="" width="32" height="32" />
+                            <span class="i-main"><a href="/admin/user/@u.Id">@u.DisplayName</a> <span class="muted">@@@u.UserName</span></span>
+                            <span class="muted">@Fmt.Time(u.CreatedAt)</span>
+                        </li>
+                    }
+                </ul>
+                <p><a href="/admin/users">All users</a></p>
+            </fieldset>
+            <fieldset>
+                <legend>Recent moderation</legend>
+                @if (Model.RecentActions.Count == 0)
+                {
+                    <p class="muted">Nothing yet.</p>
+                }
+                else
+                {
+                    <ul class="admin-list">
+                        @foreach (var a in Model.RecentActions)
                         {
-                            <tr>
-                                <td><img src="@(u.AvatarPath ?? $"/avatar/{u.UserName}.svg")" alt="" width="24" height="24" /></td>
-                                <td>@u.DisplayName (@@@u.UserName)</td>
-                                <td>@u.Email</td>
-                                <td>@Fmt.Time(u.CreatedAt)</td>
-                                <td><a role="button" href="/admin/user/@u.Id">Manage</a></td>
-                            </tr>
+                            <li>
+                                <span class="i-main"><b>@(a.Actor is null ? "system" : "@" + a.Actor.UserName)</b> <code>@a.Action</code> @a.Target</span>
+                                <span class="muted">@Fmt.Time(a.CreatedAt)</span>
+                            </li>
                         }
-                    </tbody>
-                </table>
-            </div>
+                    </ul>
+                    @if (User.IsAdmin())
+                    {
+                        <p><a href="/admin/audit">Full audit log</a></p>
+                    }
+                }
+            </fieldset>
+        </div>
+
+        <fieldset>
+            <legend>System</legend>
+            <dl class="admin-sysinfo">
+                @foreach (var (label, value) in Model.SystemInfo)
+                {
+                    <dt>@label</dt><dd>@value</dd>
+                }
+            </dl>
         </fieldset>
     </div>
 </card>

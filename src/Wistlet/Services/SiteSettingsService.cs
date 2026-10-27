@@ -23,6 +23,14 @@ public class SiteConfig
     public string AboutText { get; set; } =
         "Wistlet is a small social network. Post, follow, like and chat.";
 
+    /// <summary>Uploaded site icon (navigation bar, and the favicon unless one is set); empty for the built-in one.</summary>
+    [Display(Name = "Site icon"), StringLength(200)]
+    public string SiteIconPath { get; set; } = "";
+
+    /// <summary>Uploaded favicon; empty to use the site icon.</summary>
+    [Display(Name = "Favicon"), StringLength(200)]
+    public string FaviconPath { get; set; } = "";
+
     [Display(Name = "Home page headline (shown to logged-out visitors)"), Required, StringLength(80)]
     public string HomeHeadline { get; set; } = "posting, but better.";
 
@@ -80,7 +88,15 @@ public class SiteConfig
     [Display(Name = "Footer text"), StringLength(200)]
     public string FooterText { get; set; } = "Powered by Wistlet";
 
-    // A method rather than a property so model binding doesn't touch it.
+    public const string DefaultIcon = "/img/wistlet-icon.png";
+    public const string DefaultFavicon = "/img/favicon-32.png";
+
+    // Methods rather than properties so model binding doesn't touch them.
+    public string GetSiteIcon() => string.IsNullOrEmpty(SiteIconPath) ? DefaultIcon : SiteIconPath;
+
+    /// <summary>The uploaded favicon, else the uploaded site icon, else null (the built-in set of sizes).</summary>
+    public string? GetCustomFavicon() => !string.IsNullOrEmpty(FaviconPath) ? FaviconPath : !string.IsNullOrEmpty(SiteIconPath) ? SiteIconPath : null;
+
     public IEnumerable<string> GetBannedWords() =>
         (BannedWords ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
