@@ -98,6 +98,7 @@ builder.Services.AddScoped<TwoFactorService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<DataExportService>();
 builder.Services.AddScoped<TimelineService>();
+builder.Services.AddSingleton<LiveEvents>();
 builder.Services.AddSingleton<FederationContext>();
 builder.Services.AddScoped<FederationService>();
 builder.Services.AddScoped<FederationInbox>();
@@ -150,6 +151,7 @@ app.MapGet("/avatar/{name}.svg", (string name, HttpContext ctx) =>
 });
 
 app.MapFederation();
+app.MapLiveEvents();
 app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
 

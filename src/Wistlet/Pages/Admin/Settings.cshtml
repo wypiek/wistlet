@@ -121,6 +121,10 @@
                         <div class="field-row"><input asp-for="Config.AllowImageUploads" /><label asp-for="Config.AllowImageUploads"></label></div>
                         <label asp-for="Config.MaxUploadMb"></label>
                         <input asp-for="Config.MaxUploadMb" min="1" max="50" />
+                        <label asp-for="Config.MaxAvatarMb"></label>
+                        <div class="stack"><input asp-for="Config.MaxAvatarMb" min="1" max="50" /><span class="hint">Animated GIFs are often a few megabytes.</span></div>
+                        <label asp-for="Config.MaxBannerMb"></label>
+                        <input asp-for="Config.MaxBannerMb" min="1" max="50" />
                         <span></span>
                         <div class="field-row"><input asp-for="Config.AllowAudioUploads" /><label asp-for="Config.AllowAudioUploads"></label></div>
                         <label asp-for="Config.MaxAudioUploadMb"></label>

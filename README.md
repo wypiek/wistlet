@@ -39,10 +39,15 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Profiles with picture (squircle, circle, rounded square, egg or capsule shape), header image (banner),
   tagline, pronouns, a Markdown description, location and website; posts / comments / media / likes /
   followers / following tabs. Like cohost, follower and following counts aren't shown
+- Animated profile pictures and banners (GIF and WebP), up to sizes the admin sets (8 and 15 MB by
+  default). Their first frame is kept as a still: people can pause them (they play on hover), and
+  they're paused for devices that ask for reduced motion
 - A verified badge (Wistlet's own seal) for accounts staff mark as verified
 - Notifications for likes, comments, shares, mentions, new followers and moderator messages, grouped
   by day the way cohost did it ("annie, pete and 3 others liked your post …")
-- Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
+- Direct messages, with a per-user privacy setting (everyone / people I follow / nobody). They're live:
+  new messages, "is typing" and "seen" appear without reloading, and the unread badge updates on any
+  page (Server-Sent Events from `/events`; without JavaScript the pages work as plain forms)
 - Blocking, reporting posts and accounts, search across people, tags and posts
 - Page settings: mark your whole page 18+ (all its posts count as 18+ and visitors confirm their age
   before seeing it), or hide your page and posts from logged-out visitors
@@ -70,7 +75,7 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - Site settings (admins only), in sections with a short explanation for each: site icon and favicon
   (uploaded images; the built-in Wistlet icon by default), site name, tagline, about text, footer, announcement banner,
   front page headline and introduction, open/closed registration, guest browsing, maintenance mode,
-  maximum post length, posts per page, image and audio uploads and their size limits, banned words,
+  maximum post length, posts per page, image and audio uploads, profile picture and banner sizes, banned words,
   direct messages on/off
 - User management: search and filter, edit name/e-mail/role/verified badge, temporary or permanent
   bans with a reason, password reset, sign out all sessions, remove picture, clear profile,

@@ -47,7 +47,7 @@
         <link rel="stylesheet" href="~/css/dark.css" media="(prefers-color-scheme: dark)" asp-append-version="true" />
     }
 </head>
-<body>
+<body data-live="@(me is not null && cfg.AllowDirectMessages ? "true" : "false")">
 <header id="page-header">
     <div class="co-container i-header">
         <a href="/" class="i-logo"><img class="i-logo-icon" src="@cfg.GetSiteIcon()" alt="" width="36" height="36" /><span>@cfg.SiteName.ToLowerInvariant()!</span></a>
@@ -120,7 +120,7 @@ else
                 <li><a href="/notifications" aria-current="@Current("/notifications")">notifications @if (unreadNotes > 0) { <span class="i-count">@unreadNotes</span> }</a></li>
                 @if (cfg.AllowDirectMessages)
                 {
-                    <li><a href="/messages" aria-current="@Current("/messages")">messages @if (unreadMessages > 0) { <span class="i-count">@unreadMessages</span> }</a></li>
+                    <li><a href="/messages" aria-current="@Current("/messages")" data-unread-messages>messages @if (unreadMessages > 0) { <span class="i-count">@unreadMessages</span> }</a></li>
                 }
                 <li><a href="/bookmarks" aria-current="@Current("/bookmarks")">saved posts</a></li>
                 <li><a href="/u/@me.UserName" aria-current="@Current("/u/" + me.UserName.ToLowerInvariant())">profile</a></li>

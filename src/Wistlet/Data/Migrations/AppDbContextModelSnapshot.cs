@@ -573,6 +573,9 @@ namespace Wistlet.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("PauseAnimatedImages")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Pronouns")
                         .IsRequired()
                         .HasMaxLength(40)

@@ -746,3 +746,8 @@ a.admin-stat:hover { border-color: rgb(var(--text-accent)); }
 }
 .admin-icon-preview { width: 4rem; height: 4rem; object-fit: contain; border: 1px solid rgb(var(--line)); border-radius: 0.75rem; padding: 0.25rem; background: repeating-conic-gradient(rgb(var(--line) / 0.35) 0 25%, transparent 0 50%) 50% / 12px 12px; }
 .admin-icon-preview.is-small { width: 2.5rem; height: 2.5rem; padding: 0.25rem; }
+
+/* ---------- live messages ---------- */
+
+.chat-status { min-height: 1.25rem; font-size: 0.8125rem; color: rgb(var(--gray2)); text-align: right; }
+.chat-status.is-error { color: rgb(var(--text-accent)); font-weight: 700; text-align: left; }

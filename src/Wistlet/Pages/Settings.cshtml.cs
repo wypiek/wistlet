@@ -94,9 +94,9 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         }
 
         // Store both new images before touching the old ones, so a failed upload changes nothing.
-        var (avatarUrl, avatarError) = await uploads.SaveImageAsync(avatar, "avatars", maxMbOverride: 2);
+        var (avatarUrl, avatarError) = await uploads.SaveImageAsync(avatar, "avatars", settings.Current.MaxAvatarMb, keepStill: true);
         if (avatarError is not null) return Fail("profile", avatarError);
-        var (bannerUrl, bannerError) = await uploads.SaveImageAsync(banner, "banners", maxMbOverride: 4);
+        var (bannerUrl, bannerError) = await uploads.SaveImageAsync(banner, "banners", settings.Current.MaxBannerMb, keepStill: true);
         if (bannerError is not null)
         {
             uploads.Delete(avatarUrl);
@@ -180,10 +180,11 @@ public class SettingsModel(AppDbContext db, AccountService accounts, UploadServi
         return Done("privacy", "Privacy settings saved.");
     }
 
-    public async Task<IActionResult> OnPostDisplayAsync(string? theme, string? timelineMode)
+    public async Task<IActionResult> OnPostDisplayAsync(string? theme, string? timelineMode, bool pauseAnimatedImages)
     {
         var me = await LoadAsync();
         me.Theme = Themes.Resolve(theme);
+        me.PauseAnimatedImages = pauseAnimatedImages;
         me.TimelineMode = TimelineModes.Resolve(timelineMode);
         await db.SaveChangesAsync();
         return Done("display", "Display settings saved.");

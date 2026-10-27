@@ -10,6 +10,7 @@
         <button type="submit">Start</button>
     </form>
     <br />
+    <div id="conversation-list">
     @if (Model.Conversations.Count == 0)
     {
         <p>No conversations yet. Start one above or from someone's profile.</p>
@@ -36,4 +37,5 @@
             </table>
         </div>
     }
+    </div>
 </card>

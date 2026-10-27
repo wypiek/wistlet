@@ -31,7 +31,7 @@
                             {
                                 <div><input type="checkbox" id="removeAvatar" name="removeAvatar" value="true" /><label for="removeAvatar">Remove picture</label></div>
                             }
-                            <span>PNG, JPEG, GIF or WebP, up to 2 MB.</span>
+                            <span>PNG, JPEG, GIF or WebP, up to @cfg.MaxAvatarMb MB. Animated GIFs and WebPs play.</span>
                         </div>
                     </div>
                     <label>Banner</label>
@@ -45,7 +45,7 @@
                         {
                             <div><input type="checkbox" id="removeBanner" name="removeBanner" value="true" /><label for="removeBanner">Remove banner</label></div>
                         }
-                        <span>Shown across the top of your profile. A wide image works best (about 3:1), up to 4 MB.</span>
+                        <span>Shown across the top of your profile. A wide image works best (about 3:1), up to @cfg.MaxBannerMb MB. Animated GIFs and WebPs play.</span>
                     </div>
                     <label for="avatarShape">Avatar shape</label>
                     <select id="avatarShape" name="avatarShape">
@@ -128,6 +128,11 @@
                                 <label for="theme-@value">@label</label>
                             </div>
                         }
+                    </fieldset>
+                    <fieldset>
+                        <legend>Animation</legend>
+                        <div class="field-row"><input type="checkbox" id="pauseAnimatedImages" name="pauseAnimatedImages" value="true" checked="@me.PauseAnimatedImages" /><label for="pauseAnimatedImages">Pause animated profile pictures and banners (they play when you point at them)</label></div>
+                        <p class="muted">If your device asks for reduced motion, they're paused anyway.</p>
                     </fieldset>
                     <fieldset>
                         <legend>Home timeline</legend>

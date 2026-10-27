@@ -9,26 +9,28 @@
         <a role="button" href="/messages">All messages</a>
         <a role="button" href="/u/@o.UserName">View profile</a>
     </div>
-    <div class="chat" aria-live="polite">
+    <div class="chat" aria-live="polite" data-with="@o.UserName" data-other-name="@o.DisplayName">
         @if (Model.Messages.Count == 0)
         {
-            <p>This is the start of your conversation with @o.DisplayName.</p>
+            <p class="i-empty">This is the start of your conversation with @o.DisplayName.</p>
         }
         @foreach (var m in Model.Messages)
         {
-            <div class="bubble @(m.SenderId == Model.Me ? "is-mine" : "")">
+            <div class="bubble @(m.SenderId == Model.Me ? "is-mine" : "")" data-id="@m.Id">
                 @ContentFormatter.Format(m.Body)<br />
                 <small>@(m.SenderId == Model.Me ? "You" : o.DisplayName) · @Fmt.Time(m.CreatedAt)</small>
             </div>
         }
     </div>
+    @{ var last = Model.Messages.LastOrDefault(); }
+    <p class="chat-status" aria-live="polite" data-seen="@(last is not null && last.SenderId == Model.Me && last.Id == Model.LastReadByOther ? "true" : "false")">@(last is not null && last.SenderId == Model.Me && last.Id == Model.LastReadByOther ? "Seen" : "")</p>
     @if (Model.CannotSendReason is not null)
     {
         <p>@Model.CannotSendReason</p>
     }
     else
     {
-        <form method="post" class="stack">
+        <form method="post" class="stack chat-form">
             <textarea class="composer-text" name="Body" rows="2" placeholder="Write a message…" aria-label="Message" maxlength="2000" data-max="2000" data-counter="msg-counter" required></textarea>
             <div class="row end">
                 <span><span id="msg-counter">2000</span> characters left</span>
