@@ -8,7 +8,7 @@ services:
     container_name: wistlet
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${WISTLET_PORT:-8080}:8080"
+      - "127.0.0.1:${WISTLET_PORT:-6969}:6969"
     environment:
       # Caddy sets X-Forwarded-For/Proto; trust them so HTTPS and client IPs are detected.
       Wistlet__TrustAllProxies: "true"
