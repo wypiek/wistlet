@@ -45,7 +45,9 @@ composer, admin pages) are in `wwwroot/css/site.css` and use the same colour tok
 - A verified badge (Wistlet's own seal) for accounts staff mark as verified
 - Notifications for likes, comments, shares, mentions, new followers and moderator messages, grouped
   by day the way cohost did it ("annie, pete and 3 others liked your post …")
-- Direct messages, with a per-user privacy setting (everyone / people I follow / nobody)
+- Direct messages, with a per-user privacy setting (everyone / people I follow / nobody). They're live:
+  new messages, "is typing" and "seen" appear without reloading, and the unread badge updates on any
+  page (Server-Sent Events from `/events`; without JavaScript the pages work as plain forms)
 - Blocking, reporting posts and accounts, search across people, tags and posts
 - Page settings: mark your whole page 18+ (all its posts count as 18+ and visitors confirm their age
   before seeing it), or hide your page and posts from logged-out visitors

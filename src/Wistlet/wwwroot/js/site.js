@@ -87,6 +87,148 @@
         });
     });
 
+    // Live direct messages: the server pushes events over /events (Server-Sent Events). On a
+    // conversation page new messages, "is typing" and "seen" appear as they happen and sending
+    // doesn't reload the page; elsewhere the unread badge stays current. Without JavaScript the
+    // pages work as plain forms.
+    if (document.body.dataset.live === "true" && window.EventSource) {
+        const chatBox = document.querySelector(".chat[data-with]");
+        const status = document.querySelector(".chat-status");
+        const chatForm = document.querySelector("form.chat-form");
+        const withName = chatBox?.dataset.with.toLowerCase();
+        const token = document.querySelector("input[name=__RequestVerificationToken]")?.value ?? "";
+        const handlerUrl = (name) => location.pathname + "?handler=" + name;
+        const post = (name) => fetch(handlerUrl(name), {
+            method: "POST", credentials: "same-origin", headers: { RequestVerificationToken: token },
+        }).catch(() => {});
+
+        const setStatus = (text, isError = false) => {
+            if (!status) return;
+            status.textContent = text;
+            status.classList.toggle("is-error", isError);
+        };
+        const lastBubble = () => chatBox?.querySelector(".bubble:last-of-type");
+
+        const addBubble = (m) => {
+            if (!chatBox || chatBox.querySelector(`.bubble[data-id="${m.id}"]`)) return;
+            chatBox.querySelector(".i-empty")?.remove();
+            const bubble = document.createElement("div");
+            bubble.className = "bubble" + (m.mine ? " is-mine" : "");
+            bubble.dataset.id = String(m.id);
+            bubble.innerHTML = m.html + "<br>"; // formatted and escaped by the server
+            const small = document.createElement("small");
+            small.textContent = (m.mine ? "You" : chatBox.dataset.otherName) + " · just now";
+            bubble.append(small);
+            chatBox.append(bubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        };
+
+        const setUnread = (count) => {
+            const link = document.querySelector("[data-unread-messages]");
+            if (!link) return;
+            let badge = link.querySelector(".i-count");
+            if (count > 0) {
+                if (!badge) {
+                    badge = document.createElement("span");
+                    badge.className = "i-count";
+                    link.append(" ", badge);
+                }
+                badge.textContent = String(count);
+            } else {
+                badge?.remove();
+            }
+        };
+
+        // On the conversation list, fetch it again when something changes.
+        let listTimer;
+        const refreshList = () => {
+            const list = document.getElementById("conversation-list");
+            if (!list) return;
+            clearTimeout(listTimer);
+            listTimer = setTimeout(async () => {
+                try {
+                    const html = await (await fetch("/messages", { credentials: "same-origin" })).text();
+                    const fresh = new DOMParser().parseFromString(html, "text/html").getElementById("conversation-list");
+                    if (fresh) list.innerHTML = fresh.innerHTML;
+                } catch { /* try again on the next event */ }
+            }, 300);
+        };
+
+        let pendingRead = false;
+        let typingTimer;
+        const events = new EventSource("/events");
+        events.addEventListener("dm", (e) => {
+            const m = JSON.parse(e.data);
+            if (chatBox && m.with.toLowerCase() === withName) {
+                addBubble(m);
+                clearTimeout(typingTimer);
+                setStatus("");
+                if (!m.mine) {
+                    if (document.visibilityState === "visible") post("Read");
+                    else pendingRead = true;
+                }
+            } else if (!m.mine && typeof m.unread === "number") {
+                setUnread(m.unread);
+            }
+            refreshList();
+        });
+        events.addEventListener("unread", (e) => setUnread(JSON.parse(e.data).count));
+        events.addEventListener("read", (e) => {
+            const r = JSON.parse(e.data);
+            if (!chatBox || r.with.toLowerCase() !== withName) return;
+            const last = lastBubble();
+            if (last?.classList.contains("is-mine") && Number(last.dataset.id) <= r.upTo) setStatus("Seen");
+        });
+        events.addEventListener("typing", (e) => {
+            if (!chatBox || JSON.parse(e.data).with.toLowerCase() !== withName) return;
+            setStatus(`${chatBox.dataset.otherName} is typing…`);
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => setStatus(""), 4000);
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (pendingRead && document.visibilityState === "visible") {
+                pendingRead = false;
+                post("Read");
+            }
+        });
+
+        if (chatForm) {
+            const text = chatForm.querySelector("textarea");
+            let lastTyping = 0;
+            text.addEventListener("input", () => {
+                if (text.value.trim() && Date.now() - lastTyping > 3000) {
+                    lastTyping = Date.now();
+                    post("Typing");
+                }
+            });
+            chatForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                if (!text.value.trim()) return;
+                const button = chatForm.querySelector("button[type=submit]");
+                button.disabled = true;
+                try {
+                    const res = await fetch(handlerUrl("Send"), { method: "POST", body: new FormData(chatForm), credentials: "same-origin" });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        setStatus(data.error || (res.status === 429 ? "Slow down a little, then try again." : "The message couldn't be sent."), true);
+                    } else {
+                        addBubble(data);
+                        setStatus("");
+                        text.value = "";
+                        text.dispatchEvent(new Event("input"));
+                        lastTyping = 0;
+                    }
+                } catch {
+                    chatForm.submit(); // fall back to a normal post
+                } finally {
+                    button.disabled = false;
+                    text.focus();
+                }
+            });
+        }
+    }
+
     // Like cohost, collapse very tall post bodies (over twice the window height) behind "read more".
     document.querySelectorAll(".co-post-contents > .i-post-body").forEach((body) => {
         const prose = body.querySelector(".co-prose");

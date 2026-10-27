@@ -4,7 +4,9 @@
 # Caddy obtains and renews the HTTPS certificate automatically.
 
 wistlet.example.com {
-	encode zstd gzip
+	# Compress everything except the live event stream (/events), which must not be buffered.
+	@compressible not path /events
+	encode @compressible zstd gzip
 
 	# Allow image uploads (the app's own limit is set in the admin panel, max 50 MB).
 	request_body {
